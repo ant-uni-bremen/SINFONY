@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+  - family-names: Beck
+    given-names: Edgar
+    orcid: https://orcid.org/0000-0003-2213-9727
+title: "Semantic INFOrmation traNsmission and recoverY (SINFONY)"
+version: 1.0.0
+date-released: 2023-04-15
+% doi: 10.5281/zenodo.1234
