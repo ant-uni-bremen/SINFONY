@@ -25,4 +25,4 @@ This work was partly funded by the Federal State of Bremen and the University of
 
 # License and Referencing
 
-This program is licensed under the GPLv2 license. If you in any way use this code for research that results in publications, please cite our original article listed above.
+This program is licensed under the GPLv3 license. If you in any way use this code for research that results in publications, please cite our original article listed above.
