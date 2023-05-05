@@ -5,6 +5,7 @@
 Source code behind the scientific research articles about the semantic communication approach SINFONY:
 
 Edgar Beck, Carsten Bockelmann and Armin Dekorsy, "Semantic Information Recovery in Wireless Networks," 10.48550/arXiv.2204.13366
+
 Edgar Beck, Carsten Bockelmann and Armin Dekorsy, "Model-free Reinforcement Learning of Semantic Communication by Stochastic Policy Gradient,"
 
 ## Abstract of the article
