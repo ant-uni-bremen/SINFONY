@@ -4,7 +4,7 @@ authors:
   - family-names: Beck
     given-names: Edgar
     orcid: https://orcid.org/0000-0003-2213-9727
-title: "Semantic Information Transmission and Recovery (SINFONY)"
+title: "Semantic Information Transmission and Recovery (SINFONY) Software"
 url: https://github.com/ant-uni-bremen/SINFONY
 version: 1.0.0
 date-released: 2023-04-15
