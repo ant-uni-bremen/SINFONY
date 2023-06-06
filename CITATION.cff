@@ -5,6 +5,7 @@ authors:
     given-names: Edgar
     orcid: https://orcid.org/0000-0003-2213-9727
 title: "Semantic Information Transmission and Recovery (SINFONY) Software"
-url: https://github.com/ant-uni-bremen/SINFONY
+url: https://doi.org/10.5281/zenodo.8006567
+doi: 10.5281/zenodo.8006567
 version: 1.0.0
 date-released: 2023-04-15
