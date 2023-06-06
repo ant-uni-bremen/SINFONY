@@ -1,6 +1,6 @@
 # SINFONY: Semantic INFOrmation traNsmission and recoverY
 
-[![DOI](https://zenodo.org/badge/628290401.svg)](https://zenodo.org/badge/latestdoi/628290401)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.8006567.svg)](https://doi.org/10.5281/zenodo.8006567)
 
 Source code from scientific research articles about the semantic communication approach SINFONY:
 
