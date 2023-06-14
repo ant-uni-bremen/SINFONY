@@ -22,13 +22,13 @@ from tensorflow.keras.optimizers import SGD, Adam, Nadam
 
 ## Own packages
 import sys
-sys.path.append('..')	# Include parent folder, where own packages lie
-sys.path.append('.')	# Include current folder, where start simulation script and packages lie
+sys.path.append('..')	# Include parent folder, where own packages are
+sys.path.append('.')	# Include current folder, where start simulation script and packages are
 import mymathops as mop
 from myfunc import print_time, savemodule
 import mytraining as mt
 
-# Only necessary for windows, otherwise kernel crashes
+# Only necessary for Windows, otherwise kernel crashes
 if os.name.lower() == 'nt':
 	os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
@@ -304,7 +304,7 @@ def resnet_cifar_multitx(shape = (32, 32, 3), filters = 16, num_res = 2, num_res
 	return tx
 
 
-def resnet_cifar_rx(shape, classes = 10, n_rx = -1, num_layer = 1, rx_same = 1, image_fac = 2):
+def resnet_cifar_rx(shape, classes = 10, n_rx = -1, num_layer = 1, rx_same = 1, rx_linear = False, image_fac = 2):
 	'''SINFONY: Function returns ResNet receiver
 	shape: tx.layers[-1].output_shape[1:]
 	classes: number of classes
@@ -356,6 +356,9 @@ def resnet_cifar_rx(shape, classes = 10, n_rx = -1, num_layer = 1, rx_same = 1, 
 			x = Dec(x)
 	else:
 		x = inrx
+	if rx_linear == True:
+		# This final Rx module layer improves performance for the AE approach on rvec and at low SNR for SINFONY at the cost of a higher error floor
+		x = Dense(n_rx, activation = 'linear')(x)
 	if image_fac >= 2 and rx_same != 2:
 		x = tf.keras.layers.GlobalAvgPool2D()(x)
 	outrx = tf.keras.layers.Dense(units = classes, activation = 'softmax')(x)
@@ -363,7 +366,7 @@ def resnet_cifar_rx(shape, classes = 10, n_rx = -1, num_layer = 1, rx_same = 1, 
 	return rx
 
 
-def resnet_cifar_ae(shape = (32, 32, 3), classes = 10, filters = 16, num_res = 2, num_resblocks = 3, preactivation = True, bottleneck = False, axnorm = 0, n_tx = -1, n_rx = -1, rx_same = 1, num_layer = 1, sigma = np.array([0, 0]), image_fac = 2):
+def resnet_cifar_ae(shape = (32, 32, 3), classes = 10, filters = 16, num_res = 2, num_resblocks = 3, preactivation = True, bottleneck = False, axnorm = 0, n_tx = -1, n_rx = -1, rx_same = 1, rx_linear = False, num_layer = 1, sigma = np.array([0, 0]), image_fac = 2):
 	'''SINFONY: Autoencoder-like model via reparametrization trick
 	Function returns ResNet multi transmitter autoencoder for CIFAR with [6 * num_res + 2] layers without bottleneck structure
 	'''
@@ -376,7 +379,7 @@ def resnet_cifar_ae(shape = (32, 32, 3), classes = 10, filters = 16, num_res = 2
 		label = 'ResNet_CIFAR10_AE'
 
 	# Rx
-	rx = resnet_cifar_rx(shape = tx.layers[-1].output_shape[1:], classes = classes, n_rx = n_rx, num_layer = num_layer, rx_same = rx_same, image_fac = image_fac)
+	rx = resnet_cifar_rx(shape = tx.layers[-1].output_shape[1:], classes = classes, n_rx = n_rx, num_layer = num_layer, rx_same = rx_same, rx_linear = rx_linear, image_fac = image_fac)
 
 	# Model for autoencoder training
 	intx = Input(shape)
@@ -393,7 +396,7 @@ class resnet_cifar_rl(Model):
 	'''RL-SINFONY via Stochastic Policy Gradient
 	ResNet multi transmitter reinforcement learning for CIFAR with [6 * num_res + 2] layers without bottleneck structure
 	'''
-	def __init__(self, shape = (32, 32, 3), classes = 10, filters = 16, num_res = 2, num_resblocks = 3, preactivation = True, bottleneck = False, axnorm = 0, n_tx = -1, n_rx = -1, rx_same = 1, num_layer = 1, image_fac = 2):
+	def __init__(self, shape = (32, 32, 3), classes = 10, filters = 16, num_res = 2, num_resblocks = 3, preactivation = True, bottleneck = False, axnorm = 0, n_tx = -1, n_rx = -1, rx_same = 1, rx_linear = False, num_layer = 1, image_fac = 2):
 		super().__init__()
 
 		# self._training = training
@@ -407,7 +410,7 @@ class resnet_cifar_rl(Model):
 			self.tx = resnet_cifar_tx(shape = shape, filters = filters, num_res = num_res, num_resblocks = num_resblocks, preactivation = preactivation, bottleneck = bottleneck, axnorm = axnorm, n_tx = n_tx, num_layer = num_layer)
 			# label = 'ResNet_CIFAR10_AE'
 		# Rx
-		self.rx = resnet_cifar_rx(shape = self.tx.layers[-1].output_shape[1:], classes = classes, n_rx = n_rx, num_layer = num_layer, rx_same = rx_same, image_fac = image_fac)
+		self.rx = resnet_cifar_rx(shape = self.tx.layers[-1].output_shape[1:], classes = classes, n_rx = n_rx, num_layer = num_layer, rx_same = rx_same, rx_linear = rx_linear, image_fac = image_fac)
 		# model = Model(inputs = intx, outputs = outrx, name = label)
 
 	@tf.function#(jit_compile=True)
@@ -428,52 +431,17 @@ class resnet_cifar_rl(Model):
 		x_p2 = tf.stop_gradient(x_p)
 		lnpxs = - tf.reduce_sum(tf.reduce_sum(tf.reduce_sum((x_p2 - x) ** 2, axis = -1), axis = -1), axis = -1) / (2 * perturbation_variance) # - 0.5 * tf.math.log((2 * np.pi * perturbation_variance) ** n_dim) # Gradient is backpropagated through `x`
 		tx_loss = tf.reduce_mean(lnpxs * cce2, axis = 0)
-		# lnpxs = - (x_p2 - x) ** 2 / (2 * perturbation_variance) # Gradient is backpropagated through `x`
-		# tx_loss = tf.reduce_mean(lnpxs * cce2[:, tf.newaxis, tf.newaxis, tf.newaxis], axis = 0)
-		# tx_loss = rl_ce([z, z_hat, x_p, x, self.perturbation_variance])
 
 		acc = tf.reduce_mean(tf.cast(tf.math.equal(tf.argmax(z_hat, axis = -1), tf.argmax(z, axis = -1)), dtype = 'float32'))
 		return z_hat, tx_loss, rx_loss, acc
-	# def train_step(self, data):
-	# 	'''Unpack the data. Its structure depends on your model and on what you pass to `fit()`.
-	# 	'''
-	# 	x, y = data
 
-	# 	with tf.GradientTape() as tape:
-	# 		y_pred = self(x, training=True)  # Forward pass
-	# 		# Compute the loss value
-	# 		# (the loss function is configured in `compile()`)
-	# 		loss = self.compiled_loss(y, y_pred, regularization_losses=self.losses)
-
-	# 	# Compute gradients
-	# 	trainable_vars = self.trainable_variables
-	# 	gradients = tape.gradient(loss, trainable_vars)
-	# 	# Update weights
-	# 	self.optimizer.apply_gradients(zip(gradients, trainable_vars))
-	# 	# Update metrics (includes the metric that tracks the loss)
-	# 	self.compiled_metrics.update_state(y, y_pred)
-	# 	# Return a dict mapping metric names to current value
-	# 	return {m.name: m.result() for m in self.metrics}
-
-# @tf.custom_gradient
-# def rl_ce(inp):
-# 	z, z_hat, x_p, x, perturbation_variance = inp
-# 	cce = tf.keras.losses.categorical_crossentropy(z, z_hat)
-# 	ce_loss = tf.reduce_mean(cce)
-# 	cce2 = tf.stop_gradient(cce)
-# 	x_p2 = tf.stop_gradient(x_p)
-# 	def grad(dy):
-# 		grad_lnpxs = (x_p2 - x) / perturbation_variance # Gradient is backpropagated through `x`
-# 		grad_tx = dy * grad_lnpxs * cce2[:, tf.newaxis, tf.newaxis, tf.newaxis]
-# 		return grad_tx
-# 	return ce_loss, grad
 
 
 class resnet_cifar_ae2(Model):
 	'''SINFONY trained via RL-SINFONY training procedure/function
 	ResNet multi transmitter autoencoder-like defined like in reinforcement learning version for CIFAR with [6 * num_res + 2] layers without bottleneck structure
 	'''
-	def __init__(self, shape = (32, 32, 3), classes = 10, filters = 16, num_res = 2, num_resblocks = 3, preactivation = True, bottleneck = False, axnorm = 0, n_tx = -1, n_rx = -1, rx_same = 1, num_layer = 1, image_fac = 2):
+	def __init__(self, shape = (32, 32, 3), classes = 10, filters = 16, num_res = 2, num_resblocks = 3, preactivation = True, bottleneck = False, axnorm = 0, n_tx = -1, n_rx = -1, rx_same = 1, rx_linear = False, num_layer = 1, image_fac = 2):
 		super().__init__()
 		# Tx
 		if image_fac >= 2:
@@ -481,7 +449,7 @@ class resnet_cifar_ae2(Model):
 		else:
 			self.tx = resnet_cifar_tx(shape = shape, filters = filters, num_res = num_res, num_resblocks = num_resblocks, preactivation = preactivation, bottleneck = bottleneck, axnorm = axnorm, n_tx = n_tx, num_layer = num_layer)
 		# Rx
-		self.rx = resnet_cifar_rx(shape = self.tx.layers[-1].output_shape[1:], classes = classes, n_rx = n_rx, num_layer = num_layer, rx_same = rx_same, image_fac = image_fac)
+		self.rx = resnet_cifar_rx(shape = self.tx.layers[-1].output_shape[1:], classes = classes, n_rx = n_rx, num_layer = num_layer, rx_same = rx_same, rx_linear = rx_linear, image_fac = image_fac)
 
 	@tf.function#(jit_compile=True)
 	def call(self, s, z, sigma, perturbation_variance = tf.constant(0.0, tf.float32)):
@@ -598,7 +566,7 @@ def rl_based_training(model, trainX, trainY, opt, opt_tx = None, opt_rx2 = None,
 
 	# Function that implements one finetuning receiver training iteration
 	@tf.function
-	def train_rx2(opt_rx, trainX, trainY, sigma):
+	def train_rx2(opt_rx2, trainX, trainY, sigma):
 		# Forward pass
 		with tf.GradientTape() as tape:
 			# Keep only the RX loss
@@ -606,7 +574,7 @@ def rl_based_training(model, trainX, trainY, opt, opt_tx = None, opt_rx2 = None,
 		## Computing and applying gradients
 		weights = model.rx.trainable_weights # .rx.trainable_weights
 		grads = tape.gradient(rx_loss, weights)
-		opt_rx.apply_gradients(zip(grads, weights))
+		opt_rx2.apply_gradients(zip(grads, weights))
 		# The RX loss is returned to print the progress
 		return rx_loss, acc
     
@@ -674,12 +642,12 @@ def rl_based_training(model, trainX, trainY, opt, opt_tx = None, opt_rx2 = None,
     
 
     # Once alternating training is done, the receiver is fine-tuned.
+	start_time = time.time()
 	print('Receiver fine-tuning... ')
 	for i in range(epochs_fine):
 		ii = 0
 		trainX, trainY = shuffle_data(trainX, trainY)
 		for batchX, batchY in get_batch(trainX, trainY, training_batch_size):
-			start_time = time.time()
 			rx_loss, acc = train_rx2(optimizer_rx2, batchX, batchY, sigma)
 			if (valX is None) or (valY is None):
 				print_str = '[Rx] Epoch: {}/{}, Batch: {}/{}, CE: {:.4f}, Acc: {:.2f}'.format(i + 1, epochs_fine, ii + 1, Ne, rx_loss.numpy(), acc.numpy())
@@ -688,7 +656,9 @@ def rl_based_training(model, trainX, trainY, opt, opt_tx = None, opt_rx2 = None,
 				print_str = '[Rx] Epoch: {}/{}, Batch: {}/{}, CE: {:.4f}/{:.4f}, Acc: {:.2f}/{:.2f}'.format(i + 1, epochs_fine, ii + 1, Ne, rx_loss.numpy(), rx_val_loss.numpy(), acc.numpy(), acc_val.numpy())
 			perf_meas['rx_loss'].append(rx_loss)
 			perf_meas['acc'].append(acc)
-			print(print_str + ', Time: {:04.2f}s, Tot. time: '.format(time.time() - start_time) + print_time(time.time()- start_time0)) #, end = '\r')
+			if ii % it_print == 0:
+				print(print_str + ', Time: {:04.2f}s, Tot. time: '.format(time.time() - start_time) + print_time(time.time()- start_time0)) #, end = '\r')
+				start_time = time.time()
 			ii = ii + 1
 
 	return perf_meas
@@ -704,26 +674,28 @@ def load_dataset(dataset = 'mnist'):
 	hirise: Images from Martian surface with crater classes, etc. Only available after download of hirise dataset
 	hirisecrater: Like hirise, but combines all classes except for craters in one class
 	'''
-	# load dataset
+	# Load dataset
 	if dataset == 'cifar10':
 		(trainX, trainY), (testX, testY) = tf.keras.datasets.cifar10.load_data()
 	elif dataset == 'mnist':
 		(trainX, trainY), (testX, testY) = tf.keras.datasets.mnist.load_data()
-		# reshape dataset to have a single channel
-		trainX = trainX[..., np.newaxis] # .reshape((trainX.shape[0], 28, 28, 1))
-		testX = testX[..., np.newaxis] # .reshape((testX.shape[0], 28, 28, 1))
+		# Reshape dataset to have a single channel
+		trainX = trainX[..., np.newaxis]
+		testX = testX[..., np.newaxis]
 	elif dataset == 'fashion_mnist':
 		(trainX, trainY), (testX, testY) = tf.keras.datasets.fashion_mnist.load_data()
-		# reshape dataset to have a single channel
-		trainX = trainX[..., np.newaxis] #.reshape((trainX.shape[0], 28, 28, 1))
-		testX = testX[..., np.newaxis] #.reshape((testX.shape[0], 28, 28, 1))
+		# Reshape dataset to have a single channel
+		trainX = trainX[..., np.newaxis]
+		testX = testX[..., np.newaxis]
 	elif dataset[0:6] == 'hirise':
-		data_dir = "/home/beck/Arbeit/Seafile/Promotion/Projekt/HiSE/MarsDatasets/hirise-map-proj-v3_2/"
+		# Change directory
+		data_dir = os.path.dirname(os.path.abspath(__file__)) + "/ImageDatasets/hirise-map-proj-v3_2/"
 		data_file = data_dir + 'labels-map-proj_v3_2.txt'
 		data_file2 = data_dir + 'labels-map-proj_v3_2_train_val_test.txt'
+		# Pandas required for dataset import
 		import pandas as pd
 		X = pd.read_csv(data_file, sep = "\s", header = None, engine = 'python')	# X.loc[:, 0]
-		X2 = pd.read_csv(data_file2, sep = "\s", header = None, engine = 'python')	# X.loc[:, 0]
+		X2 = pd.read_csv(data_file2, sep = "\s", header = None, engine = 'python')
 		# Add index of alphanumerically ordered data set to X2
 		indr = np.argmax(X.sort_values(by = 0, ascending = True).loc[:, 0].to_numpy() == X2.loc[:, 0].to_numpy()[:, None], axis = -1)
 		X2[3] = indr.tolist()
@@ -736,7 +708,8 @@ def load_dataset(dataset = 'mnist'):
 			image_res = (64, 64)
 		elif dataset[-3:] == '128':
 			image_res = (128, 128)
-		else: # full resolution
+		else:
+			# Full resolution
 			image_res = (227, 227)
 		train_ds = tf.keras.utils.image_dataset_from_directory(
 					data_dir,
@@ -755,26 +728,18 @@ def load_dataset(dataset = 'mnist'):
 		# Combine all classes except for craters in one class
 		if dataset[:12] == 'hirisecrater':
 			dataY = (dataY == 1) * 1
+		# Training data set
 		ind_set = X2.loc[X2.loc[:, 2] == 'train', 3].to_numpy()
 		trainX = dataX[ind_set, ...]
 		trainY = dataY[ind_set, ...]
+		# Validation data set
 		ind_set = X2.loc[X2.loc[:, 2] == 'val', 3].to_numpy()
 		testX = dataX[ind_set, ...]
 		testY = dataY[ind_set, ...]
-		# Actual test set...
+		# Actual test set, not used so far...
 		# ind_set = X2.loc[X2.loc[:, 2] == 'test', 3].to_numpy()
 		# testX2 = dataX[ind_set, ...]
 		# testY2 = dataY[ind_set, ...]
-		
-		# Visualize data
-		# plt.figure(figsize=(10, 10))
-		# for images, labels in train_ds.take(1):
-		# 	for i in range(9):
-		# 		plt.subplot(3, 3, i + 1)
-		# 		plt.imshow(images[i].numpy().astype("uint8"), cmap = 'Greys')
-		# 		plt.title(class_names[1].tolist()[labels[i].numpy()])
-		# 		plt.axis("off")
-		# 		images[i].numpy()
 	else:
 		print('Dataset not available.')
 	# one hot encode target values
@@ -803,11 +768,11 @@ def summarize_dataset(trainx, trainy, testx, testy):
 	print('Test: X=%s, y=%s' % (testx.shape, testy.shape))
 	# Plot first few images
 	for i in range(9):
-		# define subplot
+		# Define subplot
 		plt.subplot(330 + 1 + i)
-		# plot raw pixel data
+		# Plot raw pixel data
 		plt.imshow(trainx[i], cmap = plt.get_cmap('gray'))
-	# show the figure
+	# Show the figure
 	plt.show()
 
 
@@ -843,11 +808,13 @@ if __name__ == '__main__':
 	np.random.seed()            				# Random seed in every run, predictable random numbers for debugging with np.random.seed(0)
 
 	# Simulation
-	load = False								# Load model and reevaluate: False (default)
-	evaluation_mode = 0							# Evaluation mode: (0) default: Validation for SNR range, (1) Saving probability data for interface to application, (2) t-SNE embedding for visualization
-	filename = 'ResNet14_MNIST4_RL_adam_Ne6000_snr-4_6_conv0'
-	path = 'models_sem'
-	pathfile = os.path.join(path, filename)
+	load = False										# Load model and reevaluate: False (default)
+	evaluation_mode = 0									# Evaluation mode: (0) default: Validation for SNR range, (1) Saving probability data for interface to application, (2) t-SNE embedding for visualization
+	filename = 'ResNet14_MNIST6_Ne20_layer2_rxlinear_snr-4_6'			# ResNet20_CIFAR4_RL_sgdlr2_Ne400_snr-4_6_0, ResNet20_CIFAR4_sgdlr_Ne200_snr-4_6_conv2, ResNet14_MNIST4_RL_snr-4_6_test, ResNet14_MNIST4_RL_sgd_Ne3000, ResNet52_rblock5_hirise128, ResNet14_MNIST#N, ResNet20_CIFAR#N
+	path = 'models_sem'									# Sub path for saved data
+	path0 = os.path.dirname(os.path.abspath(__file__))	# Path of script being executed
+	pathfile = os.path.join(path0, path, filename)
+	pathfile2 = os.path.join(path0, path, 'RES_' + filename)
 	saveobj = savemodule(form = 'npz')
 
 	# Data set
@@ -856,16 +823,16 @@ if __name__ == '__main__':
 	trainx, trainy, testx, testy = load_dataset(dataset)
 
 	# Training
-	bs = 500					# SGD: 128/64, Adam: 500
-	optimizer = 'adam'			# sgd, adam, (sgdlrs) SGD with learning rate schedule
-	lr = 1e-3					# SGD/Adam: 1e-3, RL: 1e-4
+	bs = 64						# Batch size, SGD: 128/64, Adam: 500
+	optimizer = 'sgdlrs'		# sgd, adam, (sgdlrs) SGD with learning rate schedule
+	lr = 1e-3					# Learning rate, SGD/Adam: 1e-3, RL: 1e-4
 	iter_epoch = trainx.shape[0] / bs
-	Ne = 6000					# 200 in CIFAR-Originalimplementierung, 20 for MNIST
+	Ne = 20						# Number of epochs, 200 in CIFAR original implementation, 20 for MNIST
 	# Choose validation data set:
 	valX = testx[:100, ...]		# None, testx[:100, ...], testx[:1000, ...]
 	valY = testy[:100, ...]		# None, testy[:100, ...], testy[:1000, ...]
 	# RL training
-	rl = 1						# (0) default AE, (1) Reinforcement learning training, (2) AE trained with rl-based training implementation
+	rl = 0						# (0) default AE, (1) Reinforcement learning training, (2) AE trained with rl-based training implementation
 	it_print = 10				# Print after 1 (default) iterations training progress
 	rx_steps = 10				# Sequential receiver batches
 	tx_steps = 10				# Sequential transmitter batches
@@ -873,21 +840,22 @@ if __name__ == '__main__':
 	per_epoch_bound = []		# [2000] # only activated during tx_train
 	exp_boundaries = list(np.round(np.array(per_epoch_bound) / 2 * iter_epoch).astype('int'))
 	expl_var = pertubation_variance_schedule(expl_values, exp_boundaries)
-	Ne_fine = 600				# Receiver finetuning for RL-based training
+	Ne_fine = 200				# Receiver finetuning for RL-based training
 	# NN Com system design
-	ae = 1				# (0) only image recognition, (1) with (multi) com. system inbetween
-	axnorm = 0			# Power normalization axis: (0) batch dimension, (1) encode vector dimension n_tx
-	n_tx = 14			# 14/16| Tx layer length: (-1) without, (0) same length as layer before Tx, (>0) adjust length
-	n_rx = 56			# 56/64| Rx layer length: (-1) without, (0) same length as Tx layer, (>0) adjust length
-						# For comparison/orientation:
-						# 1. One ReLU layer at Tx/Rx: [36/16]/64 in "Learning Task-Oriented Communication for Edge Inference: An Information Bottleneck Approach"
-						# 2. Two ReLU layer at Tx: (128->)256->16 / at Rx: 256->128(->128) from "Deep Learning Enabled Semantic Communication Systems"
-	num_layer = 1		# Number of Tx/Rx layers: 1 (default)
-	rx_same = 1			# 0: individual rx, 1: same rx (default), 2: one joint rx
-	image_fac = 2		# Division of picture by 2 (default) to create 4 patches
-	noise = True		# Training with noise: True (default)
-	snr_min_train = -4 	# default: -4, 6
-	snr_max_train = 6	# default: 6, 16
+	ae = 1						# (0) only image recognition, (1) with (multi) com. system inbetween
+	axnorm = 0					# Power normalization axis: (0) batch dimension, (1) encode vector dimension n_tx
+	n_tx = 56					# 14/16| Tx layer length: (-1) without, (0) same length as layer before Tx, (>0) adjust length
+	n_rx = 56					# 56/64| Rx layer length: (-1) without, (0) same length as Tx layer, (>0) adjust length
+								# For comparison/orientation:
+								# 1. One ReLU layer at Tx/Rx: [36/16]/64 in "Learning Task-Oriented Communication for Edge Inference: An Information Bottleneck Approach"
+								# 2. Two ReLU layer at Tx: (128->)256->16 / at Rx: 256->128(->128) from "Deep Learning Enabled Semantic Communication Systems"
+	num_layer = 1				# Number of Tx/Rx layers: 1 (default)
+	rx_same = 1					# 0: individual rx, 1: same rx (default), 2: one joint rx
+	rx_linear = False			# False: No final layer for each Rx module
+	image_fac = 2				# Division of picture by 2 (default) to create 4 patches
+	noise = True				# Training with noise: True (default)
+	snr_min_train = -4 			# default: -4, 6
+	snr_max_train = 6			# default: 6, 16
 	N_iter = Ne * iter_epoch
 
 	# Some training functionality of model.fit()
@@ -911,7 +879,7 @@ if __name__ == '__main__':
 		opt_tx = SGD(learning_rate = lr_schedule, momentum = 0.9)
 	elif optimizer.lower() == 'adam':
 		# Adam and its variants
-		opt = Adam(learning_rate = lr) 		# Optimizer for rx training # Nadam() # yogi() # Generalization expected to be bad
+		opt = Adam(learning_rate = lr) 		# Optimizer for rx training # Nadam() # yogi() # Generalization/validation performance expected to be bad
 		opt_tx = Adam(learning_rate = lr) 	# Optimizer for tx training
 	else:
 		# Default: Stochastic Gradient Descent with momentum 0.9 as in ResNet paper
@@ -922,6 +890,8 @@ if __name__ == '__main__':
 	# ResNet20 model
 	classes = trainy.shape[1]			# 10 classes for CIFAR10, MNIST
 	num_res = 2							# Defines ResNet layer number, 3 for smallest ResNet20 for CIFAR10 (2 for MNIST)
+	if dataset == 'cifar10' and num_res <= 2:
+		print('Warning: Number of residual units is below minimum number for CIFAR10 dataset!')
 	num_resblocks = 3					# 3 for CIFAR10, MNIST
 	dataset_shape = list(trainx.shape)
 	filters = int(dataset_shape[1] / 2)	# 16 for CIFAR10 (adjust for MNIST with only 1 channel instead of 3?)
@@ -961,13 +931,13 @@ if __name__ == '__main__':
 			# Select SINFONY or RL-SINFONY
 			if rl == 1:
 				# RL-SINFONY
-				model = resnet_cifar_rl(shape = dataset_shape[1:], classes = classes, filters = filters, num_res = num_res, num_resblocks = num_resblocks, preactivation = preactivation, bottleneck = bottleneck, axnorm = axnorm, n_tx = n_tx, n_rx = n_rx, rx_same = rx_same, num_layer = num_layer, image_fac = image_fac)
+				model = resnet_cifar_rl(shape = dataset_shape[1:], classes = classes, filters = filters, num_res = num_res, num_resblocks = num_resblocks, preactivation = preactivation, bottleneck = bottleneck, axnorm = axnorm, n_tx = n_tx, n_rx = n_rx, rx_same = rx_same, rx_linear = rx_linear, num_layer = num_layer, image_fac = image_fac)
 			elif rl == 2:
 				# SINFONY trained via RL-SINFONY training loop
-				model = resnet_cifar_ae2(shape = dataset_shape[1:], classes = classes, filters = filters, num_res = num_res, num_resblocks = num_resblocks, preactivation = preactivation, bottleneck = bottleneck, axnorm = axnorm, n_tx = n_tx, n_rx = n_rx, rx_same = rx_same, num_layer = num_layer, image_fac = image_fac)
+				model = resnet_cifar_ae2(shape = dataset_shape[1:], classes = classes, filters = filters, num_res = num_res, num_resblocks = num_resblocks, preactivation = preactivation, bottleneck = bottleneck, axnorm = axnorm, n_tx = n_tx, n_rx = n_rx, rx_same = rx_same, rx_linear = rx_linear, num_layer = num_layer, image_fac = image_fac)
 			else:
 				# SINFONY
-				model, tx, rx = resnet_cifar_ae(shape = dataset_shape[1:], classes = classes, filters = filters, num_res = num_res, num_resblocks = num_resblocks, preactivation = preactivation, bottleneck = bottleneck, axnorm = axnorm, n_tx = n_tx, n_rx = n_rx, rx_same = rx_same, num_layer = num_layer, sigma = sigma_train, image_fac = image_fac)
+				model, tx, rx = resnet_cifar_ae(shape = dataset_shape[1:], classes = classes, filters = filters, num_res = num_res, num_resblocks = num_resblocks, preactivation = preactivation, bottleneck = bottleneck, axnorm = axnorm, n_tx = n_tx, n_rx = n_rx, rx_same = rx_same, rx_linear = rx_linear, num_layer = num_layer, sigma = sigma_train, image_fac = image_fac)
 		else:
 			# Standard image recognition based on total image
 			model = resnet_cifar(shape = dataset_shape[1:], classes = classes, filters = filters, num_res = num_res, num_resblocks = num_resblocks, preactivation = preactivation, bottleneck = bottleneck)
@@ -980,7 +950,7 @@ if __name__ == '__main__':
 				model = resnet_cifar_rl(shape = dataset_shape[1:], classes = classes, filters = filters, num_res = num_res, num_resblocks = num_resblocks, preactivation = preactivation, bottleneck = bottleneck, axnorm = axnorm, n_tx = n_tx, n_rx = n_rx, rx_same = rx_same, num_layer = num_layer, image_fac = image_fac)
 			elif rl == 2:
 				model = resnet_cifar_ae2(shape = dataset_shape[1:], classes = classes, filters = filters, num_res = num_res, num_resblocks = num_resblocks, preactivation = preactivation, bottleneck = bottleneck, axnorm = axnorm, n_tx = n_tx, n_rx = n_rx, rx_same = rx_same, num_layer = num_layer, image_fac = image_fac)
-			model.load_weights(os.path.join(pathfile, filename))
+			model.load_weights(os.path.join(path0, pathfile, filename))
 		else:
 			# Load SINFONY model
 			model = tf.keras.models.load_model(pathfile)
@@ -991,7 +961,6 @@ if __name__ == '__main__':
 		model.summary()
 	
 	## Compile and train model
-	pathfile = os.path.join(path, 'RES_' + filename)
 	if load == False:
 		if rl >= 1:
 			# RL-SINFONY
@@ -999,7 +968,7 @@ if __name__ == '__main__':
 			results = rl_based_training(model, train_norm, trainy, opt, opt_tx, opt_rx2, valX = valX, valY = valY, epochs = Ne, epochs_fine = Ne_fine, tx_steps = tx_steps, rx_steps = rx_steps, training_batch_size = bs, sigma = sigma_train, perturbation_var = expl_var, it_print = it_print)
 			# Save model weights:
 			print('Saving model weights...')
-			model.save_weights(os.path.join(pathfile, filename))
+			model.save_weights(os.path.join(path0, pathfile, filename))
 			print('Model weigths saved.')
 			# Save training history to avoid data loss, if validation fails
 			print('Save training history...')
@@ -1020,22 +989,27 @@ if __name__ == '__main__':
 				results['acc'] = batch_tracking.batch_end_acc
 				# Save val_loss from model.fit() history under different name since it will be overwritten otherwise
 				results['val_loss_history'] = results.pop('val_loss')
-		saveobj.save(pathfile, results)
+		saveobj.save(pathfile2, results)
 		print('Saved!')
 	else:
 		# Load training history to include evaluation
 		print('Load training history...')
-		results = saveobj.load(pathfile)
+		results = saveobj.load(pathfile2)
+		if results == None:
+			results = dict()
+		else:
+			results = dict(results)
 		print('Loaded!')
 
 	##  Evaluation of model
+	SNR = np.linspace(SNR_range[0], SNR_range[1], int((SNR_range[1] - SNR_range[0]) / step_size) + 1)
 	if evaluation_mode == 0:
 		print('Evaluate model...')
 		print(filename)
 		## Evaluate model for different SNRs
-		SNR = np.linspace(SNR_range[0], SNR_range[1], int((SNR_range[1] - SNR_range[0]) / step_size) + 1)
-		if ae == True and noise == True:
+		if ae == True:
 			# SINFONY/RL-SINFONY
+			start_time = time.time()
 			eval_meas = [[], []]
 			for ii, snr in enumerate(SNR):
 				# Evaluate for each SNR in SNR range
@@ -1047,6 +1021,7 @@ if __name__ == '__main__':
 				lossi = 0
 				acci = 0
 				for ii2 in range(0, val_rounds):
+					start_time2 = time.time()
 					# Evaluate for val_rounds with different noise realizations (akin to training epochs)
 					if rl >= 1:
 						# RL-SINFONY validation step
@@ -1054,12 +1029,15 @@ if __name__ == '__main__':
 					else:
 						# SINFONY validation step
 						lossii, accii = model.evaluate(testnorm, testy)
-					lossi += lossii / val_rounds
-					acci += accii / val_rounds
+					
+					# Add current measures to total measures
+					lossi = (ii2 * lossi + lossii) / (ii2 + 1)
+					acci = (ii2 * acci + accii) / (ii2 + 1)
+					print('Validation Round: {}/{}, CE: {:.4f}, Acc: {:.2f}'.format(ii2 + 1, val_rounds, lossi, acci) + ', Time: ' + print_time(time.time() - start_time2))
 				# Append list with evaluation for each SNR value
 				eval_meas[0].append(lossi)
 				eval_meas[1].append(acci)
-				print('Iteration: {}/{}, SNR: {}, CE: {:.4f}, Acc: {:.2f}'.format(ii + 1, len(SNR), snr, lossi, acci))
+				print('Iteration: {}/{}, SNR: {}, CE: {:.4f}, Acc: {:.2f}'.format(ii + 1, len(SNR), snr, lossi, acci) + ', Time: ' + print_time(time.time() - start_time))
 			acc = np.array(eval_meas[1])
 			loss = np.array(eval_meas[0])
 			# Show performance curve
@@ -1069,43 +1047,46 @@ if __name__ == '__main__':
 			plt.semilogy(SNR, loss)
 		else:
 			# Standard image recognition: Evaluate model accuracy once for test data
-			SNR = []	# No noise, thus no SNR
 			if rl >= 1:
 				_, _, lossi, acci = model(testnorm, testy, sigma = tf.constant([0, 0], dtype = 'float32'))
 			else:
 				lossi, acci = model.evaluate(testnorm, testy)
-			loss = np.array(lossi)
-			acc = np.array(acci)
-			print('> %.3f' % (acc * 100.0))
+			# Independent from SNR / constant, but plotted over SNR range
+			loss = np.array(lossi) * np.ones(SNR.shape)
+			acc = np.array(acci) * np.ones(SNR.shape)
+			print('> %.3f' % (acci * 100.0))
 		
 		## Save evaluation
 		print('Save evaluation...')
 		results['snr'] = SNR
 		results['val_loss'] = loss
 		results['val_acc'] = acc
-		pathfile = os.path.join(path, 'RES_' + filename)
-		saveobj.save(pathfile, results)
+		saveobj.save(pathfile2, results)
 		print('Evaluation saved.')
 	elif evaluation_mode == 1:
 		# Give results of training and validation data to application beyond
 		print('Calculate interface data...')
-		if ae == 1:
-			sigma = mop.csigma(snr_eval)
-			sigma_test = np.array([sigma, sigma], dtype = 'float32')
-			model.layers[2].set_weights([sigma_test])
-		probs_val = model.predict(testnorm)
-		probs_train = model.predict(train_norm)
+		sigma = mop.csigma(snr_eval)
+		sigma_test = np.array([sigma, sigma], dtype = 'float32')
+		if rl == 1:
+			probs_val, _, _, _ = model(testnorm, testy, sigma = tf.constant(sigma_test, dtype = 'float32'))
+			probs_train, _, _, _ = model(train_norm, trainy, sigma = tf.constant(sigma_test, dtype = 'float32'))
+		else:
+			if ae == 1:
+				model.layers[2].set_weights([sigma_test])			
+			probs_val = model.predict(testnorm)
+			probs_train = model.predict(train_norm)
 		# Save interface data
 		print('Save interface data...')
-		pathfile = os.path.join(path, 'output_' + filename)
+		pathfile2 = os.path.join(path0, path, 'output_' + filename)
 		if ae == 1:
-			pathfile = pathfile + '_snr' + str(snr_eval) + 'dB'
+			pathfile2 = pathfile2 + '_snr' + str(snr_eval) + 'dB'
 		results = dict()
 		results['probs_val'] = probs_val
 		results['probs_train'] = probs_train
 		results['class_val'] = testy
 		results['class_train'] = trainy
-		saveobj.save(pathfile, results)
+		saveobj.save(pathfile2, results)
 		print('Interface data saved.')
 	elif evaluation_mode == 2:
 		# t-SNE embedding for visualization
