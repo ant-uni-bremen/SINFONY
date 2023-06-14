@@ -1,5 +1,7 @@
 # SINFONY: Semantic INFOrmation traNsmission and recoverY
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.8006567.svg)](https://doi.org/10.5281/zenodo.8006567)
+
 Source code from scientific research articles about the semantic communication approach SINFONY:
 
 1. Edgar Beck, Carsten Bockelmann and Armin Dekorsy, "Semantic Information Recovery in Wireless Networks," https://doi.org/10.48550/arXiv.2204.13366
