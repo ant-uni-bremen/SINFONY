@@ -4,6 +4,10 @@
 Created on Thu Mar 03 11:04:21 2022
 
 @author: beck
+Simulation framework for numerical results of the articles:
+1. Edgar Beck, Carsten Bockelmann, and Armin Dekorsy, "Semantic Information Recovery in Wireless Networks," https://doi.org/10.48550/arXiv.2204.13366
+(First draft version: E. Beck, C. Bockelmann, and A. Dekorsy, “Semantic communication: An information bottleneck view,” arXiv:2204.13366, Apr. 2022)
+2. Edgar Beck, Carsten Bockelmann, and Armin Dekorsy, "Model-free Reinforcement Learning of Semantic Communication by Stochastic Policy Gradient," https://doi.org/10.48550/arXiv.2305.03571
 """
 
 ## LOADED PACKAGES
@@ -59,7 +63,6 @@ class Residual(tf.keras.Model):
 			self.conv3 = None
 		self.bn1 = tf.keras.layers.BatchNormalization()
 		self.bn2 = tf.keras.layers.BatchNormalization()
-
 
 	#@tf.function # different results with tf.function decorator -> not necessary since the layers/models are just defined here, it is not a function
 	def call(self, X):
@@ -169,7 +172,7 @@ def resnet(shape = (32, 32, 3), classes = 10, filters = 64, num_res = 2, num_res
 	classes: number of image classes
 	num_resblocks: is fixed to 4 (compared to 3 for CIFAR10)
 	'''
-	weight_init = 'he_uniform' # default: he_uniform, he_normal in ResNet paper
+	weight_init = 'he_uniform' # Default: he_uniform, he_normal in ResNet paper
 	weight_decay = tf.keras.regularizers.l2(0.0001)
 	# Step 1 (Setup Input Layer)
 	x_input = tf.keras.layers.Input(shape)
@@ -207,7 +210,7 @@ def resnet_cifar(shape = (32, 32, 3), classes = 10, filters = 16, num_res = 3, n
 	num_resblocks: is fixed to 3 for CIFAR10
 	num_res: with 3 we arrive at ResNet20
 	'''
-	weight_init = 'he_uniform' # default: he_uniform, he_normal in ResNet paper
+	weight_init = 'he_uniform' # Default: he_uniform, he_normal in ResNet paper
 	weight_decay = tf.keras.regularizers.l2(0.0001)
 	# Step 1 (Setup Input Layer)
 	x_input = tf.keras.layers.Input(shape)
@@ -243,7 +246,7 @@ def resnet_cifar_tx(shape = (32, 32, 3), filters = 16, num_res = 2, num_resblock
 	axnorm: axis for normalization of tx output (otherwise power goes to infinity...)
 	n_tx: Tx/Rx layer length: (-1) without, (0) same length, (>0) adjust length
 	'''
-	weight_init = 'he_uniform' # default: he_uniform, he_normal in ResNet paper
+	weight_init = 'he_uniform' # Default: he_uniform, he_normal in ResNet paper
 	weight_decay = tf.keras.regularizers.l2(0.0001)
 	# Tx
 	# Step 1 (Setup Input Layer)
@@ -673,6 +676,7 @@ def load_dataset(dataset = 'mnist'):
 	fasion_mnist: Like mnist but with fashion images
 	hirise: Images from Martian surface with crater classes, etc. Only available after download of hirise dataset
 	hirisecrater: Like hirise, but combines all classes except for craters in one class
+	Fraeser: Images from bime (processing/production) with decent and damaged tools
 	'''
 	# Load dataset
 	if dataset == 'cifar10':
@@ -688,8 +692,8 @@ def load_dataset(dataset = 'mnist'):
 		trainX = trainX[..., np.newaxis]
 		testX = testX[..., np.newaxis]
 	elif dataset[0:6] == 'hirise':
-		# Change directory
-		data_dir = os.path.dirname(os.path.abspath(__file__)) + "/ImageDatasets/hirise-map-proj-v3_2/"
+		# Select subdirectory where images are saved
+		data_dir = os.path.dirname(os.path.abspath(__file__)) + "/Datasets/hirise-map-proj-v3_2/"
 		data_file = data_dir + 'labels-map-proj_v3_2.txt'
 		data_file2 = data_dir + 'labels-map-proj_v3_2_train_val_test.txt'
 		# Pandas required for dataset import
@@ -736,13 +740,13 @@ def load_dataset(dataset = 'mnist'):
 		ind_set = X2.loc[X2.loc[:, 2] == 'val', 3].to_numpy()
 		testX = dataX[ind_set, ...]
 		testY = dataY[ind_set, ...]
-		# Actual test set, not used so far...
+		# Actual test set (small), not used so far...
 		# ind_set = X2.loc[X2.loc[:, 2] == 'test', 3].to_numpy()
 		# testX2 = dataX[ind_set, ...]
 		# testY2 = dataY[ind_set, ...]
 	else:
 		print('Dataset not available.')
-	# one hot encode target values
+	# One hot encode target values
 	trainY = tf.keras.utils.to_categorical(trainY)
 	testY = tf.keras.utils.to_categorical(testY)
 	return trainX, trainY, testX, testY
@@ -810,7 +814,7 @@ if __name__ == '__main__':
 	# Simulation
 	load = False										# Load model and reevaluate: False (default)
 	evaluation_mode = 0									# Evaluation mode: (0) default: Validation for SNR range, (1) Saving probability data for interface to application, (2) t-SNE embedding for visualization
-	filename = 'ResNet14_MNIST6_Ne20_layer2_rxlinear_snr-4_6'			# ResNet20_CIFAR4_RL_sgdlr2_Ne400_snr-4_6_0, ResNet20_CIFAR4_sgdlr_Ne200_snr-4_6_conv2, ResNet14_MNIST4_RL_snr-4_6_test, ResNet14_MNIST4_RL_sgd_Ne3000, ResNet52_rblock5_hirise128, ResNet14_MNIST#N, ResNet20_CIFAR#N
+	filename = 'ResNet14_MNIST6_Ne20_snr-4_6'			# ResNet20_CIFAR4_RL_sgdlr2_Ne400_snr-4_6_0, ResNet20_CIFAR4_sgdlr_Ne200_snr-4_6_conv2, ResNet14_MNIST4_RL_snr-4_6_test, ResNet14_MNIST4_RL_sgd_Ne3000, ResNet52_rblock5_hirise128, ResNet14_MNIST#N, ResNet20_CIFAR#N
 	path = 'models_sem'									# Sub path for saved data
 	path0 = os.path.dirname(os.path.abspath(__file__))	# Path of script being executed
 	pathfile = os.path.join(path0, path, filename)
