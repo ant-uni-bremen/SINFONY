@@ -4,14 +4,14 @@
 
 Source code from scientific research articles [1, 2] about the semantic communication approach SINFONY:
 
-1. Edgar Beck, Carsten Bockelmann, and Armin Dekorsy, "Semantic Information Recovery in Wireless Networks," https://doi.org/10.48550/arXiv.2204.13366
+1. Edgar Beck, Carsten Bockelmann, and Armin Dekorsy, 1. Edgar Beck, Carsten Bockelmann, and Armin Dekorsy, “Semantic Information Recovery in Wireless Networks,” MDPI Sensors, vol. 23, no. 14, p. 6347, 2023
 (First draft version: E. Beck, C. Bockelmann, and A. Dekorsy, “Semantic communication: An information bottleneck view,” arXiv:2204.13366, Apr. 2022)
 
 2. Edgar Beck, Carsten Bockelmann, and Armin Dekorsy, "Model-free Reinforcement Learning of Semantic Communication by Stochastic Policy Gradient," https://doi.org/10.48550/arXiv.2305.03571
 
 Further, the source code of the proposed semantics-aware, i.e., seismic exploration data-aware, receiver in [3] can be found here:
 
-3. E. Beck, B.-S. Shin, S. Wang, T. Wiedemann, D. Shutin, and A. Dekorsy, “Swarm Exploration and Communications: A First Step towards Mutually-Aware Integration by Probabilistic Learning,” Electronics, vol. 12, no. 8, p. 1908, Apr. 2023
+3. E. Beck, B.-S. Shin, S. Wang, T. Wiedemann, D. Shutin, and A. Dekorsy, “Swarm Exploration and Communications: A First Step towards Mutually-Aware Integration by Probabilistic Learning,” MPDI Electronics, vol. 12, no. 8, p. 1908, Apr. 2023
 
 # Requirements & Usage
 
