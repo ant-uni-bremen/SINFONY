@@ -11,7 +11,7 @@ Source code from scientific research articles [1, 2] about the semantic communic
 
 Further, the source code of the proposed semantics-aware, i.e., seismic exploration data-aware, receiver in [3] can be found here:
 
-3. E. Beck, B.-S. Shin, S. Wang, T. Wiedemann, D. Shutin, and A. Dekorsy, “Swarm Exploration and Communications: A First Step towards Mutually-Aware Integration by Probabilistic Learning,” MPDI Electronics, vol. 12, no. 8, p. 1908, Apr. 2023
+3. E. Beck, B.-S. Shin, S. Wang, T. Wiedemann, D. Shutin, and A. Dekorsy, “Swarm Exploration and Communications: A First Step towards Mutually-Aware Integration by Probabilistic Learning,” MPDI Electronics, vol. 12, no. 8, p. 1908, Apr. 2023. https://doi.org/10.3390/electronics12081908
 
 # Requirements & Usage
 
