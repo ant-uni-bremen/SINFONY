@@ -4,7 +4,7 @@
 
 Source code from scientific research articles [1, 2] about the semantic communication approach SINFONY:
 
-1. Edgar Beck, Carsten Bockelmann, and Armin Dekorsy, 1. Edgar Beck, Carsten Bockelmann, and Armin Dekorsy, “Semantic Information Recovery in Wireless Networks,” MDPI Sensors, vol. 23, no. 14, p. 6347, 2023
+1. Edgar Beck, Carsten Bockelmann, and Armin Dekorsy, 1. Edgar Beck, Carsten Bockelmann, and Armin Dekorsy, “Semantic Information Recovery in Wireless Networks,” MDPI Sensors, vol. 23, no. 14, p. 6347, 2023. https://doi.org/10.3390/s23146347
 (First draft version: E. Beck, C. Bockelmann, and A. Dekorsy, “Semantic communication: An information bottleneck view,” arXiv:2204.13366, Apr. 2022)
 
 2. Edgar Beck, Carsten Bockelmann, and Armin Dekorsy, "Model-free Reinforcement Learning of Semantic Communication by Stochastic Policy Gradient," https://doi.org/10.48550/arXiv.2305.03571
