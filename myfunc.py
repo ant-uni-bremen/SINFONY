@@ -380,8 +380,8 @@ class performance_measures():
             self.err_save(snr, ebn0, cebn0)
             print_str = self.it_print()
         else:
-            self.err_del()
             print_str = self.it_fail_print()
+            self.err_del()
         return print_str, sv_flag
 
     def sel_crit(self):
@@ -692,7 +692,7 @@ class performance_measures():
             self.CE = results['ce']
             self.MSE = results['mse']
             if 'ls' in results:
-                self.CFER = results['ls']
+                self.LS = results['ls']
         return self
     
     def err_print(self):
@@ -711,6 +711,7 @@ class performance_measures():
         '''Prints selected performance measures for current iteration
         '''
         # iterstr = '{},'.format(iteration)
+        # Code rate included in EbN0 
         print_str = 'EbN0: {:.1f} (SNR: {:.1f}), CBER: {:.2e}, BER: {:.2e}, SER: {:.2e}, CE: {:.6f}'.format(self.CEbN0[-1], self.SNR[-1], self.CBER[-1], self.BER[-1], self.SER[-1], self.CE[-1])
         return print_str
 
