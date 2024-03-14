@@ -1,0 +1,82 @@
+load_settings:
+  load: False                             # start new training: 0 / load saved training: 1
+  filename: ResNet14_MNIST6_RL_adam_Ne6000_snr-4_6_onetransmitter_test
+  path: models/mnist_rl                   # path of simulation and model files
+  save_format: npz                        # save format
+  simulation_filename_prefix: RES_        # name prefix of simulation file
+  numerical_precision: float32            # computation accuracy: float16, float32 (default), or float64
+  gpu: -2                                 # Select GPU, default: 0, -1 (CPU), -2 (automatically) 
+
+dataset:
+  dataset: mnist                          # mnist, cifar10, fashion_mnist, hirise64, hirisecrater, fraeser64
+  show_dataset: True                      # Show first dataset examples, just for demonstration
+  validation_split: 0.85                  # If dataset is not split yet into training and validation data
+  image_split: True                       # Only for fraeser, default: True, split image according to given dataset rules
+
+training:
+  optimizer: adam                         # sgd, adam, (sgdlrs) SGD with learning rate schedule
+  batch_size: 500                         # default: 64 (sgd), 500 (adam)
+  number_epochs: 6000                     # default: 200 (CIFAR), 20 (MNIST)
+  validation_dataset_size: 1000           # full, 0, 100, 1000
+  learning_rate: 1.0e-3                   # SGD/Adam: 1e-3, RL: 1e-4
+  learning_rate_schedule:                 # Learning rate schedules
+    active: False
+    epoch_bound:                          # Original ResNet: 1/2, 3/4 of training learning rate division by 10, in total 64k iterations at 32000, 48000 iterations of 64000 in total:
+      - 3                                 # [100, 150] for CIFAR / [3, 6] for MNIST / [2, 50] for hirise / [100] for RL CIFAR
+      - 6
+    values:                               # [1e-1, 1e-2, 1e-3] for ae training / [0.001, 0.0001, 0.00001] for adam / [1e-3, 1e-4, 1e-5] for rl training / [1e-3, 1e-4] for rl CIFAR training sgdlr2
+      - 1.0e-1
+      - 1.0e-2
+      - 1.0e-3
+  momentum: 0.9                           # default: 0.9
+
+model:
+  communication:
+    transceiver_split: 1                  # (0) only image recognition, (1) with (multi) com. system inbetween
+    power_normalization_axis: 0           # (0) batch dimension, (1) encode vector dimension n_tx
+    number_channel_uses: 56               # 14/16| Tx layer length: (-1) without, (0) same length as layer before Tx, (>0) adjust length
+    rx_layer_width: 56                    # 56/64| Rx layer width: (-1) without, (0) same length as Tx layer, (>0) adjust length
+    # For comparison/orientation:
+    # 1. One ReLU layer at Tx/Rx: [36/16]/64 in "Learning Task-Oriented Communication for Edge Inference: An Information Bottleneck Approach"
+    # 2. Two ReLU layer at Tx: (128->)256->16 / at Rx: 256->128(->128) from "Deep Learning Enabled Semantic Communication Systems"
+    number_txrx_layer: 1                  # number of Tx/Rx layers: 1 (default)
+    image_split_factor: 1                 # division of picture by 2 (default) to create 4 patches, only active if no list image input provided
+    rx_same: 1                            # 0: individual rx, 1: same rx (default), 2: one joint rx
+    rx_linear: False                      # False: No final layer for each Rx module
+    weight_initialization: he_uniform     # default: he_uniform
+    weight_decay: null                    # default: null, l2 layer regularization
+  noise:                                  # Training with noise
+    active: True                          # True (default)
+    snr_min_train: -4                     # default: -4, 6
+    snr_max_train: 6                      # default: 6, 16
+  resnet:
+    architecture: cifar10                 # cifar10, imagenet
+    number_resnet_blocks: 3               # 3 fixed for CIFAR10, MNIST (Note: should match amount of number_residual_units entries, otherwise only the first entry is repeated)
+    number_residual_units: 2              # defines ResNet layer number, 3 for smallest ResNet20 for CIFAR10 (2 for MNIST)
+    number_filters: 16                    # 16 for CIFAR10, number of filters in first layer per image (Guideline: Set number of filters to be half of the smallest dimension of each image)
+    preactivation: True                   # True
+    bottleneck: False                     # False
+    batch_normalization: True             # True
+    weight_initialization: he_uniform     # default: he_uniform
+    weight_decay: 0.0001                  # default: 0.0001, l2 layer regularization
+    multi_image_layer_number: 0           # Only with transceiversplit = 0: null/0 means no additional feature merge layers for the image list
+    multi_image_layer_width: 0            # Only with transceiversplit = 0: null/0 means width of former layer
+
+reinforcement_learning:
+  active: 1                               # (0) default AE, (1) Reinforcement learning training, (2) AE trained with rl-based training implementation
+  iteration_print: 10                     # Print after 1 (default) iterations training progress
+  rx_steps: 10                            # Sequential receiver batches
+  tx_steps: 10                            # Sequential transmitter batches
+  exploration_variance:                   # [0.15, 0.15 ** 2] # with higher exploration variance, the gradient estimator variance decreases at the cost of more bias...
+    - 0.15
+  exploration_boundaries:                 # [2000] # only activated during tx_train
+    - []
+  number_epochs_receiver_finetuning: 600  # Receiver finetuning after RL-based training
+  own_optimizer_rxfinetuning: False       # False
+
+evaluation:
+  mode: 0                                 # Evaluation mode: (0) default: Validation for SNR range, (1) Saving probability data for interface to application, (2) t-SNE embedding for visualization
+  snr_range: [-30, 20]                    # SNR in dB range: [-30, 20] (default)
+  snr_step_size: 1                        # SNR in dB steps: 1 (default)
+  validation_rounds: 10                   # Rounds through validation data at one SNR
+  evaluation_snr: 20                      # SNR value for interface data / T-SNE embedding: -10 / 20

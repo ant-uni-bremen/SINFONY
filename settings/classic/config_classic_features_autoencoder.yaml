@@ -1,0 +1,52 @@
+load_settings:
+  load: False                             # start new training: 0 / load saved training: 1
+  filename_suffix: _ntx56_NL56_Ne100_snr-4_6_test # '_ntx56_NL112_Ne100_snr-4_6', _ntx56_NL56_Ne100_snr-4_6, _ntx14_NL28_Ne100_snr-4_6
+  path_classic: models/classic            # path of classic simulation files
+  path_models: models                     # path of model files
+  save_format: npz                        # save format
+  simulation_filename_prefix: RES_        # name prefix of simulation file
+  numerical_precision: float32            # computation accuracy: float16, float32 (default), or float64
+  gpu: -2                                 # Select GPU, default: 0, -1 (CPU), -2 (automatically)
+
+dataset:
+  dataset: mnist                          # mnist, cifar10, fashion_mnist, hirise64, hirisecrater, fraeser64
+  show_dataset: True                      # Show first dataset examples, just for demonstration
+  validation_split: 0.85                  # If dataset is not split yet into training and validation data
+  image_split: True                       # Only for fraeser, default: True, split image according to given dataset rules
+
+training:
+  loss: mean_squared_error                # mean_squared_error
+  optimizer: adam                         # sgd, adam, (sgdlrs) SGD with learning rate schedule
+  batch_size: 64                          # default: 64 (sgd), 500 (adam)
+  number_epochs: 100                      # Number of Epochs for rvec: 100
+  validation_dataset_size: full           # full, 0, 100, 1000
+  learning_rate: 1.0e-3                   # SGD/Adam: 1e-3
+  learning_rate_schedule:                 # Learning rate schedules
+    active: True
+    epoch_bound:                          # Original ResNet: 1/2, 3/4 of training learning rate division by 10, in total 64k iterations at 32000, 48000 iterations of 64000 in total:
+      - 3                                 # [3, 6] for MNIST
+      - 6
+    values:                               # [0.1, 0.01, 0.001] for ae training
+      - 1.0e-1
+      - 1.0e-2
+      - 1.0e-3
+  momentum: 0.9                           # default: 0.9
+
+model:
+  # AE architecture for feature output
+  feature_input: AErvec                   # AE, AErvec, AErvec_ind
+  power_normalization_axis: 0             # AE-Tx output power normalization axis: (0) batch dimension, (1) encode vector dimension n_tx
+  number_channel_uses: 56                 # default: 56 (AE_rvec) / 4, 16 (AE)
+  # NL = 2 * number_channel_uses          # Intermediate layer width: 2 * number_channel_uses
+  layer_width_tx_intermediate: 56         # Intermediate Tx layer width  # NL = 2 * number_channel_uses
+  layer_width_rx_intermediate: 56         # Intermediate Rx layer width
+  number_txrx_layer: 1                    # Number of Tx and Rx module layers, default: 1
+  receiver_final_layer_linear: False      # Final linear Rx module layer? (default: False)
+  noise:                                  # Training with noise
+    snr_min_train: -4                     # default: -4, 6
+    snr_max_train: 6                      # default: 6, 16
+
+evaluation:
+  snr_range: [-30, 20]                    # SNR in dB range: [-30, 20] (default)
+  snr_step_size: 1                        # SNR in dB steps: 1 (default)
+  validation_rounds: 10                   # Rounds through validation data at one SNR

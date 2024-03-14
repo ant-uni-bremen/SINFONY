@@ -1,0 +1,12 @@
+# Blender MTL File: 'cube.blend'
+# Material Count: 1
+
+newmtl SpaceGold
+Ns 665.639999
+Ka 1.000000 1.000000 1.000000
+Kd 0.010000 1.000000 0.010000
+Ks 0.458333 0.458333 0.458333
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 3
