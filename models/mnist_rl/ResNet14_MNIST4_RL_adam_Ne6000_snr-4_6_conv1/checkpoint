@@ -1,0 +1,2 @@
+model_checkpoint_path: "ResNet14_MNIST4_RL_adam_Ne6000_snr-4_6_conv1"
+all_model_checkpoint_paths: "ResNet14_MNIST4_RL_adam_Ne6000_snr-4_6_conv1"

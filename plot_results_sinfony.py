@@ -32,6 +32,67 @@ ACCURACY_MEASURES = ['val_acc', 'accuracy', 'val_accuracy',
                      'acc', 'acc_val']  # Accuracy measures
 
 
+def copy_published_models2repository(selected_plots, datapath='models', simulation_filename_prefix='RES_'):
+    '''Copy published/selected models to GitHub repository
+    '''
+    import shutil
+    # Copy all selected curves
+    git_path = '../github/SINFONY/'
+    load = savemodule()
+    load_format = 'npz'
+    for plot in selected_plots:
+        # Performance curves
+        path = datapath
+        if 'title' in plot:
+            subpath = plot['title'][1]
+            if isinstance(subpath, str) and subpath != '' and subpath is not None:
+                path = os.path.join(datapath, subpath)
+
+        for _, table_entries in plot.items():
+            if table_entries[-1]:
+                # If curve activated in plot, load data
+                simulation_file_basename = os.path.basename(table_entries[0])
+                simulation_file_subpath = os.path.dirname(table_entries[0])
+                simulation_file = os.path.join(
+                    simulation_file_subpath, simulation_filename_prefix + simulation_file_basename)
+                pathfile = os.path.join(path, simulation_file)
+                load_file = load.load(pathfile, form=load_format)
+                if load_file is not None:
+                    source_folder = os.path.join(path, table_entries[0])
+                    destination_folder = os.path.join(
+                        git_path, path, simulation_file_subpath)
+                    destination_files = os.path.join(
+                        destination_folder, simulation_file_basename)
+                    destination_simulation_file = os.path.join(
+                        destination_folder, simulation_file_basename) + '.' + load_format
+                    # Remove the destination folder if it exists
+                    if os.path.exists(destination_files):
+                        shutil.rmtree(destination_files)
+                    # If the destination simulation file exists, remove it
+                    if os.path.exists(destination_simulation_file):
+                        os.remove(destination_simulation_file)
+                    # Check if the destination folder exists, if not, create it
+                    print(destination_folder)
+                    if not os.path.exists(destination_folder):
+                        os.makedirs(destination_folder)
+                    try:
+                        # Copy the file to the destination folder
+                        source_simulation_file = pathfile + '.' + load_format
+                        shutil.copy2(source_simulation_file,
+                                     destination_simulation_file)
+                        print(
+                            f"File '{source_simulation_file}' copied to '{destination_simulation_file}' successfully.")
+                        if os.path.exists(source_folder):
+                            # Copy the entire folder to the destination folder
+                            shutil.copytree(source_folder, destination_files)
+                            print(
+                                f"Folder '{source_folder}' copied to '{destination_files}' successfully.")
+                        else:
+                            print(f"Folder '{source_folder}' not found.")
+                    except IOError as e:
+                        print(f"Error: {e}")
+
+
 def load_result(table_entries, path, x_axis='snr', y_axis='val_acc', error_mode=True, x_axis_normalization=0):
     '''Load one element result in chosen dictionary
     '''
@@ -161,10 +222,14 @@ if __name__ == '__main__':
     x_axis = 'snr'
     logplot = True          # Logarithmic plot?
     select_plot = False     # Select one plot or plot all preselected plots
+    copy_models = False     # Copy published models to public repository
     # Fixed
     datapath = 'models'
     filename_prefix = 'RES_'
-    dn = filename_prefix
+    if copy_models:
+        dn = ''
+    else:
+        dn = filename_prefix
 
     # Plot tables
 
@@ -345,5 +410,9 @@ if __name__ == '__main__':
     if select_plot is True:
         selected_plots = [cifar]
 
-    figures = plot_results_semcom(selected_plots=selected_plots, x_axis=x_axis, y_axis=y_axis, datapath=datapath,
-                                  logplot=logplot, error_mode=error_mode, x_axis_normalization=x_axis_normalization)
+    if copy_models:
+        copy_published_models2repository(
+            selected_plots, datapath=datapath, simulation_filename_prefix=filename_prefix)
+    else:
+        figures = plot_results_semcom(selected_plots=selected_plots, x_axis=x_axis, y_axis=y_axis, datapath=datapath,
+                                      logplot=logplot, error_mode=error_mode, x_axis_normalization=x_axis_normalization)

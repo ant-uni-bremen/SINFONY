@@ -124,18 +124,18 @@ if __name__ == '__main__':
 
     if transceiver_split == 1:
         # Models for testing so far:
-        # SINFONY approach with communication channel: sinfony4_fraeser64_test
+        # SINFONY approach with communication channel: sinfony4_fraeser64_test, sinfony_hise64, sinfony_hise256_imagenet
         filename = 'sinfony4_fraeser64_test'
         sinfony = SinfonyWrapper(path=path, filename=filename,
                                  last_layer_input=last_layer_input)
     else:
-        # Only image recognition: ResNet4_fraeser64_test
+        # Only image recognition: ResNet4_fraeser64_test, ResNet20_hise64, ResNet18_hise256_imagenet
         filename = 'ResNet4_fraeser64_test'
         sinfony = ResNetWrapper(path=path, filename=filename,
                                 last_layer_input=last_layer_input)
 
     # Possible data sets:
-    # mnist, cifar10, fraeser, fraeser64, hise, hise64
+    # mnist, cifar10, fraeser, fraeser64, hise, hise64, hise256
     # Number after dataset name is the resolution of the images
     dataset_name = 'fraeser64'
     train_input, train_labels, test_input, test_labels = datasets.load_dataset(
@@ -146,7 +146,7 @@ if __name__ == '__main__':
         train_input, train_labels, test_input, test_labels)
 
     # Evaluation of model
-    evaluation_mode = 0         # Interface data: 0, SNR evaluation: 1
+    evaluation_mode = 1         # Interface data: 0, SNR evaluation: 1
 
     if evaluation_mode == 0:
         # Evaluation parameters

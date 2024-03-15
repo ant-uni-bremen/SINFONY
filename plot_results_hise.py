@@ -27,10 +27,14 @@ if __name__ == '__main__':
     x_axis = 'snr'
     logplot = True          # Logarithmic plot?
     select_plot = False     # Select one plot or plot all preselected plots
+    copy_models = False     # Copy published models to public repository
     # Fixed
     datapath = 'models'
     filename_prefix = 'RES_'
-    dn = filename_prefix
+    if copy_models:
+        dn = ''
+    else:
+        dn = filename_prefix
 
     # Plot tables
 
@@ -97,5 +101,9 @@ if __name__ == '__main__':
         # mnist_classic, mnist_conv, cifar_rl, mnist_sgd_rl
         selected_plots = [hise]
 
-    plot_sinfony.plot_results_semcom(selected_plots=selected_plots, x_axis=x_axis, y_axis=y_axis, datapath=datapath,
-                                     logplot=logplot, error_mode=error_mode, x_axis_normalization=x_axis_normalization)
+    if copy_models:
+        plot_sinfony.copy_published_models2repository(
+            selected_plots, datapath=datapath, simulation_filename_prefix=filename_prefix)
+    else:
+        figures = plot_sinfony.plot_results_semcom(selected_plots=selected_plots, x_axis=x_axis, y_axis=y_axis, datapath=datapath,
+                                                   logplot=logplot, error_mode=error_mode, x_axis_normalization=x_axis_normalization)

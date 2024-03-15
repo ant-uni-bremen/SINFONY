@@ -1,0 +1,2 @@
+model_checkpoint_path: "ResNet20_CIFAR4_RL_adam_lr1e-4_Ne100000_snr-4_6_conv0"
+all_model_checkpoint_paths: "ResNet20_CIFAR4_RL_adam_lr1e-4_Ne100000_snr-4_6_conv0"
