@@ -86,16 +86,15 @@ def gpu_select(number=0, memory_growth=True):
 
 # Custom Layer Functions
 
-
-def normalize_input(inputs, axis=0, epsilon=0):
+def normalize_input(inputs, axis=0, eps=0):
     '''Normalize power of inputs to one
     axis: axis along normalization is performed
-    epsilon: Small constant to avoid numerical problems, e.g., 1e-12, since inputs=0, then NaN!
+    eps: Small constant to avoid numerical problems, e.g., 1e-12, since inputs=0, then NaN!
     '''
     # out = inputs / tf.keras.backend.sqrt(tf.keras.backend.mean(inputs ** 2 + epsilon, axis = axis, keepdims = True)) # Keras backend version
     out = inputs / \
         tf.math.sqrt(tf.reduce_mean(
-            inputs ** 2 + epsilon, axis=axis, keepdims=True))
+            inputs ** 2 + eps, axis=axis, keepdims=True))
     return out
 
 
@@ -245,7 +244,9 @@ class GaussianNoise2(Layer):
         # Conversion to numpy array necessary for serialization
         config = {"stddev": self.stddev.numpy()}
         base_config = super().get_config()
-        return dict(list(base_config.items()) + list(config.items()))
+        base_config.update(config)
+        return base_config
+        # return dict(list(base_config.items()) + list(config.items()))
 
     @shape_type_conversion
     def compute_output_shape(self, input_shape):

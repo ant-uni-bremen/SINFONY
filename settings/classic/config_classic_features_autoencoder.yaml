@@ -1,6 +1,6 @@
 load_settings:
   load: False                             # start new training: 0 / load saved training: 1
-  filename_suffix: _ntx56_NL56_Ne100_snr-4_6_test # '_ntx56_NL112_Ne100_snr-4_6', _ntx56_NL56_Ne100_snr-4_6, _ntx14_NL28_Ne100_snr-4_6
+  filename_suffix: _ntx56_NW56_NL1_SINFONY_sgdlrs_Ne20_snr-4_6_test # '_ntx56_NL112_Ne100_snr-4_6', _ntx56_NL56_Ne100_snr-4_6, _ntx14_NL28_Ne100_snr-4_6
   path_classic: models/classic            # path of classic simulation files
   path_models: models                     # path of model files
   save_format: npz                        # save format
@@ -16,9 +16,9 @@ dataset:
 
 training:
   loss: mean_squared_error                # mean_squared_error
-  optimizer: adam                         # sgd, adam, (sgdlrs) SGD with learning rate schedule
+  optimizer: sgd                          # sgd, adam, (sgdlrs) SGD with learning rate schedule
   batch_size: 64                          # default: 64 (sgd), 500 (adam)
-  number_epochs: 100                      # Number of Epochs for rvec: 100
+  number_epochs: 20                       # Number of Epochs for rvec: 100
   validation_dataset_size: full           # full, 0, 100, 1000
   learning_rate: 1.0e-3                   # SGD/Adam: 1e-3
   learning_rate_schedule:                 # Learning rate schedules

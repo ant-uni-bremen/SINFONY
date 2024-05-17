@@ -24,7 +24,7 @@ communication:
 
 evaluation:
   classic_mode: 2                         # Evaluation mode: 1: classic (feature transmission), 2: classic (image transmission)
-  bits_per_image_value: 8                 # # Images have RGB color entries: 8 bits -> [0, 256]
+  bits_per_image_value: 8                 # Images have RGB color entries: 8 bits -> [0, 256]
   snr_range: [-1, 5]                      # SNR in dB range: [-1, 5] (default)
   snr_step_size: 0.5                      # SNR in dB steps: 1 (default)
   validation_rounds: 10                   # Rounds through validation data at one SNR

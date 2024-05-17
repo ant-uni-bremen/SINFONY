@@ -101,7 +101,11 @@ if __name__ == '__main__':
     # Load parameters from configuration file
     # Get the script's directory
     path_script = os.path.dirname(os.path.abspath(__file__))
-    SETTINGS_FILE = 'cifar10/semantic_config_cifar_rlsinfony.yaml'
+    # Default: mnist/semantic_config_mnist_sinfony.yaml
+    SETTINGS_FILE = 'mnist/semantic_config_mnist_sinfony.yaml'
+    # Avoid error messages
+    import logging
+    tf.get_logger().setLevel(logging.ERROR)
     # Load the provided configuration file or the default one
     # python SINFONY.py semantic_config.yaml
     # Workaround for interactive sessions: Only allow config file names starting 'semantic_config'
@@ -191,11 +195,17 @@ if __name__ == '__main__':
             sigma_train = mop.snr2standard_deviation(
                 np.array([model_settings['noise']['snr_min_train'], model_settings['noise']['snr_max_train']]))[::-1]
     total_number_iterations = number_epochs * iterations_per_epoch
-    # TODO: l2 regularization only for ResNet feature extractor?
-    weight_decay = tf.keras.regularizers.l2(
-        model_settings['resnet']['weight_decay'])
-    weight_decay_communication = tf.keras.regularizers.l2(
-        model_settings['communication']['weight_decay'])
+    # TODO: l2 regularization only for ResNet feature extractor? Yes, better performance
+    if model_settings['resnet']['weight_decay'] == 0:
+        weight_decay = None
+    else:
+        weight_decay = tf.keras.regularizers.l2(
+            model_settings['resnet']['weight_decay'])
+    if model_settings['communication']['weight_decay'] == 0:
+        weight_decay_communication = None
+    else:
+        weight_decay_communication = tf.keras.regularizers.l2(
+            model_settings['communication']['weight_decay'])
     if transceiver_split == 1:
         encoding_config = resnet_sinfony.EncodingConfiguration(transmit_normalization=True, normalization_axis=model_settings['communication']['power_normalization_axis'], encoding_layer_width=model_settings['communication'][
             'number_channel_uses'], number_encoding_layer=number_layer, image_split_factor=model_settings['communication']['image_split_factor'], weight_initialization=model_settings['communication']['weight_initialization'], weight_decay=weight_decay_communication)

@@ -86,6 +86,8 @@ def load_dataset(dataset='mnist', validation_split=0.85, image_split=True):
             resolution = None
         train_input, validation_input, train_labels, validation_labels = load_dataset_tools(
             resolution=resolution, image_split=image_split, number_augmentations=0, validation_split=validation_split, validation_diverse=False, shuffle=False)
+        # train_input, validation_input, train_labels, validation_labels = load_dataset_tools_with_greater_4mm(
+        #     resolution=resolution, image_split=image_split, number_augmentations=0, validation_split=validation_split)
     elif dataset[0:4] == 'hise':
         if dataset[4:].isdigit():
             resolution = int(dataset[4:])
@@ -98,7 +100,7 @@ def load_dataset(dataset='mnist', validation_split=0.85, image_split=True):
             dataset=dataset_hise, resolution=resolution, validation_split=validation_split, number_augmentations=0)
     else:
         print('Dataset not available.')
-    # One hot encode target values
+    # One hot encode target values (Note: dtype = float32)
     train_labels = tf.keras.utils.to_categorical(train_labels)
     validation_labels = tf.keras.utils.to_categorical(validation_labels)
     return train_input, train_labels, validation_input, validation_labels
@@ -127,17 +129,29 @@ def load_dataset_tools(resolution=None, image_split=True, number_augmentations=0
     dataset_sheet2 = pd.read_csv(os.path.join(data_directory, 'Bildliste_einzeln_bewertet_laden.txt'), sep="\t", header=None,
                                  engine='python')
     labels_list2 = dataset_sheet2.loc[:, ...].sort_values(
-        by=2, ascending=True).loc[:, 5].to_numpy().astype('int')
-    accuracy_individual = np.sum(
-        labels_list == labels_list2) / labels_list.shape[0]
+        by=1, ascending=True).loc[:, 5].to_numpy().astype('int')
+    accuracy_individual = np.mean(
+        labels_list == labels_list2)
     print(f'Individual image classification accuracy: {accuracy_individual}')
+    # Use labeling
+    LABEL = 'joint'
+    if LABEL == 'joint':
+        label_list_used = labels_list
+    elif LABEL == 'individual':
+        label_list_used = labels_list2
+    elif LABEL == 'and':
+        label_list_used = np.logical_and(labels_list, labels_list2)*1
+    elif LABEL == 'or':
+        label_list_used = np.logical_or(labels_list, labels_list2)*1
+    else:
+        label_list_used = labels_list
     # First load with full resolution
     full_resolution = (705, 380)
     # Two images are captured as one -> split in first dimension at 218
     split_pixel = 218
     train_dataset = tf.keras.utils.image_dataset_from_directory(
         data_directory,
-        labels=labels_list.tolist(),
+        labels=label_list_used.tolist(),
         label_mode='int',
         color_mode='grayscale',
         # validation_split = 0.2,
@@ -146,8 +160,13 @@ def load_dataset_tools(resolution=None, image_split=True, number_augmentations=0
         crop_to_aspect_ratio=True,
     )
     # Convert into numpy format
-    data_input = np.concatenate([x for x, _ in train_dataset], axis=0)
+    data_input = np.concatenate(
+        [x for x, _ in train_dataset], axis=0).astype('uint8')
     data_labels = np.concatenate([y for _, y in train_dataset], axis=0)
+
+    # Turn around dataset
+    # data_input = data_input[::-1]
+    # data_labels = data_labels[::-1]
 
     if image_split:
         # Split two in images in one image into two images
@@ -210,6 +229,17 @@ def load_dataset_tools(resolution=None, image_split=True, number_augmentations=0
         ])
         train_input, train_labels = augment_dataset(
             train_input, train_labels, data_augmentation=data_augmentation, number_augmentations=number_augmentations)
+
+    # Report prior probabilities of tool dataset
+    prior_probability = np.mean(label_list_used)
+    print(
+        f'Prior probablity of - Tool damaged: {prior_probability} - Tool ok: {1-prior_probability}')
+    prior_probability_train = np.mean(train_labels)
+    print(
+        f'Training set prior probablity of - Tool damaged: {prior_probability_train} - Tool ok: {1-prior_probability_train}')
+    prior_probability_validation = np.mean(validation_labels)
+    print(
+        f'Validation set prior probablity of - Tool damaged: {prior_probability_validation} - Tool ok: {1-prior_probability_validation}')
     return train_input, validation_input, train_labels, validation_labels
 
 
@@ -256,7 +286,8 @@ def load_dataset_hise(dataset=None, resolution=None, validation_split=0.85, numb
         crop_to_aspect_ratio=True,
     )
     # Convert into numpy format
-    data_input = np.concatenate([x for x, _ in train_dataset], axis=0)
+    data_input = np.concatenate(
+        [x for x, _ in train_dataset], axis=0).astype('uint8')
     data_labels = np.concatenate([y for _, y in train_dataset], axis=0)
 
     # Separating image tuples and combining images of same object into one list of images
@@ -482,14 +513,14 @@ def augment_dataset(train_images, train_labels, data_augmentation=None, number_a
 def preprocess_pixels(train_images, test_images):
     '''Preprocessing: Scale pixels between 0 and 1 for image list
     '''
-    train_images_normalized = train_images
+    train_images_normalized = train_images.copy()
     # Preprocess list of images
     for image_number, train_image in enumerate(train_images):
         # Convert RGB values from integers to floats
         train_images_normalized[image_number] = preprocess_pixels_image(
             train_image)
     # Same steps for test/validation set
-    test_images_normalized = test_images
+    test_images_normalized = test_images.copy()
     for image_number, test_image in enumerate(test_images):
         test_images_normalized[image_number] = preprocess_pixels_image(
             test_image)
@@ -527,8 +558,146 @@ def summarize_dataset(train_inputs, train_labels, test_inputs, test_labels):
         # Show the figure
         plt.show()
 
+# TODO: Use this in the tool function and somewhere else
+
+
+def load_images_with_split(data_directory, labels_list, full_resolution, resolution=None, image_split=False, split_pixel=None):
+    '''Load images from data_directory with image split in x dimension
+    '''
+    train_dataset = tf.keras.utils.image_dataset_from_directory(
+        data_directory,
+        labels=labels_list,
+        label_mode='int',
+        color_mode='grayscale',
+        shuffle=False,
+        image_size=full_resolution,
+        crop_to_aspect_ratio=True,
+    )
+    # Convert into numpy format
+    data_input = np.concatenate([x for x, _ in train_dataset], axis=0)
+    data_labels = np.concatenate([y for _, y in train_dataset], axis=0)
+
+    if image_split and split_pixel is not None:
+        # Split two in images in one image into two images
+        data_input_split = [data_input[:, :split_pixel, ...],
+                            data_input[:, split_pixel:, ...]]
+    else:
+        # Two images remain one image
+        data_input_split = [data_input]
+
+    # Lower resolution for each image
+    # Make full resolution of smaller image the maximum resolution
+    if resolution is None:
+        image_resolution = full_resolution
+    else:
+        image_resolution = (0, resolution)
+
+    # Set resolution of second dimension but keep aspect ratio, first dimension (large one) is adapted
+    if image_resolution != full_resolution:
+        if image_split and split_pixel is not None:
+            image1_scale_xdim = int(
+                split_pixel / full_resolution[1] * image_resolution[1])
+            image2_scale_xdim = int(
+                (full_resolution[0] - split_pixel) / full_resolution[1] * image_resolution[1])
+            data_input_split = [resize_image(data_input_split[0], image1_scale_xdim, image_resolution[1]), resize_image(
+                data_input_split[1], image2_scale_xdim, image_resolution[1])]
+        else:
+            image1_scale_xdim = int(
+                full_resolution[0] / full_resolution[1] * image_resolution[1])
+            data_input_split = [resize_image(
+                data_input_split[0], image1_scale_xdim, image_resolution[1])]
+
+    return data_input_split, data_labels
+
+
+def load_dataset_tools_with_greater_4mm(resolution=None, image_split=True, number_augmentations=0, validation_split=0.9):
+    '''Load and preprocess tool dataset (fraeser)
+    resolution: Targeted image resolution
+    image_split: Split the image into two original tool images from the top and from the side
+    number_augmentations: Number of image augmentations, rotated and flipped
+    validation_split: Validation split
+    '''
+    # Include new fraeser dataset
+    data_directory = os.path.join(os.path.dirname(os.path.abspath(
+        __file__)), 'Datasets', 'Fraeser_Aufnahmen_Bis_220823')
+    data_file = os.path.join(data_directory, 'Label.csv')
+    dataset_sheet = pd.read_csv(
+        data_file, sep=";", header=None, engine='python')
+    labeling_index = 5  # 5: Experts and Tobias, 7: Tobias, 8: Experts
+    labels_list = dataset_sheet.loc[1:, ...].sort_values(
+        by=2, ascending=True).loc[:, labeling_index].to_numpy().astype('int')
+
+    # Tool images = 4mm
+    data_directory_4mm = os.path.join(data_directory, 'tools_4mm')
+    # First load with full resolution
+    full_resolution_4mm = (720, 380)
+    # Two images are captured as one -> split in first dimension at 218 vs. 223 with better lighting condition
+    split_pixel_4mm = 223
+    number_tools_greater_4mm = 264
+
+    data_input_4mm_split, data_labels_4mm = load_images_with_split(
+        data_directory_4mm, labels_list[number_tools_greater_4mm:, ...].tolist(), full_resolution_4mm, resolution=resolution, image_split=image_split, split_pixel=split_pixel_4mm)
+
+    # Tool images > 4mm
+    data_directory_greater_4mm = os.path.join(
+        data_directory, 'tools_greater_4mm')
+    # First load with full resolution
+    full_resolution_greater_4mm = (2036, 920)
+    # Two images are captured as one -> split in first dimension at 499
+    split_pixel_greater_4mm = 499
+    data_input_greater_4mm_split, data_labels_greater_4mm = load_images_with_split(data_directory_greater_4mm, labels_list[:number_tools_greater_4mm, ...].tolist(
+    ), full_resolution_greater_4mm, resolution=None, image_split=image_split, split_pixel=split_pixel_greater_4mm)
+
+    # Resize tool images > 4mm to have same aspect ratio as tool images == 4mm
+    data_input_greater_4mm_split[0] = resize_image(
+        data_input_greater_4mm_split[0], data_input_4mm_split[0].shape[1], data_input_4mm_split[0].shape[2], interpolation='bilinear')
+
+    # Cut the lower part of sideways image
+    aspect_ratio = data_input_4mm_split[1].shape[2] / \
+        data_input_4mm_split[1].shape[1]
+    aspect_ratio2 = data_input_greater_4mm_split[1].shape[2] / \
+        data_input_greater_4mm_split[1].shape[1]
+    x_dimension = int(
+        data_input_greater_4mm_split[1].shape[1] * aspect_ratio2 / aspect_ratio)
+
+    data_input_greater_4mm_split[1] = resize_image(
+        data_input_greater_4mm_split[1][:, :x_dimension, ...], data_input_4mm_split[1].shape[1], data_input_4mm_split[1].shape[2], interpolation='bilinear')
+
+    # Split into training and validation data
+    train_input_4mm, validation_input_4mm = mt.dataset_split(
+        data_input_4mm_split, validation_split=validation_split)
+    train_labels_4mm, validation_labels_4mm = mt.dataset_split(
+        data_labels_4mm, validation_split=validation_split)
+    train_input_greater_4mm, validation_input_greater_4mm = mt.dataset_split(
+        data_input_greater_4mm_split, validation_split=validation_split)
+    train_labels_greater_4mm, validation_labels_greater_4mm = mt.dataset_split(
+        data_labels_greater_4mm, validation_split=validation_split)
+
+    train_input = [np.concatenate([train_input_4mm[0], train_input_greater_4mm[0]]), np.concatenate(
+        [train_input_4mm[1], train_input_greater_4mm[1]])]
+    validation_input = [np.concatenate([validation_input_4mm[0], validation_input_greater_4mm[0]]), np.concatenate(
+        [validation_input_4mm[1], validation_input_greater_4mm[1]])]
+    train_labels = np.concatenate(
+        [train_labels_4mm, train_labels_greater_4mm])
+    validation_labels = np.concatenate(
+        [validation_labels_4mm, validation_labels_greater_4mm])
+
+    # Data augmentation for training set
+    if number_augmentations >= 1:
+        data_augmentation = tf.keras.Sequential([
+            tf.keras.layers.RandomFlip("horizontal_and_vertical"),
+            tf.keras.layers.RandomRotation(0.2),
+        ])
+        train_input, train_labels = augment_dataset(
+            train_input, train_labels, data_augmentation=data_augmentation, number_augmentations=number_augmentations)
+    return train_input, validation_input, train_labels, validation_labels
+
 
 if __name__ == '__main__':
     #     my_func_main()
     # def my_func_main():
-    train_input, validation_input, train_labels, validation_labels = load_dataset_hise()
+
+    # train_input, validation_input, train_labels, validation_labels = load_dataset_tools(
+    #     resolution=64, image_split=True, number_augmentations=0, validation_split=0.85)
+    train_input, validation_input, train_labels, validation_labels = load_dataset_hise(
+        dataset='HiSE256', resolution=None, number_augmentations=0, validation_split=0.85)

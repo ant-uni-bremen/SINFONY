@@ -124,20 +124,28 @@ if __name__ == '__main__':
 
     if transceiver_split == 1:
         # Models for testing so far:
-        # SINFONY approach with communication channel: sinfony4_fraeser64_test, sinfony_hise64, sinfony_hise256_imagenet
-        filename = 'sinfony4_fraeser64_test'
+        # SINFONY approach with communication channel:
+        # Human Rover: sinfony6_fraeser64, sinfony6_fraeser64_ntx16, sinfony18_fraeser_lr1e-3_3, sinfony18_fraeser_ntx128
+        # MNIST: sinfony14_MNIST_ntx56_Ne20_snr-4_6_human, sinfony14_MNIST_ntx14_Ne20_snr-4_6_human
+        # CIFAR10: sinfony20_CIFAR_ntx64_snr-4_6_human, sinfony20_CIFAR_ntx16_snr-4_6_human
+        # HiSE: sinfony_hise64, sinfony_hise256_imagenet
+        filename = 'sinfony18_fraeser_lr1e-3_3'
         sinfony = SinfonyWrapper(path=path, filename=filename,
                                  last_layer_input=last_layer_input)
     else:
-        # Only image recognition: ResNet4_fraeser64_test, ResNet20_hise64, ResNet18_hise256_imagenet
-        filename = 'ResNet4_fraeser64_test'
+        # Only image recognition:
+        # Human Rover: ResNet6_fraeser64_test, ResNet18_fraeser
+        # MNIST: ResNet14_MNIST_Ne20_human
+        # CIFAR10: ResNet20_CIFAR_human
+        # HiSE: ResNet20_hise64, ResNet18_hise256_imagenet
+        filename = 'ResNet18_fraeser'
         sinfony = ResNetWrapper(path=path, filename=filename,
                                 last_layer_input=last_layer_input)
 
     # Possible data sets:
     # mnist, cifar10, fraeser, fraeser64, hise, hise64, hise256
     # Number after dataset name is the resolution of the images
-    dataset_name = 'fraeser64'
+    dataset_name = 'fraeser'
     train_input, train_labels, test_input, test_labels = datasets.load_dataset(
         dataset_name)
     train_input_norm, test_input_norm = datasets.preprocess_pixels(

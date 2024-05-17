@@ -75,9 +75,19 @@ def classic_features_autoencoder(number_channel_uses, layer_width_transmitter, l
     # Receiver Design
     receiver_in = Input(shape=(number_channel_uses, ))
     layer = receiver_in
-    for _ in range(0, number_txrx_layer):
+    # Intermediate layers
+    for _ in range(0, number_txrx_layer-1):
         layer = Dense(layer_width_receiver, activation='relu',
                       kernel_initializer='he_uniform')(layer)
+    if number_txrx_layer >= 1:
+        if receiver_final_layer_linear is True:
+            layer = Dense(layer_width_receiver, activation='relu',
+                          kernel_initializer='he_uniform')(layer)
+        else:
+            # Make sure last layer matches output shape matches features dimensions
+            layer = Dense(output_shape, activation='relu',
+                          kernel_initializer='he_uniform')(layer)
+    # Final layer matching output shape
     if receiver_final_layer_linear is True:
         layer = Dense(output_shape, activation='linear')(layer)
     receiver_out = layer
@@ -168,7 +178,8 @@ if __name__ == '__main__':
     # Load parameters from configuration file
     # Get the script's directory
     path_script = os.path.dirname(os.path.abspath(__file__))
-    SETTINGS_FILE = 'classic/config_classic_features_autoencoder.yaml'
+    # Default: 'classic/config_classic_features_autoencoder.yaml'
+    SETTINGS_FILE = 'classic/config_classic_features_autoencoder_cifar.yaml'
     # Load the provided configuration file or the default one
     # python SINFONY.py semantic_config.yaml
     # Workaround for interactive sessions: Only allow config file names starting 'semantic_config'
@@ -197,6 +208,7 @@ if __name__ == '__main__':
     show_dataset = dataset_settings['show_dataset']
     train_input, train_labels, test_input, test_labels = datasets.load_dataset(
         dataset)
+    # NOTE: Not implemented for input list of images
     train_input = train_input[0]
     test_input = test_input[0]
     # File for distributed image classification with perfect links
@@ -232,7 +244,7 @@ if __name__ == '__main__':
     batch_size = training_settings['batch_size']
     loss = training_settings['loss']
     optimizer = training_settings['optimizer']
-    learning_rate = training_settings['optimizer']
+    learning_rate = training_settings['learning_rate']
     snr_min_train = model_settings['noise']['snr_min_train']
     snr_max_train = model_settings['noise']['snr_max_train']
     dataset_size = train_input[0].shape[0]

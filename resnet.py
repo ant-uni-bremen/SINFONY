@@ -32,7 +32,8 @@ def repeat_entry_2_list(number_units, number_blocks):
 
 def calculate_resnet_layer_number(number_resnet_blocks, number_residual_units, bottleneck=False):
     '''Calculate official ResNet layer number
-    Pooling layers not counted / only conv2d + dense softmax, bottleneck structure for deeper architectures -> 3 instead of 2
+    Pooling layers not counted / only conv2d + dense softmax
+    Bottleneck structure for deeper architectures -> 3 instead of 2
     '''
     if bottleneck is True:
         layer_number_per_residual_unit = 3

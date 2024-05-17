@@ -114,7 +114,7 @@ def encoding_layers(input_shape, encoding_config=EncodingConfiguration()):
                          kernel_regularizer=encoding_config.weight_decay)(x_tensor)
     if encoding_config.transmit_normalization is True:
         transmitter_output = mt.normalize_input(
-            x_tensor, axis=encoding_config.normalization_axis, epsilon=1e-12)
+            x_tensor, axis=encoding_config.normalization_axis, eps=1e-12)
     else:
         transmitter_output = x_tensor
     encoder = Model(inputs=transmitter_input, outputs=transmitter_output)

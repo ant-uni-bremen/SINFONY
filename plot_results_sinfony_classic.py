@@ -15,7 +15,7 @@ import plot_results_sinfony as plot_sinfony
 
 
 # Huffman encoding gain for cifar features
-HUFF_GAIN_CIFAR_FEATURES = 1        # TODO: Not evaluated so far, not needed
+HUFF_GAIN_CIFAR_FEATURES = 1.704170057532382
 # Huffman encoding gain for cifar image data set
 HUFF_GAIN_CIFAR_IMAGES = 1.005575740720937
 HUFF_GAIN = 1.348970196377917       # Huffman encoding gain on mnist features
@@ -83,14 +83,15 @@ if __name__ == '__main__':
                             # 'MNIST2 classic rc75 n=11264 h100': ['classic/' + dn + 'classic_' + 'ResNet14_MNIST2_rc75_n11264_h100', 'k->', 56 * 16 / (0.75 * HUFF_GAIN), True],
                             # 'MNIST2 AE ntx4 Ne10 snr-4 6': ['classic/' + dn + 'AE_' + 'ResNet14_MNIST2_ntx4_NL8_Ne10_snr-4_6', 'g-x', 56 * 4, True],
                             'MNIST2 AE ntx16 Ne10 snr-4 6': ['classic/' + dn + 'AE_' + 'ResNet14_MNIST2_ntx16_NL32_Ne10_snr-4_6', 'g--x', 56 * 16, True],
-                            # 'MNIST2 AE ntx56 NL112 rvec snr-4 6': ['classic/' + dn + 'AErvec_' + 'ResNet14_MNIST2_ntx56_NL112_Ne100_snr-4_6', 'm-s', 56, True],
-                            # 'MNIST2 AE ntx56 NL56 Ne100 adam SINFONY rvec snr-4 6': ['classic/' + dn + 'AErvec_' + 'ResNet14_MNIST2_ntx56_NL56_SINFONY_Ne100_snr-4_6', 'm--s', 56, True],
-                            'MNIST2 AE ntx56 nrx56 Ne20 sgdlrs SINFONY rvec snr-4 6': ['classic/' + dn + 'AErvec_' + 'ResNet14_MNIST2_ntx56_NL56_SINFONY_sgdlrs_Ne20_snr-4_6', 'm:^', 56, True],
-                            # 'MNIST2 AE ntx112 NL224 rvec snr-4 6': ['classic/' + dn + 'AErvec_' + 'ResNet14_MNIST2_ntx112_NL224_Ne100_snr-4_6', 'm:s', 56, True],
-                            # 'MNIST2 AE ntx56 NL56 rvec snr-4 6': ['classic/' + dn + 'AErvec_' + 'ResNet14_MNIST2_ntx56_NL56_Ne100_snr-4_6', 'm--s', 56, True],
-                            # 'MNIST2 AE ntx56 NL112 rvec ind snr-4 6': ['classic/' + dn + 'AErvec_ind_' + 'ResNet14_MNIST2_ntx56_NL112_Ne100_snr-4_6', 'm--d', 56, True],
-                            # 'MNIST2 AE ntx14 NL28 rvec snr-4 6': ['classic/' + dn + 'AErvec_' + 'ResNet14_MNIST2_ntx14_NL28_Ne100_snr-4_6', 'm-D', 14, True],
+                            # 'MNIST2 AE ntx56 NW112 NL2 + linear rvec snr-4 6': ['classic/' + dn + 'AErvec_' + 'ResNet14_MNIST2_ntx56_NL112_Ne100_snr-4_6', 'm-s', 56, True],
+                            # 'MNIST2 AE ntx56 NW112 NL2 + linear rvec ind snr-4 6': ['classic/' + dn + 'AErvec_ind_' + 'ResNet14_MNIST2_ntx56_NL112_Ne100_snr-4_6', 'm--d', 56, True],
+                            # 'MNIST2 AE ntx56 NW56 NL2 + linear rvec snr-4 6': ['classic/' + dn + 'AErvec_' + 'ResNet14_MNIST2_ntx56_NL56_Ne100_snr-4_6', 'm--s', 56, True],
+                            # 'MNIST2 AE ntx112 NW224 NL2 + linear rvec snr-4 6': ['classic/' + dn + 'AErvec_' + 'ResNet14_MNIST2_ntx112_NL224_Ne100_snr-4_6', 'm:s', 56, True],
+                            # 'MNIST2 AE ntx14 NW28 NL2 + linear rvec snr-4 6': ['classic/' + dn + 'AErvec_' + 'ResNet14_MNIST2_ntx14_NL28_Ne100_snr-4_6', 'm-D', 14, True],
+                            # SINFONY Tx/Rx modules as AE for fair comparison
                             # 'MNIST2 AE ntx14 nrx56 Ne20 sgdlrs SINFONY rvec snr-4 6': ['classic/' + dn + 'AErvec_' + 'ResNet14_MNIST2_ntx14_SINFONY_sgdlrs_Ne20_snr-4_6', 'm:D', 14, True],
+                            # 'MNIST2 AE ntx56 nrx56 Ne100 adam SINFONY rvec snr-4 6': ['classic/' + dn + 'AErvec_' + 'ResNet14_MNIST2_ntx56_NL56_SINFONY_Ne100_snr-4_6', 'm--s', 56, True],
+                            'MNIST2 AE ntx56 nrx56 Ne20 sgdlrs SINFONY rvec snr-4 6': ['classic/' + dn + 'AErvec_' + 'ResNet14_MNIST2_ntx56_NL56_SINFONY_sgdlrs_Ne20_snr-4_6', 'm:^', 56, True],
                             'MNIST6 ntx56 nrx56 Ne20 snr-4 6': ['mnist/' + dn + 'ResNet14_MNIST6_Ne20_snr-4_6', 'r-s', 56, True],
                             # 'MNIST6 ntx56 nrx56 Ne20 layer2 linear rx ind snr-4 6': ['mnist/' + dn + 'ResNet14_MNIST6_Ne20_layer2_rxindilinear_snr-4_6', 'r--s', 56, True],
                             # 'MNIST6 ntx56 nrx56 Ne20 layer2 linear rx snr-4 6': ['mnist/' + dn + 'ResNet14_MNIST6_Ne20_layer2_rxlinear_snr-4_6', 'r:s', 56, True],
@@ -107,9 +108,13 @@ if __name__ == '__main__':
                             'CIFAR1': ['cifar10/' + dn + 'ResNet20_CIFAR', 'k--', 0, True],
                             'CIFAR2': ['cifar10/' + dn + 'ResNet20_CIFAR2_nosnr', 'b--', 0, True],
                             'CIFAR6 ntx64 nrx64 snr-4_6': ['cifar10/' + dn + 'ResNet20_CIFAR6_snr-4_6', 'r-s', 64, True],
-                            # 'CIFAR2 classic rc25 n=15360 h100 int': ['classic/' + dn + 'classic_' + 'ResNet20_CIFAR2_rc25_n15360_h100_int', 'k-o', 64 * 16 / (0.25 * HUFF_GAIN_CIFAR_FEATURES), True],
+                            # 'CIFAR2 features classic rc25 n=15360 h1000': ['classic/' + dn + 'classic_' + 'ResNet20_CIFAR2_rc25_n15360_h1000', 'k-o', 64 * 16 / (0.25 * HUFF_GAIN_CIFAR_FEATURES), True],
+                            'CIFAR2 features classic rc25 n=15360 h100': ['classic/' + dn + 'classic_' + 'ResNet20_CIFAR2_rc25_n15360_h100', 'k--o', 64 * 16 / (0.25 * HUFF_GAIN_CIFAR_FEATURES), True],
                             'CIFAR1 image classic rc25 n=15360 h100': ['classic/' + dn + 'classic_image_' + 'ResNet20_CIFAR_rc25_n15360_h100', 'k-x', 32 * 32 * 3 * 8 / (0.25 * HUFF_GAIN_CIFAR_IMAGES), True],
                             # 'CIFAR1 image classic rc25 n=15360 h1000': ['classic/' + dn + 'classic_image_' + 'ResNet20_CIFAR_rc25_n15360_h1000', 'k--x', 32 * 32 * 3 * 8 / (0.25 * HUFF_GAIN_CIFAR_IMAGES), True],
+                            'CIFAR2 AE ntx4 Ne10 snr-4 6': ['classic/' + dn + 'AE_' + 'ResNet14_CIFAR2_ntx4_NW8_NL2_linear_Ne10_snr-4_6_CIFAR', 'g--x', 64 * 4, True],
+                            'CIFAR2 AE ntx64 nrx64 Ne200 sgdlrs SINFONY rvec snr-4 6': ['classic/' + dn + 'AErvec_' + 'ResNet20_CIFAR2_ntx64_NW64_NL1_Ne200_snr-4_6_CIFAR', 'm:^', 64, True],
+                            # 'CIFAR2 AE ntx64 nrx64 Ne200 sgdlrs SINFONY rvec individual snr-4 6': ['classic/' + dn + 'AErvec_ind_' + 'ResNet20_CIFAR2_ntx64_NW64_NL1_Ne200_snr-4_6_CIFAR', 'm:>', 64, True],
                             }
     selected_plots.append(semcom_cifar_classic)
 

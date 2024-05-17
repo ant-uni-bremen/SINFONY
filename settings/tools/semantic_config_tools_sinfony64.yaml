@@ -1,6 +1,6 @@
 load_settings:
-  load: False                             # start new training: 0 / load saved training: 1
-  filename: sinfony4_fraeser64_test       # mnist, cifar10, fashion_mnist, hirise64, hirisecrater, fraeser64
+  load: True                              # start new training: 0 / load saved training: 1
+  filename: sinfony6_fraeser64            # mnist, cifar10, fashion_mnist, hirise64, hirisecrater, fraeser64
   path: models/fraeser                    # path of simulation and model files
   save_format: npz                        # save format
   simulation_filename_prefix: RES_        # name prefix of simulation file
@@ -44,7 +44,7 @@ model:
     rx_same: 2                            # 0: individual rx, 1: same rx (default), 2: one joint rx
     rx_linear: False                      # False: No final layer for each Rx module
     weight_initialization: he_uniform     # default: he_uniform
-    weight_decay: null                    # default: null, l2 layer regularization
+    weight_decay: 0                       # default: 0, l2 layer regularization
   noise:                                  # Training with noise
     active: True                          # True (default)
     snr_min_train: -4                     # default: -4, 6
@@ -80,5 +80,5 @@ evaluation:
   mode: 0                                 # Evaluation mode: (0) default: Validation for SNR range, (1) Saving probability data for interface to application, (2) t-SNE embedding for visualization
   snr_range: [-30, 20]                    # SNR in dB range: [-30, 20] (default)
   snr_step_size: 1                        # SNR in dB steps: 1 (default)
-  validation_rounds: 10                   # Rounds through validation data at one SNR
+  validation_rounds: 100                  # Rounds through validation data at one SNR
   evaluation_snr: 20                      # SNR value for interface data / T-SNE embedding: -10 / 20

@@ -1,6 +1,6 @@
 load_settings:
   load: False                             # start new training: 0 / load saved training: 1
-  filename: ResNet14_MNIST_Ne20_test      # mnist, cifar10, fashion_mnist, hirise64, hirisecrater, fraeser64
+  filename: ResNet14_MNIST_Ne20_human     # mnist, cifar10, fashion_mnist, hirise64, hirisecrater, fraeser64
   path: models/mnist                      # path of simulation and model files
   save_format: npz                        # save format
   simulation_filename_prefix: RES_        # name prefix of simulation file
@@ -44,7 +44,7 @@ model:
     rx_same: 1                            # 0: individual rx, 1: same rx (default), 2: one joint rx
     rx_linear: False                      # False: No final layer for each Rx module
     weight_initialization: he_uniform     # default: he_uniform
-    weight_decay: null                    # default: null, l2 layer regularization
+    weight_decay: 0                       # default: 0, l2 layer regularization
   noise:                                  # Training with noise
     active: True                          # True (default)
     snr_min_train: -4                     # default: -4, 6
@@ -53,7 +53,7 @@ model:
     architecture: cifar10                 # cifar10, imagenet
     number_resnet_blocks: 3               # 3 fixed for CIFAR10, MNIST (Note: should match amount of number_residual_units entries, otherwise only the first entry is repeated)
     number_residual_units: 2              # defines ResNet layer number, 3 for smallest ResNet20 for CIFAR10 (2 for MNIST)
-    number_filters: 16                    # 16 for CIFAR10, number of filters in first layer per image (Guideline: Set number of filters to be half of the smallest dimension of each image)
+    number_filters: 14                    # 16 for CIFAR10, number of filters in first layer per image (Guideline: Set number of filters to be half of the smallest dimension of each image)
     preactivation: True                   # True
     bottleneck: False                     # False
     batch_normalization: True             # True

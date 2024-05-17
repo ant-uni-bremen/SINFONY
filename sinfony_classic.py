@@ -160,24 +160,31 @@ def sequence_prior_data_int(bit_integer, bit_integer_maximum=-1, show=False):
     return probability_integer
 
 
-def image_transmission(images, model, blocks, huffman, information_word_length, encoder, mapper, channel, demapper, decoder, interleaver, deinterleaver, snr):
+def image_transmission(images, blocks, huffman, information_word_length, encoder, mapper, channel, demapper, decoder, interleaver, deinterleaver, snr, floatx=None, probability_bit=None):
     '''Test image data enters classic communications as source source_signal
     '''
     source_signal = images.reshape([images.shape[0], -1])
     # Evaluate classical digital transmission of images
     # Huffman encode [blocks] feature vectors into one block + split across agents
     reconstructed_source = np.zeros(source_signal.shape)
-    for index_block in range(0, int(source_signal.shape[0] / blocks)):
+    number_blocks = int(source_signal.shape[0] / blocks)
+    for index_block in range(0, number_blocks):
         reconstructed_source[index_block * blocks:(index_block + 1) * blocks, :] = classic_digital_communication(source_signal[index_block * blocks:(index_block + 1) * blocks, :].flatten(
-        ), huffman, information_word_length, encoder, mapper, channel, demapper, decoder, interleaver, deinterleaver, snr).reshape((blocks, -1))
+        ), huffman, information_word_length, encoder, mapper, channel, demapper, decoder, interleaver, deinterleaver, snr, floatx=floatx, probability_bit=probability_bit).reshape((blocks, -1))
+    # Rest not included in former blocks
+    number_remaining_blocks = reconstructed_source.shape[0] - \
+        number_blocks * blocks
+    if number_remaining_blocks >= 1:
+        reconstructed_source[number_blocks * blocks:, :] = classic_digital_communication(source_signal[number_blocks * blocks:, :].flatten(
+        ), huffman, information_word_length, encoder, mapper, channel, demapper, decoder, interleaver, deinterleaver, snr, floatx=floatx, probability_bit=probability_bit).reshape((number_remaining_blocks, -1))
     reconstructed_source = reconstructed_source.reshape(images.shape)
-    reconstructed_source = datasets.preprocess_pixels_image(
-        reconstructed_source)
-    number_classes = model.predict(reconstructed_source)
-    return number_classes
+    # reconstructed_source = datasets.preprocess_pixels_image(
+    #     reconstructed_source)
+    # number_classes = model.predict(reconstructed_source)
+    return reconstructed_source  # number_classes
 
 
-def feature_transmission(source_signal, model, blocks, huffman, information_word_length, encoder, mapper, channel, demapper, decoder, interleaver, deinterleaver, snr, floatx=None, probability_bit=None):
+def feature_transmission(source_signal, blocks, huffman, information_word_length, encoder, mapper, channel, demapper, decoder, interleaver, deinterleaver, snr, floatx=None, probability_bit=None):
     '''Test data features enter classic communications as source source_signal.
     '''
     # Evaluate classical digital transmission
@@ -190,8 +197,8 @@ def feature_transmission(source_signal, model, blocks, huffman, information_word
                 reconstructed_source[index_block * blocks:(index_block + 1) * blocks, index_x, index_y, :] = classic_digital_communication(source_signal[index_block * blocks:(index_block + 1) * blocks, index_x, index_y, :].flatten(
                 ), huffman, information_word_length, encoder, mapper, channel, demapper, decoder, interleaver, deinterleaver, snr, floatx=floatx, probability_bit=probability_bit).reshape((blocks, -1))
     # Extract semantics based on received signal received_signal = r_r = reconstructed_source
-    number_classes = model.layers[-1].predict(reconstructed_source)
-    return number_classes
+    # number_classes = model.layers[-1].predict(reconstructed_source)
+    return reconstructed_source  # number_classes
 
 
 if __name__ == '__main__':
@@ -201,6 +208,7 @@ if __name__ == '__main__':
     # Load parameters from configuration file
     # Get the script's directory
     path_script = os.path.dirname(os.path.abspath(__file__))
+    # Default: 'classic/config_classic.yaml'
     SETTINGS_FILE = 'classic/config_classic.yaml'
     # Load the provided configuration file or the default one
     # python SINFONY.py semantic_config.yaml
@@ -237,8 +245,6 @@ if __name__ == '__main__':
     show_dataset = dataset_settings['show_dataset']
     train_input, train_labels, test_input, test_labels = datasets.load_dataset(
         dataset)
-    train_input = train_input[0]
-    test_input = test_input[0]
 
     # Automatic decision for model with dataset
     if dataset == 'mnist':
@@ -255,6 +261,13 @@ if __name__ == '__main__':
             filename = 'ResNet20_CIFAR'
         else:
             filename = 'ResNet20_CIFAR2'
+    elif dataset == 'fraeser':
+        subpath = 'fraeser'
+        if classic == 2:
+            filename = 'ResNet18_fraeser'               # ResNet18_fraeser_test
+        else:
+            # NOTE: Should be SINFONY version without noise and transceiver layers, not, e.g., sinfony18_fraeser_lr1e-3_3
+            filename = 'ResNet18_fraeser'
     else:
         print('Dataset not implemented into script.')
 
@@ -304,15 +317,28 @@ if __name__ == '__main__':
         model.summary()
 
     # Preprocess Data set
-    train_input_normalized = datasets.preprocess_pixels_image(train_input)
-    test_input_normalized = datasets.preprocess_pixels_image(test_input)
+    [train_input_normalized, test_input_normalized] = datasets.preprocess_pixels(
+        train_input, test_input)
+    # test_input_normalized = datasets.preprocess_pixels_image(test_input)
     if show_dataset is True:
-        datasets.summarize_dataset([train_input], train_labels, [
-                                   test_input], test_labels)
+        datasets.summarize_dataset(train_input, train_labels,
+                                   test_input, test_labels)
 
     if classic != 2:
-        data_train = model.layers[1].predict(train_input_normalized)
-        data_validation = model.layers[1].predict(test_input_normalized)
+        if len(train_input_normalized) == 1:
+            # Models with internal image split
+            data_train = [model.layers[1].predict(train_input_normalized)]
+            data_validation = [model.layers[1].predict(test_input_normalized)]
+        else:
+            # Models with input split
+            data_train = []
+            for index_model, model_layer in enumerate(model.layers[len(train_input_normalized)].layers[-len(train_input_normalized)-1:-1]):
+                data_train.append(model_layer.predict(
+                    train_input_normalized[index_model]))
+            data_validation = []
+            for index_model, model_layer in enumerate(model.layers[len(test_input_normalized)].layers[-len(test_input_normalized)-1:-1]):
+                data_validation.append(model_layer.predict(
+                    test_input_normalized[index_model]))
 
     # Initialize classic and AE communications
     start_time = time.time()
@@ -325,19 +351,30 @@ if __name__ == '__main__':
         number_bits = evaluation_settings['bits_per_image_value']
         number_categorical = 2 ** number_bits
         bits_poss = np.arange(0, number_categorical)
+        # Flatten dataset for digital transmission -> Huffman encoding over all distributed agent data
+        test_input_flattened = []
+        for test_input_item in test_input:
+            test_input_flattened.append(test_input_item.flatten())
+        test_input_flattened = np.concatenate(test_input_flattened)
         probability_sequence = sequence_prior_data_int(
-            test_input.flatten(), bit_integer_maximum=number_categorical)
+            test_input_flattened, bit_integer_maximum=number_categorical)
     elif classic == 1:
         # Features to be transmitted are floating point values
         # Each value is one symbol for huffman encoding
         floatx = mfl.float_toolbox(float_name)
         # Note: Compression from, e.g., float32 to float16 possible!
         number_bits = floatx.N_bits
-        bits_poss = floatx.bits_poss
+        bits_poss = floatx.b_poss
+        # Flatten dataset for digital transmission -> Huffman encoding over all distributed agent data
+        data_validation_flattened = []
+        for data_validation_item in data_validation:
+            data_validation_flattened.append(data_validation_item.flatten())
+        data_validation_flattened = np.concatenate(data_validation_flattened)
         probability_sequence = mfl.sequence_prior_data(
-            floatx, data=data_validation.flatten())
+            floatx, data=data_validation_flattened)
         probability_bit = mfl.compute_single_bitprob(
             floatx, probability_sequence)
+    # Definition of communication blocks
     huffman = hc.huffman_coder(symbols=bits_poss, probs=probability_sequence)
     # Compute total gain of the Huffman encoding
     _, _, _, _, rate_huffman_code = huffman.total_gain()
@@ -360,12 +397,18 @@ if __name__ == '__main__':
     rate_total = rate_huffman_code * rate_channel_code
     if classic == 2:
         # Number of image entries
-        number_entries = np.prod(test_input.shape[1:])
+        number_entries = 0
+        for test_input_item in test_input:
+            number_entries = number_entries + \
+                np.prod(test_input_item.shape[1:])
     else:
         # Number of features
-        number_entries = data_validation.shape[-1]
+        number_entries = 0
+        for data_validation_item in data_validation:
+            number_entries = number_entries + data_validation_item.shape[-1]
     # Average number of channels uses with digital communication
     mean_number_channel_uses = number_entries * number_bits / rate_total
+    print(f'Mean number of channel uses: {mean_number_channel_uses:.2f}')
 
     # Print initialization time
     print('Initialization Time: ' + print_time(time.time() - start_time))
@@ -385,13 +428,32 @@ if __name__ == '__main__':
             start_time2 = time.time()
             if classic == 1:
                 # Test data features enter classic communications as source source_signal.
-                source_signal = data_validation
-                number_classes = feature_transmission(source_signal, model, blocks, huffman, information_word_length, encoder, mapper,
-                                                      channel, demapper, decoder, interleaver, deinterleaver, snr, floatx=floatx, probability_bit=probability_bit)
+                reconstructed_sources = []
+                for data_validation_item in data_validation:
+                    source_signal = data_validation_item
+                    if len(source_signal.shape) == 4:
+                        # Models with internal image split
+                        reconstructed_source = feature_transmission(source_signal, blocks, huffman, information_word_length, encoder, mapper,
+                                                                    channel, demapper, decoder, interleaver, deinterleaver, snr, floatx=floatx, probability_bit=probability_bit)
+                    else:
+                        # Models with input split
+                        reconstructed_source = image_transmission(
+                            source_signal, blocks, huffman, information_word_length, encoder, mapper, channel, demapper, decoder, interleaver, deinterleaver, snr, floatx=floatx, probability_bit=probability_bit)
+                    reconstructed_sources.append(reconstructed_source)
+                reconstructed_sources = np.concatenate(
+                    reconstructed_sources, axis=-1)
+                # Extract semantics based on received signal received_signal = r_r = reconstructed_source
+                number_classes = model.layers[-1](reconstructed_sources)
+                # number_classes = model.layers[-1].predict(reconstructed_sources)
             elif classic == 2:
-                number_classes = image_transmission(test_input, model, blocks, huffman, information_word_length,
-                                                    encoder, mapper, channel, demapper, decoder, interleaver, deinterleaver, snr)
-
+                reconstructed_sources = []
+                for test_input_item in test_input:
+                    reconstructed_source = image_transmission(
+                        test_input_item, blocks, huffman, information_word_length, encoder, mapper, channel, demapper, decoder, interleaver, deinterleaver, snr)
+                    reconstructed_sources.append(datasets.preprocess_pixels_image(
+                        reconstructed_source))
+                # Extract semantics based on all received images
+                number_classes = model.predict(reconstructed_sources)
             # Calculate average loss and accuracy
             loss_ii = np.mean(model.loss(test_labels, number_classes))
             accuracy_ii = np.mean(np.argmax(number_classes, axis=-1) ==

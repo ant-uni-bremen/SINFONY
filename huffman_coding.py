@@ -24,14 +24,14 @@ class huffman_coder():
         data: Data from which probabilities are inferred
         '''
         self.symbols = symbols
-        if probs.any() == None:
+        if probs.any() is None:
             self.p_s = self.calculate_probability(data)
         else:
             self.p_s = probs
         self.nodes = None
-        self.huff_tree = self.huffman_tree_gen(
+        self.huffman_tree = self.huffman_tree_gen(
             dict(zip(self.symbols, self.p_s)))
-        self.huff_code = self.calculate_codes(self.huff_tree)
+        self.huffman_code = self.calculate_codes(self.huffman_tree)
 
     class Node:
         '''A Huffman tree node
@@ -57,7 +57,7 @@ class huffman_coder():
         INPUT
         symbol_with_probs: Dictionary consisting of symbols and their probabilities
         OUTPUT
-        huff_tree: Huffman tree
+        huffman_tree: Huffman tree
         '''
 
         symbols = symbol_with_probs.keys()
@@ -88,8 +88,8 @@ class huffman_coder():
             nodes.remove(right)
             nodes.append(newNode)
 
-        huff_tree = nodes[0]
-        return huff_tree
+        huffman_tree = nodes[0]
+        return huffman_tree
 
     def encoding(self, data):
         '''A helper function to obtain the encoded output
@@ -100,7 +100,7 @@ class huffman_coder():
         encoding_output: Huffman encoded symbols
         encoded: Encoded Huffman sequence provided as one list
         '''
-        huffman_code = self.huff_code
+        huffman_code = self.huffman_code
         encoding_output = []
         for c in data:
             # print(coding[c], end = '')
@@ -118,7 +118,7 @@ class huffman_coder():
         OUTPUT
         decoded_output: Huffman decoded stream
         '''
-        huffman_tree = self.huff_tree
+        huffman_tree = self.huffman_tree
         tree_head = huffman_tree
         decoded_output = []
         for x in encoded_data:
@@ -127,7 +127,7 @@ class huffman_coder():
             elif x == 0:  # x == '0'
                 huffman_tree = huffman_tree.left
             try:
-                if huffman_tree.left.symbol == None and huffman_tree.right.symbol == None:
+                if huffman_tree.left.symbol is None and huffman_tree.right.symbol is None:
                     pass
             except AttributeError:
                 decoded_output.append(huffman_tree.symbol[0])
@@ -146,7 +146,7 @@ class huffman_coder():
         codes: Huffman subcode
         '''
         # newVal = val + str(node.code)
-        if node.code == None:
+        if node.code is None:
             newVal = val
         else:
             newVal = val + [node.code]
@@ -171,10 +171,10 @@ class huffman_coder():
         code_rate: Code rate
         '''
         p_s = self.p_s
-        huff_code = self.huff_code
+        huffman_code = self.huffman_code
         length_uncoded = int(np.log2(p_s.shape[0]))
         avg_length = np.sum([len(value) * p_s[key]
-                            for key, value in huff_code.items()])
+                            for key, value in huffman_code.items()])
         entropy = np.sum(- p_s[p_s != 0] * np.log2(p_s[p_s != 0]))
         redundancy = avg_length - entropy
         code_rate = length_uncoded / avg_length
@@ -192,7 +192,7 @@ class huffman_coder():
         '''
         symprob = dict()
         for element in data:
-            if symprob.get(element) == None:
+            if symprob.get(element) is None:
                 symprob[element] = 1 / data.shape[0]
             else:
                 symprob[element] += 1 / data.shape[0]
@@ -223,7 +223,7 @@ if __name__ == '__main__':
     b_poss = np.arange(0, 2 ** floatx.N_bits, dtype=floatx.intx)
     # p_s = huffman.calculate_probability(data)
     huffman = huffman_coder(symbols=b_poss, probs=p_s)
-    huff_stat = huffman.total_gain()
+    huffman_statistics = huffman.total_gain()
 
     # Functional test: Huffman encoding and decoding
     b = np.random.choice(b_poss, p=p_s, size=(Nb))
@@ -237,7 +237,7 @@ if __name__ == '__main__':
         Nerr_min = 100                  # Mininum number of error to be found per SNR value
         step_size = 1                   # SNR step
         EbN0_range = [-2, 10]           # SNR range
-        R_c = huff_stat[-1]             # Code rate
+        R_c = huffman_statistics[-1]             # Code rate
         mod = com.modulation('BPSK')    # Modulation object: BPSK
         mod.alpha = 1 / mod.M * \
             np.ones((int(floatx.N_bits / np.log2(mod.M)), mod.M))

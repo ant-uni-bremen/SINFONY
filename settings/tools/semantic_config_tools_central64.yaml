@@ -1,6 +1,6 @@
 load_settings:
   load: False                             # start new training: 0 / load saved training: 1
-  filename: ResNet4_fraeser64_test        # mnist, cifar10, fashion_mnist, hirise64, hirisecrater, fraeser64
+  filename: ResNet6_fraeser64             # mnist, cifar10, fashion_mnist, hirise64, hirisecrater, fraeser64
   path: models/fraeser                    # path of simulation and model files
   save_format: npz                        # save format
   simulation_filename_prefix: RES_        # name prefix of simulation file
@@ -44,7 +44,7 @@ model:
     rx_same: 1                            # 0: individual rx, 1: same rx (default), 2: one joint rx
     rx_linear: False                      # False: No final layer for each Rx module
     weight_initialization: he_uniform     # default: he_uniform
-    weight_decay: null                    # default: null, l2 layer regularization
+    weight_decay: 0                       # default: 0, l2 layer regularization
   noise:                                  # Training with noise
     active: True                          # True (default)
     snr_min_train: -4                     # default: -4, 6
