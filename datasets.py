@@ -97,7 +97,7 @@ def load_dataset(dataset='mnist', validation_split=0.85, image_split=True):
             resolution = None
             dataset_hise = None
         train_input, validation_input, train_labels, validation_labels = load_dataset_hise(
-            dataset=dataset_hise, resolution=resolution, validation_split=validation_split, number_augmentations=0)
+            dataset=dataset_hise, resolution=resolution, validation_split=validation_split, number_augmentations=0, image_split=image_split)
     else:
         print('Dataset not available.')
     # One hot encode target values (Note: dtype = float32)
@@ -243,12 +243,13 @@ def load_dataset_tools(resolution=None, image_split=True, number_augmentations=0
     return train_input, validation_input, train_labels, validation_labels
 
 
-def load_dataset_hise(dataset=None, resolution=None, validation_split=0.85, number_augmentations=0):
+def load_dataset_hise(dataset=None, resolution=None, validation_split=0.85, number_augmentations=0, image_split=True):
     '''Load and preprocess HiSE dataset
     resolution: Targeted image resolution
     number_augmentations: Number of image augmentations, rotated and flipped
     validation_split: Validation split -> e.g. CIFAR10: 5/6=0.833, MNIST: 6/7=0.857
     shuffle: Shuffle validation dataset
+    image_split: Individual separate images or joint (distributed) image observations
     '''
     # Select subdirectory where images are saved
     default_dataset = 'HiSE64'
@@ -264,8 +265,8 @@ def load_dataset_hise(dataset=None, resolution=None, validation_split=0.85, numb
     labels_list = dataset_sheet.loc[:, 2].to_numpy().astype('int')
     # NOTE: Possible to read where the box is in the image: [box,5,26,36,60]
     # First load with full resolution
-    full_resolution = (dataset_sheet.loc[:, 3].to_numpy()[
-                       0], dataset_sheet.loc[:, 4].to_numpy()[0])
+    full_resolution = (dataset_sheet.loc[:, 4].to_numpy()[
+                       0], dataset_sheet.loc[:, 5].to_numpy()[0])
     # Lower resolution for each image
     if resolution is None:
         image_resolution = full_resolution
@@ -290,11 +291,16 @@ def load_dataset_hise(dataset=None, resolution=None, validation_split=0.85, numb
         [x for x, _ in train_dataset], axis=0).astype('uint8')
     data_labels = np.concatenate([y for _, y in train_dataset], axis=0)
 
-    # Separating image tuples and combining images of same object into one list of images
-    number_images = np.sum(dataset_sheet.loc[:, 1].to_numpy() == 0)
-    train_input = [data_input[0::number_images, ...],
-                   data_input[1::number_images, ...]]
-    train_labels = data_labels[0::number_images, ...]
+    if image_split is False:
+        # Treat the images as invidual separate observations
+        train_input = [data_input]
+        train_labels = dataset_sheet.loc[:, 3].to_numpy().astype('int')
+    else:
+        # Separating image tuples and combining images of same object into one list of images
+        number_images = np.sum(dataset_sheet.loc[:, 1].to_numpy() == 0)
+        train_input = [data_input[0::number_images, ...],
+                       data_input[1::number_images, ...]]
+        train_labels = data_labels[0::number_images, ...]
 
     # Split into training and validation data
     train_input, validation_input = mt.dataset_split(
@@ -700,4 +706,4 @@ if __name__ == '__main__':
     # train_input, validation_input, train_labels, validation_labels = load_dataset_tools(
     #     resolution=64, image_split=True, number_augmentations=0, validation_split=0.85)
     train_input, validation_input, train_labels, validation_labels = load_dataset_hise(
-        dataset='HiSE256', resolution=None, number_augmentations=0, validation_split=0.85)
+        dataset='HiSE256', resolution=None, number_augmentations=0, validation_split=0.85, image_split=False)

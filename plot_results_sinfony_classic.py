@@ -76,7 +76,7 @@ if __name__ == '__main__':
                             # 'MNIST2 classic rc25 n=15360 h1000 int': ['classic/' + dn + 'classic_' + 'ResNet14_MNIST2_rc25_n15360_h1000_int', 'r-o', 56 * 16 / (0.25 * HUFF_GAIN), True],
                             # 'MNIST2 classic rc25 n=15360 h100': ['classic/' + dn + 'classic_' + 'ResNet14_MNIST2_rc25_n15360_h100', 'k-o', 56 * 16 / (0.25 * HUFF_GAIN), True],
                             'MNIST2 classic rc25 n=15360 h100 int': ['classic/' + dn + 'classic_' + 'ResNet14_MNIST2_rc25_n15360_h100_int', 'k-o', 56 * 16 / (0.25 * HUFF_GAIN), True],
-                            'MNIST image classic rc25 n=15360 h100': ['classic/' + dn + 'classic_image_' + 'ResNet14_MNIST_rc25_n15360_h100', 'k-x', 28 * 28 * 1 * 8 / (0.25 * HUFF_GAIN2), True],
+                            'MNIST image classic rc25 n=15360 h100': ['classic/' + dn + 'classic_image_' + 'ResNet14_MNIST_rc25_n15360_h100', 'k-x', 28 * 28 / 4 * 1 * 8 / (0.25 * HUFF_GAIN2), True],
                             'MNIST2 classic rc25 qam4 n=15360 h100': ['classic/' + dn + 'classic_' + 'ResNet14_MNIST2_rc25_n15360_qam4_h100', 'k-*', 56 * 16 * 2 / (4 * 0.25 * HUFF_GAIN), True],
                             # 'MNIST2 classic rc75 n=1000 h1000': ['classic/' + dn + 'classic_' + 'ResNet14_MNIST2_rc75_h1000', 'k--<', 56 * 16 / (0.75 * HUFF_GAIN), True],
                             # 'MNIST2 classic rc75 n=1000 h100': ['classic/' + dn + 'classic_' + 'ResNet14_MNIST2_rc75_h100', 'k-<', 56 * 16 / (0.75 * HUFF_GAIN), True],
@@ -101,8 +101,8 @@ if __name__ == '__main__':
                             }
     selected_plots.append(semcom_mnist_classic)
 
-    # Investigation for CIFAR dataset
-    # [Partly Published]
+    # Investigation for CIFAR10 dataset
+    # [Partly Published, prepared for PhD thesis]
     semcom_cifar_classic = {'title': ['SINFONY vs Classic communications on CIFAR10', '', 64, False],
                             # 'Tag': ['data name', 'color in plot', channel uses, on/off],
                             'CIFAR1': ['cifar10/' + dn + 'ResNet20_CIFAR', 'k--', 0, True],
@@ -110,9 +110,9 @@ if __name__ == '__main__':
                             'CIFAR6 ntx64 nrx64 snr-4_6': ['cifar10/' + dn + 'ResNet20_CIFAR6_snr-4_6', 'r-s', 64, True],
                             # 'CIFAR2 features classic rc25 n=15360 h1000': ['classic/' + dn + 'classic_' + 'ResNet20_CIFAR2_rc25_n15360_h1000', 'k-o', 64 * 16 / (0.25 * HUFF_GAIN_CIFAR_FEATURES), True],
                             'CIFAR2 features classic rc25 n=15360 h100': ['classic/' + dn + 'classic_' + 'ResNet20_CIFAR2_rc25_n15360_h100', 'k--o', 64 * 16 / (0.25 * HUFF_GAIN_CIFAR_FEATURES), True],
-                            'CIFAR1 image classic rc25 n=15360 h100': ['classic/' + dn + 'classic_image_' + 'ResNet20_CIFAR_rc25_n15360_h100', 'k-x', 32 * 32 * 3 * 8 / (0.25 * HUFF_GAIN_CIFAR_IMAGES), True],
-                            # 'CIFAR1 image classic rc25 n=15360 h1000': ['classic/' + dn + 'classic_image_' + 'ResNet20_CIFAR_rc25_n15360_h1000', 'k--x', 32 * 32 * 3 * 8 / (0.25 * HUFF_GAIN_CIFAR_IMAGES), True],
-                            'CIFAR2 AE ntx4 Ne10 snr-4 6': ['classic/' + dn + 'AE_' + 'ResNet14_CIFAR2_ntx4_NW8_NL2_linear_Ne10_snr-4_6_CIFAR', 'g--x', 64 * 4, True],
+                            'CIFAR1 image classic rc25 n=15360 h100': ['classic/' + dn + 'classic_image_' + 'ResNet20_CIFAR_rc25_n15360_h100', 'k-x', 32 * 32 / 4 * 3 * 8 / (0.25 * HUFF_GAIN_CIFAR_IMAGES), True],
+                            # 'CIFAR1 image classic rc25 n=15360 h1000': ['classic/' + dn + 'classic_image_' + 'ResNet20_CIFAR_rc25_n15360_h1000', 'k--x', 32 * 32 / 4 * 3 * 8 / (0.25 * HUFF_GAIN_CIFAR_IMAGES), True],
+                            'CIFAR2 AE ntx4 Ne10 snr-4 6': ['classic/' + dn + 'AE_' + 'ResNet20_CIFAR2_ntx4_NW8_NL2_linear_Ne10_snr-4_6_CIFAR', 'g--x', 64 * 4, True],
                             'CIFAR2 AE ntx64 nrx64 Ne200 sgdlrs SINFONY rvec snr-4 6': ['classic/' + dn + 'AErvec_' + 'ResNet20_CIFAR2_ntx64_NW64_NL1_Ne200_snr-4_6_CIFAR', 'm:^', 64, True],
                             # 'CIFAR2 AE ntx64 nrx64 Ne200 sgdlrs SINFONY rvec individual snr-4 6': ['classic/' + dn + 'AErvec_ind_' + 'ResNet20_CIFAR2_ntx64_NW64_NL1_Ne200_snr-4_6_CIFAR', 'm:>', 64, True],
                             }

@@ -1,6 +1,6 @@
 # Blender v2.82 (sub 7) OBJ File: 'cube.blend'
 # www.blender.org
-mtllib cube_blue.mtl
+mtllib cube_invisible.mtl
 o visual_box_PLI_box
 v -0.150000 -0.150000 -0.300000
 v 0.150000 0.150000 -0.300000
@@ -16,7 +16,7 @@ vn 1.0000 0.0000 -0.0000
 vn 0.0000 -1.0000 0.0000
 vn 0.0000 0.0000 1.0000
 vn 0.0000 0.0000 -1.0000
-usemtl SpaceBlue
+usemtl SpaceInvisible
 s off
 f 3//1 1//1 8//1
 f 5//2 3//2 8//2

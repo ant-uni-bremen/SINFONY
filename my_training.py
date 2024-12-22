@@ -74,7 +74,7 @@ def gpu_select(number=0, memory_growth=True):
             cpu_number = 0  # Index of the CPU to use
             try:
                 tf.config.experimental.set_visible_devices([], 'GPU')
-                print('GPUs dectivated.')
+                print('GPUs deactivated.')
                 tf.config.set_visible_devices(cpus[cpu_number], 'CPU')
                 print('Only CPU number', cpu_number, 'used.')
                 # tf.config.experimental.set_memory_growth(cpus[cpu_number], memory_growth)

@@ -1,11 +1,11 @@
 load_settings:
-  load: True                              # start new training: 0 / load saved training: 1
-  filename: sinfony_hise256_imagenet_ntx64  # mnist, cifar10, fashion_mnist, hirise64, hirisecrater, fraeser64
+  load: False                             # start new training: 0 / load saved training: 1
+  filename: sinfony_hise256_v2_imagenet   # mnist, cifar10, fashion_mnist, hirise64, hirisecrater, fraeser64
   path: models/hise                       # path of simulation and model files
   save_format: npz                        # save format
   simulation_filename_prefix: RES_        # name prefix of simulation file
   numerical_precision: float32            # computation accuracy: float16, float32 (default), or float64
-  gpu: -1                                 # Select GPU, default: 0, -1 (CPU), -2 (automatically) 
+  gpu: -2                                 # Select GPU, default: 0, -1 (CPU), -2 (automatically) 
 
 dataset:
   dataset: hise256                        # mnist, cifar10, fashion_mnist, hirise64, hirisecrater, fraeser64
@@ -34,8 +34,8 @@ model:
   communication:
     transceiver_split: 1                  # (0) only image recognition, (1) with (multi) com. system inbetween
     power_normalization_axis: 0           # (0) batch dimension, (1) encode vector dimension n_tx
-    number_channel_uses: 64               # 14/16| Tx layer length: (-1) without, (0) same length as layer before Tx, (>0) adjust length
-    rx_layer_width: 1028                  # 56/64| Rx layer width: (-1) without, (0) same length as Tx layer, (>0) adjust length
+    number_channel_uses: 0                # 14/16| Tx layer length: (-1) without, (0) same length as layer before Tx, (>0) adjust length
+    rx_layer_width: 0                     # 56/64| Rx layer width: (-1) without, (0) same length as Tx layer, (>0) adjust length
     # For comparison/orientation:
     # 1. One ReLU layer at Tx/Rx: [36/16]/64 in "Learning Task-Oriented Communication for Edge Inference: An Information Bottleneck Approach"
     # 2. Two ReLU layer at Tx: (128->)256->16 / at Rx: 256->128(->128) from "Deep Learning Enabled Semantic Communication Systems"

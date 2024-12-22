@@ -1,6 +1,6 @@
 load_settings:
   load: False                             # start new training: 0 / load saved training: 1
-  filename: ResNet18_hise256_imagenet     # mnist, cifar10, fashion_mnist, hirise64, hirisecrater, fraeser64
+  filename: ResNet18_hise256_v2_imagenet  # mnist, cifar10, fashion_mnist, hirise64, hirisecrater, fraeser64, hise
   path: models/hise                       # path of simulation and model files
   save_format: npz                        # save format
   simulation_filename_prefix: RES_        # name prefix of simulation file

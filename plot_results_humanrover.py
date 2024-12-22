@@ -21,10 +21,11 @@ if __name__ == '__main__':
     # def my_func_main():
 
     # Settings
-    y_axis = 'val_acc'   	# val_loss, val_acc, loss, accuracy, val_accuracy, acc, acc_val, rx_loss, rx_val_loss, tx_loss, tx_val_loss
+    # val_loss, val_acc, loss, accuracy, val_accuracy, acc, acc_val, rx_loss, rx_val_loss, tx_loss, tx_val_loss
+    y_axis = 'val_acc'
     error_mode = True       # Show classification error instead of accuracy
     # (0) w/o SNR normalization, SNR normalization by [number of channel uses/number of features]
-    x_axis_normalization = 1
+    x_axis_normalization = 0
     # (snr) snr value on x axis, (default) index on x axis
     x_axis = 'snr'
     logplot = True          # Logarithmic plot?
@@ -66,12 +67,15 @@ if __name__ == '__main__':
              'SINFONY snr-4 6 ntx128': ['fraeser/' + dn + 'sinfony18_fraeser_ntx128', 'r-o', 128, True],
              # 'SINFONY snr-4 6 ntx256': ['fraeser/' + dn + 'sinfony18_fraeser_ntx256', 'r--x', 256, True],
              # 'SINFONY snr-4 6 ntx64': ['fraeser/' + dn + 'sinfony18_fraeser_ntx64', 'r--o', 64, True],
-             # 'SINFONY snr-4 6 ntx16': ['fraeser/' + dn + 'sinfony18_fraeser_ntx16', 'r--<', 16, True],
+             # 'SINFONY snr-4 6 ntx16': ['fraeser/' + dn + 'sinfony18_fraeser_ntx16', 'r--s', 16, True],
              # 'SINFONY snr-4 6 ntx32': ['fraeser/' + dn + 'sinfony18_fraeser_ntx32', 'r--<', 32, True],
-             # 'ResNet18 image classic rc25 n=15360 h10': ['classic/' + dn + 'classic_image_' + 'ResNet18_fraeser_rc25_n15360_h10_test', 'k-x', (218 + 487) * 380 * 1 * 8 / (0.25 * HUFF_GAIN_FRAESER_IMAGES), True],
-             'ResNet18 image classic rc25 n=15360 h1': ['classic/' + dn + 'classic_image_' + 'ResNet18_fraeser_rc25_n15360_h1_test', 'k--x', (218 + 487) * 380 * 1 * 8 / (0.25 * HUFF_GAIN_FRAESER_IMAGES), True],
-             # 'ResNet18 features classic rc25 n=15360 h100': ['classic/' + dn + 'classic_' + 'ResNet18_fraeser_rc25_n15360_h100_test', 'k-o', 1024 * 16 / (0.25 * HUFF_GAIN_FRAESER_FEATURES), True],
-             'ResNet18 features classic rc25 n=15360 h10': ['classic/' + dn + 'classic_' + 'ResNet18_fraeser_rc25_n15360_h10_test', 'k--o', 1024 * 16 / (0.25 * HUFF_GAIN_FRAESER_FEATURES), True],
+             # 'SINFONY snr-4 6 ntx64 2': ['fraeser/' + dn + 'sinfony18_fraeser_ntx64_2', 'g-.o', 64, True],
+             # 'SINFONY snr-4 6 ntx16 2': ['fraeser/' + dn + 'sinfony18_fraeser_ntx16_2', 'g-.s', 16, True],
+             # 'SINFONY snr-4 6 ntx32 2': ['fraeser/' + dn + 'sinfony18_fraeser_ntx32_2', 'g-.<', 32, True],
+             # 'ResNet18 image classic rc25 n=15360 h10': ['classic/' + dn + 'classic_image_' + 'ResNet18_fraeser_rc25_n15360_h10_test', 'k-x', (218 + 487) * 380 / 2 * 1 * 8 / (0.25 * HUFF_GAIN_FRAESER_IMAGES), True],
+             'ResNet18 image classic rc25 n=15360 h1': ['classic/' + dn + 'classic_image_' + 'ResNet18_fraeser_rc25_n15360_h1_test', 'k--x', (218 + 487) * 380 / 2 * 1 * 8 / (0.25 * HUFF_GAIN_FRAESER_IMAGES), True],
+             # 'ResNet18 features classic rc25 n=15360 h100': ['classic/' + dn + 'classic_' + 'ResNet18_fraeser_rc25_n15360_h100_test', 'k-o', 1024 / 2 * 16 / (0.25 * HUFF_GAIN_FRAESER_FEATURES), True],
+             'ResNet18 features classic rc25 n=15360 h10': ['classic/' + dn + 'classic_' + 'ResNet18_fraeser_rc25_n15360_h10_test', 'k--o', 1024 / 2 * 16 / (0.25 * HUFF_GAIN_FRAESER_FEATURES), True],
              }
     selected_plots.append(tools)
 

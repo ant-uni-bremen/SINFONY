@@ -5,10 +5,12 @@ Created on Mon Jan 08 16:06:40 2024
 
 @author: beck
 Wrapper for easy use of SINFONY models in Human on Mars Initiative and its seed project Human-integrated Swarm Exploration (HiSE)
+The TensorFlow models were generated in version 2.15.0 for better compatibility.
 
 Belongs to simulation framework for numerical results of the articles:
 1. Edgar Beck, Carsten Bockelmann, and Armin Dekorsy, “Semantic Information Recovery in Wireless Networks,” MDPI Sensors, vol. 23, no. 14, p. 6347, 2023. https://doi.org/10.3390/s23146347 (First draft version: E. Beck, C. Bockelmann, and A. Dekorsy, “Semantic communication: An information bottleneck view,” arXiv:2204.13366, Apr. 2022).
-2. Edgar Beck, Carsten Bockelmann, and Armin Dekorsy, "Model-free Reinforcement Learning of Semantic Communication by Stochastic Policy Gradient,” in IEEE International Conference on Machine Learning for Communication and Networking (ICMLCN 2024), vol. 1, Stockholm, Sweden, May 2024.
+2. Edgar Beck, Carsten Bockelmann, and Armin Dekorsy, “Model-free Reinforcement Learning of Semantic Communication by Stochastic Policy Gradient,” in IEEE International Conference on Machine Learning for Communication and Networking (ICMLCN 2024), vol. 1, Stockholm, Sweden, May 2024.
+3. E. Beck, H.-Y. Lin, P. Rückert, Y. Bao, B. von Helversen, S. Fehrler, K. Tracht, and A. Dekorsy, “Integrating Semantic Communication and Human Decision-Making into an End-to-End Sensing-Decision Framework”, arXiv preprint: 2412.05103, Dec. 2024. doi: 10.48550/arXiv.2412.05103.
 """
 
 import sys                                  # NOQA
@@ -114,47 +116,98 @@ if __name__ == '__main__':
     #     my_func_main()
     # def my_func_main():
 
-    # Load sinfony wrapper
-    path_script = os.path.dirname(os.path.abspath(__file__))
-    path = os.path.join(path_script, 'models', 'fraeser')
-    subpath_results = os.path.join(path_script, 'models_output')
+    # import my_training as mt
+    # mt.gpu_select(number=3, memory_growth=False)
+
+    # Choose project/dataset
+    # Possible data sets: mnist, cifar10, fraeser (human rover), fraeser64, hise, hise64, hise256
+    # Number after dataset name is the resolution of the images
+    wrapper = 'hise'
 
     last_layer_input = False
     transceiver_split = 1       # image recognition: 0, sinfony: 1
+    sinfony_version = 0         # 0: high bandwidth, 1: low bandwidth
+    # image_split: One image (False) or multi-image classification based on different views (true)
+    image_split = True
+    evaluation_mode = 1         # Interface data: 0, SNR evaluation: 1
 
-    if transceiver_split == 1:
-        # Models for testing so far:
-        # SINFONY approach with communication channel:
-        # Human Rover: sinfony6_fraeser64, sinfony6_fraeser64_ntx16, sinfony18_fraeser_lr1e-3_3, sinfony18_fraeser_ntx128
-        # MNIST: sinfony14_MNIST_ntx56_Ne20_snr-4_6_human, sinfony14_MNIST_ntx14_Ne20_snr-4_6_human
-        # CIFAR10: sinfony20_CIFAR_ntx64_snr-4_6_human, sinfony20_CIFAR_ntx16_snr-4_6_human
-        # HiSE: sinfony_hise64, sinfony_hise256_imagenet
-        filename = 'sinfony18_fraeser_lr1e-3_3'
-        sinfony = SinfonyWrapper(path=path, filename=filename,
-                                 last_layer_input=last_layer_input)
+    # Load sinfony wrapper
+    path_script = os.path.dirname(os.path.abspath(__file__))
+    path = os.path.join(path_script, 'models', wrapper)
+    subpath_results = os.path.join(path_script, 'models_output')
+
+    # Models for testing so far:
+    if wrapper == 'hise':
+        # HiSE template files
+        # SINFONY versions: sinfony_hise256_v2_imagenet, sinfony_hise256_v2_imagenet_ntx64
+        # Only image recognition: ResNet18_hise256_v2_imagenet
+        # Only image recognition based on one image view: ResNet18_hise256_v2_imagenet_oneimage
+        template_files = [['sinfony_hise256_v2_imagenet', 'sinfony_hise256_v2_imagenet_ntx64'],
+                          'ResNet18_hise256_v2_imagenet', 'ResNet18_hise256_v2_imagenet_oneimage']
+        dataset_name = 'hise256'
+    elif wrapper == 'fraeser':
+        # Human Rover template files
+        # SINFONY versions: sinfony18_fraeser_lr1e-3_3, sinfony18_fraeser_ntx128
+        # Only image recognition: ResNet18_fraeser
+        template_files = [['sinfony18_fraeser_lr1e-3_3',
+                           'sinfony18_fraeser_ntx128'], 'ResNet18_fraeser', '']
+        dataset_name = 'fraeser'
+    elif wrapper == 'mnist':
+        # MNIST template files
+        # SINFONY versions: sinfony14_MNIST_ntx56_Ne20_snr-4_6_human, sinfony14_MNIST_ntx14_Ne20_snr-4_6_human
+        # Only image recognition: ResNet14_MNIST_Ne20_human
+        template_files = [
+            ['sinfony14_MNIST_ntx56_Ne20_snr-4_6_human', 'sinfony14_MNIST_ntx14_Ne20_snr-4_6_human'], 'ResNet14_MNIST_Ne20_human', '']
+        dataset_name = 'mnist'
+    elif wrapper == 'cifar10':
+        # CIFAR10 template files
+        # SINFONY versions: sinfony20_CIFAR_ntx64_snr-4_6_human, sinfony20_CIFAR_ntx16_snr-4_6_human
+        # Only image recognition: ResNet20_CIFAR_human
+        template_files = [
+            ['sinfony20_CIFAR_ntx64_snr-4_6_human', 'sinfony20_CIFAR_ntx16_snr-4_6_human'], 'ResNet20_CIFAR_human', '']
+        dataset_name = 'cifar10'
+    elif wrapper == 'hise64':
+        # HiSE template files for low 64 resolution
+        # SINFONY versions: sinfony_hise64_v2, sinfony_hise64_v2_ntx16
+        # Only image recognition: ResNet20_hise64_v2
+        # Only image recognition based on one image view: ResNet20_hise64_v2_oneimage
+        template_files = [['sinfony_hise64_v2', 'sinfony_hise64_v2_ntx16'],
+                          'ResNet20_hise64_v2', 'ResNet20_hise64_v2_oneimage']
+        dataset_name = 'hise64'
+    elif wrapper == 'fraeser64':
+        # Human Rover template files for low 64 resolution
+        # SINFONY versions: sinfony6_fraeser64, sinfony6_fraeser64_ntx16
+        # Only image recognition: ResNet6_fraeser64_test
+        template_files = [
+            ['sinfony6_fraeser64', 'sinfony6_fraeser64_ntx16'], 'ResNet6_fraeser64_test', '']
+        dataset_name = 'fraeser64'
+
+    if image_split is True:
+        if transceiver_split == 1:
+            # SINFONY approach with communication channel:
+            filename = template_files[0][sinfony_version]
+            sinfony = SinfonyWrapper(path=path, filename=filename,
+                                     last_layer_input=last_layer_input)
+        else:
+            # Only image recognition:
+            filename = template_files[1]
+            sinfony = ResNetWrapper(path=path, filename=filename,
+                                    last_layer_input=last_layer_input)
     else:
-        # Only image recognition:
-        # Human Rover: ResNet6_fraeser64_test, ResNet18_fraeser
-        # MNIST: ResNet14_MNIST_Ne20_human
-        # CIFAR10: ResNet20_CIFAR_human
-        # HiSE: ResNet20_hise64, ResNet18_hise256_imagenet
-        filename = 'ResNet18_fraeser'
-        sinfony = ResNetWrapper(path=path, filename=filename,
-                                last_layer_input=last_layer_input)
+        if transceiver_split == 0:
+            # Only image recognition based on one image view:
+            filename = template_files[2]
+            sinfony = ResNetWrapper(path=path, filename=filename,
+                                    last_layer_input=last_layer_input)
 
-    # Possible data sets:
-    # mnist, cifar10, fraeser, fraeser64, hise, hise64, hise256
-    # Number after dataset name is the resolution of the images
-    dataset_name = 'fraeser'
     train_input, train_labels, test_input, test_labels = datasets.load_dataset(
-        dataset_name)
+        dataset_name, image_split=image_split)
     train_input_norm, test_input_norm = datasets.preprocess_pixels(
         train_input, test_input)
     datasets.summarize_dataset(
         train_input, train_labels, test_input, test_labels)
 
     # Evaluation of model
-    evaluation_mode = 1         # Interface data: 0, SNR evaluation: 1
 
     if evaluation_mode == 0:
         # Evaluation parameters

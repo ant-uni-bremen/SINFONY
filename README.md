@@ -13,6 +13,10 @@ Further, the source code of the proposed semantics-aware, i.e., seismic explorat
 
 3. Edgar Beck, Ban-Sok Shin, Shengdi Wang, Thomas Wiedemann, Dmitriy Shutin, and Armin Dekorsy, “Swarm Exploration and Communications: A First Step towards Mutually-Aware Integration by Probabilistic Learning,” MDPI Electronics, vol. 12, no. 8, p. 1908, Apr. 2023. https://doi.org/10.3390/electronics12081908
 
+SINFONY is also part of the End-to-End Sensing-Decision Framework in:
+
+4. E. Beck, H.-Y. Lin, P. R¨uckert, Y. Bao, B. von Helversen, S. Fehrler, K. Tracht, and A. Dekorsy, “Integrating Semantic Communication and Human Decision-Making into an End-to-End Sensing-Decision Framework”, arXiv preprint: 2412.05103, Dec. 2024. doi: 10.48550/arXiv.2412.05103.
+
 # Requirements & Usage
 
 This code was tested with TensorFlow 2.6 and should also run with version 2.10-2.15. For the script `sinfony_classic.py`, further sionna (>=0.9.0) is required.

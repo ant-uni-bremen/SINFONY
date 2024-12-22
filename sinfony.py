@@ -5,8 +5,9 @@ Created on Thu Mar 03 11:04:21 2022
 
 @author: beck
 Simulation framework for numerical results of the articles:
-1. Edgar Beck, Carsten Bockelmann, and Armin Dekorsy, “Semantic Information Recovery in Wireless Networks,” MDPI Sensors, vol. 23, no. 14, p. 6347, 2023. https://doi.org/10.3390/s23146347 (First draft version: E. Beck, C. Bockelmann, and A. Dekorsy, “Semantic communication: An information bottleneck view,” arXiv:2204.13366, Apr. 2022)
-2. Edgar Beck, Carsten Bockelmann, and Armin Dekorsy, "Model-free Reinforcement Learning of Semantic Communication by Stochastic Policy Gradient,” in IEEE International Conference on Machine Learning for Communication and Networking (ICMLCN 2024), vol. 1, Stockholm, Sweden, May 2024.
+1. Edgar Beck, Carsten Bockelmann, and Armin Dekorsy, “Semantic Information Recovery in Wireless Networks,” MDPI Sensors, vol. 23, no. 14, p. 6347, 2023. https://doi.org/10.3390/s23146347 (First draft version: E. Beck, C. Bockelmann, and A. Dekorsy, “Semantic communication: An information bottleneck view,” arXiv:2204.13366, Apr. 2022).
+2. Edgar Beck, Carsten Bockelmann, and Armin Dekorsy, “Model-free Reinforcement Learning of Semantic Communication by Stochastic Policy Gradient,” in IEEE International Conference on Machine Learning for Communication and Networking (ICMLCN 2024), vol. 1, Stockholm, Sweden, May 2024.
+3. E. Beck, H.- Y. Lin, P. Rückert, Y. Bao, B. von Helversen, S. Fehrler, K. Tracht, and A. Dekorsy, “Integrating Semantic Communication and Human Decision-Making into an End-to-End Sensing-Decision Framework”, arXiv preprint: 2412.05103, Dec. 2024. doi: 10.48550/arXiv.2412.05103.
 """
 
 import sys                                  # NOQA
@@ -43,6 +44,30 @@ import my_training as mf
 # Only necessary for Windows, otherwise kernel crashes
 if os.name.lower() == 'nt':
     os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
+
+
+def compute_confusion_matrix(true_labels, pred_labels, num_classes):
+    """
+    Compute the confusion matrix manually.
+
+    Parameters:
+    - true_labels: List or array of true class labels.
+    - pred_labels: List or array of predicted class labels.
+    - num_classes: Number of classes in the labels.
+
+    Returns:
+    - Confusion matrix as a 2D numpy array.
+    """
+    conf_matrix = np.zeros((num_classes, num_classes), dtype=int)
+    for t, p in zip(true_labels, pred_labels):
+        conf_matrix[t, p] += 1
+    return conf_matrix
+
+# aprob = model(test_input_normalized)
+# num_classes = 5
+# true_labels= np.argmax(test_labels, axis=1)
+# pred_labels= np.argmax(aprob, axis=1)
+# compute_confusion_matrix(true_labels, pred_labels, num_classes)
 
 
 def visualize_tsne_embedding(visualized_model, snr_evaluation_test, test_input, test_labels, visualized_dataset):
@@ -101,7 +126,7 @@ if __name__ == '__main__':
     # Load parameters from configuration file
     # Get the script's directory
     path_script = os.path.dirname(os.path.abspath(__file__))
-    # Default: mnist/semantic_config_mnist_sinfony.yaml
+    # Default: 'mnist/semantic_config_mnist_sinfony.yaml'
     SETTINGS_FILE = 'mnist/semantic_config_mnist_sinfony.yaml'
     # Avoid error messages
     import logging

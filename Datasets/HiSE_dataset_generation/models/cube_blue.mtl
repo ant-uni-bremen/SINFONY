@@ -1,7 +1,7 @@
 # Blender MTL File: 'cube.blend'
 # Material Count: 1
 
-newmtl SpaceGold
+newmtl SpaceBlue
 Ns 665.639999
 Ka 1.000000 1.000000 1.000000
 Kd 0.010000 0.010000 1.000000

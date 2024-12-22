@@ -41,26 +41,48 @@ if __name__ == '__main__':
     selected_plots = []
 
     # SINFONY applied to HiSE project datasets
-    # TODO: Normalization for hise dataset
 
-    hise = {'title': ['SINFONY: HiSE', 'hise', 0, False],
+    # 512 features per subimage, Ntx counted per subimage
+    # Bits per subimage: 256*256*3*8
+    hise_v2 = {'title': ['SINFONY: HiSE 256 v2', 'hise', 512, False],
+               # 'Tag': ['data name', 'color in plot', channel uses, on/off],
+               'hise resnet imagenet 256x256': [dn + 'ResNet18_hise256_v2_imagenet', 'k--', 0, True],
+               # 'hise resnet imagenet 256x256 final layer ?': [dn + 'ResNet18_hise256_v2_imagenet_test', 'k-o', 0, True],
+               'hise resnet imagenet 256x256 one image': [dn + 'ResNet18_hise256_v2_imagenet_oneimage', 'k:', 0, True],
+               'hise sinfony ntx512 imagenet 256x256': [dn + 'sinfony_hise256_v2_imagenet', 'r--o', 512, True],
+               'hise sinfony ntx64 imagenet 256x256': [dn + 'sinfony_hise256_v2_imagenet_ntx64', 'g--o', 64, True],
+               }
+    selected_plots.append(hise_v2)
+
+    hise64_v2 = {'title': ['SINFONY: HiSE 64 v2', 'hise', 64, False],
+                 # 'Tag': ['data name', 'color in plot', channel uses, on/off],
+                 'hise resnet 64x64': [dn + 'ResNet20_hise64_v2', 'k-', 0, True],
+                 'hise resnet 64x64 one image': [dn + 'ResNet20_hise64_v2_oneimage', 'k:', 0, True],
+                 'hise sinfony ntx64 64x64 snr-4 6': [dn + 'sinfony_hise64_v2', 'r-o', 64, True],
+                 'hise sinfony ntx16 64x64 snr-4 6': [dn + 'sinfony_hise64_v2_ntx16', 'g-o', 16, True],
+                 }
+    selected_plots.append(hise64_v2)
+
+    # Old versions
+
+    hise = {'title': ['SINFONY: HiSE 256', 'hise', 512, False],
             # 'Tag': ['data name', 'color in plot', channel uses, on/off],
             'hise resnet imagenet 256x256': [dn + 'ResNet18_hise256_imagenet', 'k--', 0, True],
             # 'hise resnet imagenet cifarpar 256x256': [dn + 'ResNet20_hise256_imagenet_cifarpar', 'k-x', 0, True],
-            'hise sinfony imagenet 256x256': [dn + 'sinfony_hise256_imagenet', 'r--o', 0, True],
-            'hise sinfony ntx16 imagenet 256x256': [dn + 'sinfony_hise256_imagenet_ntx16', 'g--o', 0, True],
+            'hise sinfony ntx512 imagenet 256x256': [dn + 'sinfony_hise256_imagenet', 'r--o', 512, True],
+            'hise sinfony ntx64 imagenet 256x256': [dn + 'sinfony_hise256_imagenet_ntx64', 'g--o', 64, True],
             }
-    selected_plots.append(hise)
+    # selected_plots.append(hise)
 
-    hise64 = {'title': ['SINFONY: HiSE 64', 'hise', 0, False],
+    hise64 = {'title': ['SINFONY: HiSE 64', 'hise', 64, False],
               # 'Tag': ['data name', 'color in plot', channel uses, on/off],
               'hise resnet 64x64': [dn + 'ResNet20_hise64', 'k-', 0, True],
-              # 'hise sinfony 64x64 snr6 10 1stlr1e-1': [dn + 'sinfony_hise64', 'r-', 0, True],
-              # 'hise sinfony 64x64 snr6 10 1stlr1e-2': [dn + 'sinfony_hise64_1stlr1e-2', 'r--', 0, True],
-              'hise sinfony 64x64 snr-4 6': [dn + 'sinfony_hise64_snr-4_6', 'r-o', 0, True],
-              'hise sinfony ntx16 64x64 snr-4 6': [dn + 'sinfony_hise64_ntx16', 'g-o', 0, True],
+              # 'hise sinfony 64x64 snr6 10 1stlr1e-1': [dn + 'sinfony_hise64', 'r-', 64, True],
+              # 'hise sinfony 64x64 snr6 10 1stlr1e-2': [dn + 'sinfony_hise64_1stlr1e-2', 'r--', 64, True],
+              'hise sinfony ntx64 64x64 snr-4 6': [dn + 'sinfony_hise64_snr-4_6', 'r-o', 64, True],
+              'hise sinfony ntx16 64x64 snr-4 6': [dn + 'sinfony_hise64_ntx16', 'g-o', 16, True],
               }
-    selected_plots.append(hise64)
+    # selected_plots.append(hise64)
 
     # Set here one dictionary to be analyzed
     if select_plot is True:

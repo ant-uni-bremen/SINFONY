@@ -29,7 +29,7 @@ from my_functions import print_time
 import my_math_operations as mop
 
 
-def evaluate_sinfony(evaluated_model, test_input, test_labels, snrs=np.linspace(-30, 20, 1), validation_rounds=10):
+def evaluate_sinfony(evaluated_model, test_input, test_labels, snrs=np.linspace(-30, 20, 1), validation_rounds=10, batch_size=32):
     '''Evaluate SINFONY over noisy SNR range for multiple validation rounds (= dataset epochs)
     evaluated_model: Keras model to be evaluated
     '''
@@ -50,7 +50,7 @@ def evaluate_sinfony(evaluated_model, test_input, test_labels, snrs=np.linspace(
             # Evaluate for validation_rounds with different noise realizations (akin to training epochs)
             # SINFONY validation step
             loss_ii, accuracy_ii = evaluated_model.evaluate(
-                test_input, test_labels)
+                test_input, test_labels, batch_size=batch_size)
 
             # Add current measures to total measures
             loss_i = (validation_round * loss_i + loss_ii) / \
@@ -108,10 +108,11 @@ def evaluate_rlsinfony(evaluated_model, test_input, test_labels, snrs=np.linspac
     return accuracy, loss
 
 
-def evaluate_image_classifier(evaluated_model, test_input, test_labels):
+def evaluate_image_classifier(evaluated_model, test_input, test_labels, batch_size=32):
     '''Evaluate image classifier Keras model on validation/test set
     '''
     # Standard image recognition: Evaluate model accuracy once for test data
-    loss_i, accuracy_i = evaluated_model.evaluate(test_input, test_labels)
+    loss_i, accuracy_i = evaluated_model.evaluate(
+        test_input, test_labels, batch_size=batch_size)
     # Independent from SNR / constant, but plotted over SNR range
     return accuracy_i, loss_i
