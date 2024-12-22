@@ -15,7 +15,7 @@ Further, the source code of the proposed semantics-aware, i.e., seismic explorat
 
 SINFONY is also part of the End-to-End Sensing-Decision Framework in:
 
-4. E. Beck, H.-Y. Lin, P. R¨uckert, Y. Bao, B. von Helversen, S. Fehrler, K. Tracht, and A. Dekorsy, “Integrating Semantic Communication and Human Decision-Making into an End-to-End Sensing-Decision Framework”, arXiv preprint: 2412.05103, Dec. 2024. doi: 10.48550/arXiv.2412.05103.
+4. E. Beck, H.-Y. Lin, P. Rückert, Y. Bao, B. von Helversen, S. Fehrler, K. Tracht, and A. Dekorsy, “Integrating Semantic Communication and Human Decision-Making into an End-to-End Sensing-Decision Framework”, arXiv preprint: 2412.05103, Dec. 2024. doi: 10.48550/arXiv.2412.05103.
 
 # Requirements & Usage
 
