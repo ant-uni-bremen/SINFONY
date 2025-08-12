@@ -209,11 +209,11 @@ def template_models(wrapper):
     '''
     if wrapper == 'hise':
         # HiSE template files
-        # SINFONY versions: sinfony_hise256_v3_imagenet, sinfony_hise256_v3_imagenet_ntx64
-        # Only image recognition: ResNet18_hise256_v3_imagenet
-        # Only image recognition based on one image view: ResNet18_hise256_v3_imagenet_oneimage
-        template_files = [['sinfony_hise256_v3_imagenet', 'sinfony_hise256_v3_imagenet_ntx64'],
-                          'ResNet18_hise256_v3_imagenet', 'ResNet18_hise256_v3_imagenet_oneimage']
+        # SINFONY versions: sinfony_hise256_v4_imagenet, sinfony_hise256_v4_imagenet_ntx64_2
+        # Only image recognition: ResNet18_hise256_v4_imagenet
+        # Only image recognition based on one image view: ResNet18_hise256_v4_imagenet_oneimage
+        template_files = [['sinfony_hise256_v4_imagenet', 'sinfony_hise256_v4_imagenet_ntx64_2'],
+                          'ResNet18_hise256_v4_imagenet', 'ResNet18_hise256_v4_imagenet_oneimage']
         dataset_name = 'hise256'
     elif wrapper == 'fraeser':
         # Human Rover template files
@@ -238,11 +238,11 @@ def template_models(wrapper):
         dataset_name = 'cifar10'
     elif wrapper == 'hise64':
         # HiSE template files for low 64 resolution
-        # SINFONY versions: sinfony_hise64_v2, sinfony_hise64_v2_ntx16
-        # Only image recognition: ResNet20_hise64_v2
-        # Only image recognition based on one image view: ResNet20_hise64_v2_oneimage
-        template_files = [['sinfony_hise64_v2', 'sinfony_hise64_v2_ntx16'],
-                          'ResNet20_hise64_v2', 'ResNet20_hise64_v2_oneimage']
+        # SINFONY versions: sinfony_hise64_v4, sinfony_hise64_v4_ntx16
+        # Only image recognition: ResNet20_hise64_v4_2
+        # Only image recognition based on one image view: ResNet20_hise64_v4_oneimage
+        template_files = [['sinfony_hise64_v4', 'sinfony_hise64_v4_ntx16'],
+                          'ResNet20_hise64_v4_2', 'ResNet20_hise64_v4_oneimage']
         dataset_name = 'hise64'
     elif wrapper == 'fraeser64':
         # Human Rover template files for low 64 resolution
