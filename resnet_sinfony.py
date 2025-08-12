@@ -96,10 +96,10 @@ class CommunicationConfiguration():
         self.communication_channel = communication_channel
 
 
-def encoding_layers(input_shape, encoding_config=EncodingConfiguration()):
+def encoding_layers(input_shape, encoding_config=EncodingConfiguration(), encoder_number=''):
     '''Encoding layers for channel encoding of features
     '''
-    transmitter_input = tf.keras.layers.Input(input_shape)
+    transmitter_input = Input(input_shape)
     x_tensor = transmitter_input
     encoding_layer_width = encoding_config.encoding_layer_width
     if encoding_layer_width > -1:
@@ -108,27 +108,28 @@ def encoding_layers(input_shape, encoding_config=EncodingConfiguration()):
         # Choose number of equal width layers
         for layer_number in range(0, encoding_config.number_encoding_layer):
             x_tensor = Dense(encoding_layer_width, activation='relu', kernel_initializer=encoding_config.weight_initialization, kernel_regularizer=encoding_config.weight_decay,
-                             name="tx_layer" + str(layer_number))(x_tensor)
+                             name="tx_layer" + str(layer_number) + '_' + encoder_number)(x_tensor)
         # Linear layer here, or small constant in normalization -> then no numerical instability
         x_tensor = Dense(encoding_layer_width, activation='linear',
                          kernel_regularizer=encoding_config.weight_decay)(x_tensor)
     if encoding_config.transmit_normalization is True:
-        transmitter_output = mt.normalize_input(
-            x_tensor, axis=encoding_config.normalization_axis, eps=1e-12)
+        transmitter_output = mt.NormalizeInputLayer(
+            axis=encoding_config.normalization_axis, eps=1e-12)(x_tensor)
+        # mt.normalize_input(x_tensor, axis=encoding_config.normalization_axis, eps=1e-12)
     else:
         transmitter_output = x_tensor
     encoder = Model(inputs=transmitter_input, outputs=transmitter_output)
     return encoder
 
 
-def resnet_transmitter(resnet_config=resnet.ResnetConfiguration(), encoding_config=EncodingConfiguration()):
+def resnet_transmitter(resnet_config=resnet.ResnetConfiguration(), encoding_config=EncodingConfiguration(), transmitter_number=''):
     '''SINFONY: Function returns ResNet transmitter (CIFAR with [6 * number_residual_units + 2] layers without bottleneck structure)
     '''
     resnet_config.image_shape = resnet.list2first_element(
         resnet_config.image_shape)
     # Tx
     # Step 1 (Setup Input Layer)
-    transmitter_input = tf.keras.layers.Input(resnet_config.image_shape)
+    transmitter_input = Input(resnet_config.image_shape)
     # Step 2 (ResNet Layers)
     feature_extractor = resnet.resnet_feature_extractor(
         resnet_config=resnet_config)
@@ -136,7 +137,7 @@ def resnet_transmitter(resnet_config=resnet.ResnetConfiguration(), encoding_conf
 
     # Step 3 (Channel Encoding)
     encoder = encoding_layers(
-        input_shape=feature_extractor.layers[-1].output_shape[1:], encoding_config=encoding_config)
+        input_shape=feature_extractor.layers[-1].output.shape[1:], encoding_config=encoding_config, encoder_number=transmitter_number)
     transmitter_output = encoder(x_tensor)
 
     transmitter = Model(inputs=transmitter_input, outputs=transmitter_output)
@@ -154,13 +155,15 @@ def resnet_multi_transmitter_imagesplit(resnet_config=resnet.ResnetConfiguration
     im_div2 = image_shape[1] / encoding_config.image_split_factor
     tx_list = [[], []]
     resnet_config_tx = resnet_config
+    transmitter_number = 0
     for index_x in range(0, encoding_config.image_split_factor):
         for index_y in range(0, encoding_config.image_split_factor):
             shape_tx = (int((index_x + 1) * im_div1) - int(index_x * im_div1),
                         int((index_y + 1) * im_div2) - int(index_y * im_div2), image_shape[-1])
             resnet_config_tx.image_shape = shape_tx
             tx_list[index_x].append(resnet_transmitter(
-                resnet_config=resnet_config_tx, encoding_config=encoding_config))
+                resnet_config=resnet_config_tx, encoding_config=encoding_config, transmitter_number=str(transmitter_number)))
+            transmitter_number = transmitter_number + 1
     # Reset image shape
     resnet_config.image_shape = image_shape
 
@@ -182,7 +185,7 @@ def resnet_multi_transmitter_imagesplit(resnet_config=resnet.ResnetConfiguration
 
 def resnet_receiver_imagesplit(received_signal_shape, number_classes=10, image_split_factor=2, decoding_config=DecodingConfiguration()):
     '''SINFONY: Function returns ResNet receiver
-    received_signal_shape: transmitter.layers[-1].output_shape[1:]
+    received_signal_shape: transmitter.layers[-1].output.shape[1:]
     number_classes: number of classes
     '''
     decoding_layer_width = decoding_config.decoding_layer_width
@@ -263,7 +266,7 @@ def resnet_sinfony_imagesplit(communication_config, resnet_config=resnet.ResnetC
         label = f'ResNet{resnet_layer_number}_AE_{resnet_config.architecture.upper()}'
 
     # Rx
-    receiver = resnet_receiver_imagesplit(received_signal_shape=transmitter.layers[-1].output_shape[1:], number_classes=resnet_config.number_classes,
+    receiver = resnet_receiver_imagesplit(received_signal_shape=transmitter.layers[-1].output.shape[1:], number_classes=resnet_config.number_classes,
                                           image_split_factor=image_split_factor, decoding_config=communication_config.decoding_config)
 
     # Model for autoencoder training
@@ -303,7 +306,7 @@ def resnet_multi_transmitter(resnet_config=resnet.ResnetConfiguration(), encodin
                 resnet_config=resnet_config_tx)(image)
         else:
             transmit_signal = resnet_transmitter(
-                resnet_config=resnet_config_tx, encoding_config=encoding_config)(image)
+                resnet_config=resnet_config_tx, encoding_config=encoding_config, transmitter_number=str(shape_index))(image)
         transmit_signals.append(transmit_signal)
     resnet_config.image_shape = image_shapes
     # Concatenate the transmit signals
@@ -315,7 +318,7 @@ def resnet_multi_transmitter(resnet_config=resnet.ResnetConfiguration(), encodin
 
 def resnet_receiver(received_signal_shape, number_classes=10, decoding_config=DecodingConfiguration()):
     '''SINFONY: Function returns ResNet receiver for list of input images
-    received_signal_shape: transmiters.layers[-1].output_shape[1:]
+    received_signal_shape: transmiters.layers[-1].output.shape[1:]
     '''
     # Rx
     received_signals = Input(shape=received_signal_shape)
@@ -348,7 +351,7 @@ def resnet_sinfony(communication_config, resnet_config=resnet.ResnetConfiguratio
         resnet_config=resnet_config, encoding_config=communication_config.encoding_config)
     # Rx
     receiver = resnet_receiver(
-        received_signal_shape=transmitters.layers[-1].output_shape[1:], number_classes=resnet_config.number_classes, decoding_config=communication_config.decoding_config)
+        received_signal_shape=transmitters.layers[-1].output.shape[1:], number_classes=resnet_config.number_classes, decoding_config=communication_config.decoding_config)
 
     # Model for autoencoder training
     images = []
@@ -386,7 +389,7 @@ def resnet_multi_image(resnet_config=resnet.ResnetConfiguration(), number_combin
     x_tensor = features
     # Joint preprocessing of features
     if combination_layer_width <= 0:
-        combination_layer_width = feature_extractors.layers[-1].output_shape[-1]
+        combination_layer_width = feature_extractors.layers[-1].output.shape[-1]
     # number_combination_layer = 0
     if number_combination_layer > 0:
         for layer_number in range(0, number_combination_layer):

@@ -28,7 +28,7 @@ if __name__ == '__main__':
     x_axis_normalization = 0
     # (snr) snr value on x axis, (default) index on x axis
     x_axis = 'snr'
-    logplot = True          # Logarithmic plot?
+    logplot = 1             # Logarithmic plot?
     select_plot = False     # Select one plot or plot all preselected plots
     copy_models = False     # Copy published models to public repository
     # Fixed
@@ -63,7 +63,7 @@ if __name__ == '__main__':
              # 'SINFONY snr-4 6 4': ['fraeser/' + dn + 'sinfony18_fraeser_lr1e-3_4', 'b--o', 512, True],
              # 'SINFONY snr-4 6 5': ['fraeser/' + dn + 'sinfony18_fraeser_lr1e-3_5', 'b--D', 512, True],
              # 'SINFONY snr-4 6 6': ['fraeser/' + dn + 'sinfony18_fraeser_lr1e-3_6', 'b--<', 512, True],
-             'SINFONY snr-4 6 full image': ['fraeser/' + dn + 'sinfony18_fraeser_fullimage', 'k--s', 512, True],
+             # 'SINFONY snr-4 6 full image': ['fraeser/' + dn + 'sinfony18_fraeser_fullimage', 'k--s', 512, True],
              'SINFONY snr-4 6 ntx128': ['fraeser/' + dn + 'sinfony18_fraeser_ntx128', 'r-o', 128, True],
              # 'SINFONY snr-4 6 ntx256': ['fraeser/' + dn + 'sinfony18_fraeser_ntx256', 'r--x', 256, True],
              # 'SINFONY snr-4 6 ntx64': ['fraeser/' + dn + 'sinfony18_fraeser_ntx64', 'r--o', 64, True],
@@ -72,12 +72,30 @@ if __name__ == '__main__':
              # 'SINFONY snr-4 6 ntx64 2': ['fraeser/' + dn + 'sinfony18_fraeser_ntx64_2', 'g-.o', 64, True],
              # 'SINFONY snr-4 6 ntx16 2': ['fraeser/' + dn + 'sinfony18_fraeser_ntx16_2', 'g-.s', 16, True],
              # 'SINFONY snr-4 6 ntx32 2': ['fraeser/' + dn + 'sinfony18_fraeser_ntx32_2', 'g-.<', 32, True],
-             # 'ResNet18 image classic rc25 n=15360 h10': ['classic/' + dn + 'classic_image_' + 'ResNet18_fraeser_rc25_n15360_h10_test', 'k-x', (218 + 487) * 380 / 2 * 1 * 8 / (0.25 * HUFF_GAIN_FRAESER_IMAGES), True],
-             'ResNet18 image classic rc25 n=15360 h1': ['classic/' + dn + 'classic_image_' + 'ResNet18_fraeser_rc25_n15360_h1_test', 'k--x', (218 + 487) * 380 / 2 * 1 * 8 / (0.25 * HUFF_GAIN_FRAESER_IMAGES), True],
+             'ResNet18 image classic rc25 n=15360 h1': ['classic/' + dn + 'classic_image_' + 'ResNet18_fraeser_rc25_n15360_h1_fine', 'k-x', (218 + 487) * 380 / 2 * 1 * 8 / (0.25 * HUFF_GAIN_FRAESER_IMAGES), True],
+             'ResNet18 image classic rc25 n=15360 h10': ['classic/' + dn + 'classic_image_' + 'ResNet18_fraeser_rc25_n15360_h10_fine', 'k-*', (218 + 487) * 380 / 2 * 1 * 8 / (0.25 * HUFF_GAIN_FRAESER_IMAGES), True],
+             # 'ResNet18 image classic rc25 n=15360 h1': ['classic/' + dn + 'classic_image_' + 'ResNet18_fraeser_rc25_n15360_h1_test', 'k--x', (218 + 487) * 380 / 2 * 1 * 8 / (0.25 * HUFF_GAIN_FRAESER_IMAGES), True],
              # 'ResNet18 features classic rc25 n=15360 h100': ['classic/' + dn + 'classic_' + 'ResNet18_fraeser_rc25_n15360_h100_test', 'k-o', 1024 / 2 * 16 / (0.25 * HUFF_GAIN_FRAESER_FEATURES), True],
-             'ResNet18 features classic rc25 n=15360 h10': ['classic/' + dn + 'classic_' + 'ResNet18_fraeser_rc25_n15360_h10_test', 'k--o', 1024 / 2 * 16 / (0.25 * HUFF_GAIN_FRAESER_FEATURES), True],
+             # 'ResNet18 features classic rc25 n=15360 h10': ['classic/' + dn + 'classic_' + 'ResNet18_fraeser_rc25_n15360_h10_test', 'k--o', 1024 / 2 * 16 / (0.25 * HUFF_GAIN_FRAESER_FEATURES), True],
              }
     selected_plots.append(tools)
+
+    gcm_tools = {'title': ['SINFONY: Human Rover Tools (705, 380, 1)', 'fraeser', 256+256, False],
+                 # 'Tag': ['data name', 'color in plot', channel uses, on/off],
+                 'ResNet18 2': [dn + 'ResNet18_fraeser', 'k--x', 0, True],
+                 'SINFONY snr-4 6 3': [dn + 'sinfony18_fraeser_lr1e-3_3', 'k-', 512, True],
+                 'SINFONY snr-4 6 ntx128': [dn + 'sinfony18_fraeser_ntx128', 'k--', 128, True],
+                 'GCM prob + SINFONY ntx128 snr-4 6': [dn + 'GCM+sinfony18_fraeser_ntx128', 'r-x', 128, True],
+                 'GCM opt + SINFONY ntx128': [dn + 'opt_GCM+sinfony18_fraeser_ntx128', 'r--x', 128, True],
+                 'GCM Nfeat 5 Ne20 + SINFONY ntx128': [dn + 'GCM_Nfeatures5+sinfony18_fraeser_ntx128', 'm--', 128, True],
+                 'GCM Nfeat 10 Ne20 + SINFONY ntx128': [dn + 'GCM_Nfeatures10+sinfony18_fraeser_ntx128', 'g--', 128, True],
+                 'GCM Nfeat 20 Ne20 + SINFONY ntx128': [dn + 'GCM_Nfeatures20+sinfony18_fraeser_ntx128', 'y--', 128, True],
+                 'GCM Nfeat 40 Ne20 + SINFONY ntx128': [dn + 'GCM_Nfeatures40+sinfony18_fraeser_ntx128', 'b--', 128, True],
+                 'GCM Nfeat max Ne20 + SINFONY ntx128': [dn + 'GCM_Nfeatures-1+sinfony18_fraeser_ntx128', 'c--', 128, True],
+                 'GCM prob + SINFONY ntx512 snr-4 6': [dn + 'GCM+sinfony18_fraeser_lr1e-3_3', 'k-o', 512, True],
+                 'GCM opt + SINFONY ntx512': [dn + 'opt_GCM+sinfony18_fraeser_lr1e-3_3', 'k--o', 512, True],
+                 }
+    selected_plots.append(gcm_tools)
 
     tools64 = {'title': ['SINFONY: Human Rover Tools (118, 64, 1)', 'fraeser', 36+64, False],
                # 'Tag': ['data name', 'color in plot', channel uses, on/off],
@@ -95,7 +113,7 @@ if __name__ == '__main__':
                'SINFONY 64x64 ntx16': [dn + 'sinfony6_fraeser64_ntx16', 'r-o', 16, True],
                # 'SINFONY 64x64 ntx16 snr6 16': [dn + 'sinfony6_fraeser64_ntx16_snr6_16', 'r-s', 16, True],
                }
-    selected_plots.append(tools64)
+    # selected_plots.append(tools64)
 
     human_rover_cifar = {'title': ['SINFONY: Human Rover CIFAR10', 'cifar10', 64, False],
                          # 'Tag': ['data name', 'color in plot', channel uses, on/off],
@@ -108,20 +126,124 @@ if __name__ == '__main__':
                          'SINFONY ntx64 nrx64 snr-4 6': [dn + 'sinfony20_CIFAR_ntx64_snr-4_6_human', 'b--s', 64, True],
                          'SINFONY ntx64 nrx64 snr-4 6 test': [dn + 'sinfony20_CIFAR_ntx64_snr-4_6_human_test', 'b--o', 64, True],
                          }
-    selected_plots.append(human_rover_cifar)
+    # selected_plots.append(human_rover_cifar)
+
+    gcm_cifar = {'title': ['SINFONY: GCM CIFAR10 ntx64', 'cifar10', 64, False],
+                 # 'Tag': ['data name', 'color in plot', channel uses, on/off],
+                 'ResNet human': [dn + 'ResNet20_CIFAR_human', 'k--x', 0, True],
+                 'SINFONY ntx64 nrx64 snr-4 6': [dn + 'sinfony20_CIFAR_ntx64_snr-4_6_human', 'k-', 64, True],
+                 'GCM prob + SINFONY ntx64 Ne20 snr-4 6': [dn + 'GCM+sinfony20_CIFAR_ntx64_snr-4_6_human', 'r-x', 16, True],
+                 'GCM opt + SINFONY ntx64 Ne20 snr-4 6': [dn + 'opt_GCM+sinfony20_CIFAR_ntx64_snr-4_6_human', 'r--x', 16, True],
+                 'GCM Nfeat 5 Ne20 + SINFONY ntx64 Ne20 snr-4 6': [dn + 'GCM_Nfeatures5+sinfony20_CIFAR_ntx64_snr-4_6_human', 'm--', 16, True],
+                 'GCM Nfeat 10 Ne20 + SINFONY ntx64 Ne20 snr-4 6': [dn + 'GCM_Nfeatures10+sinfony20_CIFAR_ntx64_snr-4_6_human', 'g--', 16, True],
+                 'GCM Nfeat 20 Ne20 + SINFONY ntx64 Ne20 snr-4 6': [dn + 'GCM_Nfeatures20+sinfony20_CIFAR_ntx64_snr-4_6_human', 'y--', 16, True],
+                 'GCM Nfeat 40 Ne20 + SINFONY ntx64 Ne20 snr-4 6': [dn + 'GCM_Nfeatures40+sinfony20_CIFAR_ntx64_snr-4_6_human', 'b--', 16, True],
+                 'GCM Nfeat max Ne20 + SINFONY ntx64 Ne20 snr-4 6': [dn + 'GCM_Nfeatures-1+sinfony20_CIFAR_ntx64_snr-4_6_human', 'c--', 16, True],
+                 }
+    selected_plots.append(gcm_cifar)
+
+    gcm_cifar_ntx16 = {'title': ['SINFONY: GCM CIFAR10 ntx16', 'cifar10', 64, False],
+                       # 'Tag': ['data name', 'color in plot', channel uses, on/off],
+                       'ResNet human': [dn + 'ResNet20_CIFAR_human', 'k--x', 0, True],
+                       'SINFONY ntx16 nrx64 snr-4 6': [dn + 'sinfony20_CIFAR_ntx16_snr-4_6_human', 'k--', 16, True],
+                       'SINFONY ntx64 nrx64 snr-4 6': [dn + 'sinfony20_CIFAR_ntx64_snr-4_6_human', 'k-', 64, True],
+                       'GCM prob + SINFONY ntx16 Ne20 snr-4 6': [dn + 'GCM+sinfony20_CIFAR_ntx16_snr-4_6_human', 'r--x', 16, True],
+                       'GCM opt + SINFONY ntx16 Ne20 snr-4 6': [dn + 'opt_GCM+sinfony20_CIFAR_ntx16_snr-4_6_human', 'r-x', 16, True],
+                       'GCM old prob + SINFONY ntx16 Ne20 snr-4 6': [dn + 'GCM_test+sinfony20_CIFAR_ntx16_snr-4_6_human_test', 'r--<', 16, True],
+                       'GCM old opt + SINFONY ntx16 Ne20 snr-4 6': [dn + 'opt_GCM_test+sinfony20_CIFAR_ntx16_snr-4_6_human_test', 'r->', 16, True],
+                       'GCM Nfeat 5 Ne20 + SINFONY ntx16 Ne20 snr-4 6': [dn + 'GCM_Nfeatures5+sinfony20_CIFAR_ntx16_snr-4_6_human', 'm--', 16, True],
+                       # 'GCM test Nfeat 5 Ne20 + SINFONY ntx16 Ne20 snr-4 6': [dn + 'GCM_test_Nfeatures5+sinfony20_CIFAR_ntx16_snr-4_6_human_test', 'm--<', 16, True],
+                       # 'GCM Nfeat 7 Ne20 + SINFONY ntx16 Ne20 snr-4 6': [dn + 'GCM_Nfeatures7+sinfony20_CIFAR_ntx16_snr-4_6_human', 'k--^', 16, True],
+                       # 'GCM Nfeat 8 Ne20 + SINFONY ntx16 Ne20 snr-4 6': [dn + 'GCM_Nfeatures8+sinfony20_CIFAR_ntx16_snr-4_6_human', 'k--<', 16, True],
+                       # 'GCM Nfeat 9 Ne20 + SINFONY ntx16 Ne20 snr-4 6': [dn + 'GCM_Nfeatures9+sinfony20_CIFAR_ntx16_snr-4_6_human', 'k-->', 16, True],
+                       'GCM Nfeat 10 Ne20 + SINFONY ntx16 Ne20 snr-4 6': [dn + 'GCM_Nfeatures10+sinfony20_CIFAR_ntx16_snr-4_6_human', 'g--', 16, True],
+                       # 'GCM test Nfeat 10 Ne20 + SINFONY ntx16 Ne20 snr-4 6': [dn + 'GCM_test_Nfeatures10+sinfony20_CIFAR_ntx16_snr-4_6_human_test', 'g--<', 16, True],
+                       'GCM Nfeat 20 Ne20 + SINFONY ntx16 Ne20 snr-4 6': [dn + 'GCM_Nfeatures20+sinfony20_CIFAR_ntx16_snr-4_6_human', 'y--', 16, True],
+                       # 'GCM test Nfeat 20 Ne20 + SINFONY ntx16 Ne20 snr-4 6': [dn + 'GCM_test_Nfeatures20+sinfony20_CIFAR_ntx16_snr-4_6_human_test', 'y--<', 16, True],
+                       'GCM Nfeat 40 Ne20 + SINFONY ntx16 Ne20 snr-4 6': [dn + 'GCM_Nfeatures40+sinfony20_CIFAR_ntx16_snr-4_6_human', 'b--', 16, True],
+                       # 'GCM test Nfeat 40 Ne20 + SINFONY ntx16 Ne20 snr-4 6': [dn + 'GCM_test_Nfeatures40+sinfony20_CIFAR_ntx16_snr-4_6_human_test', 'b--<', 16, True],
+                       'GCM Nfeat max Ne20 + SINFONY ntx16 Ne20 snr-4 6': [dn + 'GCM_Nfeatures-1+sinfony20_CIFAR_ntx16_snr-4_6_human', 'c--', 16, True],
+                       # 'GCM test Nfeat max Ne20 + SINFONY ntx16 Ne20 snr-4 6': [dn + 'GCM_test_Nfeatures-1+sinfony20_CIFAR_ntx16_snr-4_6_human_test', 'c--<', 16, True],
+                       }
+    selected_plots.append(gcm_cifar_ntx16)
 
     human_rover_mnist = {'title': ['SINFONY: Human Rover MNIST', 'mnist', 56, False],
                          # 'Tag': ['data name', 'color in plot', channel uses, on/off],
-                         'ResNet Ne20': [dn + 'ResNet14_MNIST_Ne20', 'k--', 0, True],
+                         # 'ResNet Ne20': [dn + 'ResNet14_MNIST_Ne20', 'k--', 0, True],
                          'ResNet Ne20 human': [dn + 'ResNet14_MNIST_Ne20_human', 'k--x', 0, True],
-                         'SINFONY ntx14 nrx56 Ne20 snr-4 6': [dn + 'ResNet14_MNIST4_Ne20_snr-4_6', 'g-D', 14, True],
+                         # 'SINFONY ntx14 nrx56 Ne20 snr-4 6': [dn + 'ResNet14_MNIST4_Ne20_snr-4_6', 'g-D', 14, True],
                          'SINFONY ntx14 nrx56 Ne20 snr-4 6 human': [dn + 'sinfony14_MNIST_ntx14_Ne20_snr-4_6_human', 'b--D', 14, True],
-                         'SINFONY ntx14 nrx56 Ne20 snr-4 6 human test': [dn + 'sinfony14_MNIST_ntx14_Ne20_snr-4_6_human_test', 'b--o', 14, True],
-                         'SINFONY ntx56 Ne20 snr-4 6': [dn + 'ResNet14_MNIST6_Ne20_snr-4_6', 'r-s', 56, True],
+                         # 'SINFONY ntx14 nrx56 Ne20 snr-4 6 human test': [dn + 'sinfony14_MNIST_ntx14_Ne20_snr-4_6_human_test', 'b--o', 14, True],
+                         # 'SINFONY ntx56 Ne20 snr-4 6': [dn + 'ResNet14_MNIST6_Ne20_snr-4_6', 'r-s', 56, True],
                          'SINFONY ntx56 Ne20 snr-4 6 human': [dn + 'sinfony14_MNIST_ntx56_Ne20_snr-4_6_human', 'b--s', 56, True],
-                         'SINFONY ntx56 Ne20 snr-4 6 human test': [dn + 'sinfony14_MNIST_ntx56_Ne20_snr-4_6_human_test', 'b--o', 56, True],
+                         # 'SINFONY ntx56 Ne20 snr-4 6 human test': [dn + 'sinfony14_MNIST_ntx56_Ne20_snr-4_6_human_test', 'b--o', 56, True],
                          }
-    selected_plots.append(human_rover_mnist)
+    # selected_plots.append(human_rover_mnist)
+
+    gcm_mnist = {'title': ['SINFONY: GCM MNIST ntx56', 'mnist', 56, False],
+                 # 'Tag': ['data name', 'color in plot', channel uses, on/off],
+                 'ResNet Ne20 human': [dn + 'ResNet14_MNIST_Ne20_human', 'k--x', 0, True],
+                 'SINFONY ntx56 Ne20 snr-4 6 human': [dn + 'sinfony14_MNIST_ntx56_Ne20_snr-4_6_human', 'k-', 56, True],
+                 'GCM prob Ne20 + SINFONY ntx56 Ne20 snr-4 6 human': [dn + 'GCM+sinfony14_MNIST_ntx56_Ne20_snr-4_6_human', 'r--x', 56, True],
+                 'GCM opt Ne20 + SINFONY ntx56 Ne20 snr-4 6 human': [dn + 'opt_GCM+sinfony14_MNIST_ntx56_Ne20_snr-4_6_human', 'r-x', 56, True],
+                 'GCM Nfeat 5 Ne20 + SINFONY ntx56 Ne20 snr-4 6 human': [dn + 'GCM_Nfeatures5+sinfony14_MNIST_ntx56_Ne20_snr-4_6_human', 'm--', 56, True],
+                 'GCM Nfeat 10 Ne20 + SINFONY ntx56 Ne20 snr-4 6 human': [dn + 'GCM_Nfeatures10+sinfony14_MNIST_ntx56_Ne20_snr-4_6_human', 'g--', 56, True],
+                 'GCM Nfeat 20 Ne20 + SINFONY ntx56 Ne20 snr-4 6 human': [dn + 'GCM_Nfeatures20+sinfony14_MNIST_ntx56_Ne20_snr-4_6_human', 'y--', 56, True],
+                 'GCM Nfeat 40 Ne20 + SINFONY ntx56 Ne20 snr-4 6 human': [dn + 'GCM_Nfeatures40+sinfony14_MNIST_ntx56_Ne20_snr-4_6_human', 'b--', 56, True],
+                 'GCM Nfeat max Ne20 + SINFONY ntx56 Ne20 snr-4 6 human': [dn + 'GCM_Nfeatures-1+sinfony14_MNIST_ntx56_Ne20_snr-4_6_human', 'c--', 56, True],
+                 }
+    selected_plots.append(gcm_mnist)
+
+    gcm_mnist_ntx14 = {'title': ['SINFONY: GCM MNIST ntx14', 'mnist', 56, False],
+                       # 'Tag': ['data name', 'color in plot', channel uses, on/off],
+                       # 'ResNet Ne20 human': [dn + 'ResNet14_MNIST_Ne20_human', 'k--x', 0, True],
+                       # 'SINFONY ntx56 Ne20 snr-4 6 human': [dn + 'sinfony14_MNIST_ntx56_Ne20_snr-4_6_human', 'k-', 56, True],
+                       'SINFONY ntx14 nrx56 Ne20 snr-4 6 human': [dn + 'sinfony14_MNIST_ntx14_Ne20_snr-4_6_human', 'k--^', 14, True],
+                       'GCM prob Ne1 + SINFONY ntx14 Ne20 snr-4 6 human': [dn + 'GCM+sinfony14_MNIST_ntx14_Ne20_snr-4_6_human', 'r-', 14, True],
+                       'GCM prob Ne10 + SINFONY ntx14 Ne20 snr-4 6 human': [dn + 'GCM_Ne10+sinfony14_MNIST_ntx14_Ne20_snr-4_6_human', 'r--', 14, True],
+                       'GCM opt Ne1 + SINFONY ntx14 Ne20 snr-4 6 human': [dn + 'opt_GCM+sinfony14_MNIST_ntx14_Ne20_snr-4_6_human', 'r-x', 14, True],
+                       'GCM opt Ne10 + SINFONY ntx14 Ne20 snr-4 6 human': [dn + 'opt_GCM_Ne10+sinfony14_MNIST_ntx14_Ne20_snr-4_6_human', 'r--x', 14, True],
+                       'GCM Nfeat 5 Ne1 + SINFONY ntx14 Ne20 snr-4 6 human': [dn + 'GCM_Nfeatures5+sinfony14_MNIST_ntx14_Ne20_snr-4_6_human', 'm--', 14, True],
+                       'GCM Nfeat 10 Ne1 + SINFONY ntx14 Ne20 snr-4 6 human': [dn + 'GCM_Nfeatures10+sinfony14_MNIST_ntx14_Ne20_snr-4_6_human', 'g--', 14, True],
+                       # 'GCM new Nfeat 10 Ne1 + SINFONY ntx14 Ne20 snr-4 6 human': [dn + 'GCM_new_Nfeatures10+sinfony14_MNIST_ntx14_Ne20_snr-4_6_human', 'g--<', 14, True],
+                       # 'GCM old Nfeat 10 Ne1 + SINFONY ntx14 Ne20 snr-4 6 human': [dn + 'GCM_old_Nfeatures10+sinfony14_MNIST_ntx14_Ne20_snr-4_6_human', 'g-->', 14, True],
+                       'GCM Nfeat 20 Ne1 + SINFONY ntx14 Ne20 snr-4 6 human': [dn + 'GCM_Nfeatures20+sinfony14_MNIST_ntx14_Ne20_snr-4_6_human', 'y--', 14, True],
+                       'GCM Nfeat 40 Ne1 + SINFONY ntx14 Ne20 snr-4 6 human': [dn + 'GCM_Nfeatures40+sinfony14_MNIST_ntx14_Ne20_snr-4_6_human', 'b--', 14, True],
+                       'GCM Nfeat max Ne1 + SINFONY ntx14 Ne20 snr-4 6 human': [dn + 'GCM_Nfeatures-1+sinfony14_MNIST_ntx14_Ne20_snr-4_6_human', 'c--', 14, True],
+                       }
+    selected_plots.append(gcm_mnist_ntx14)
+
+    gcm_mnist_ntx14_joint_training = {'title': ['SINFONY: GCM MNIST ntx14 joint training', 'mnist', 56, False],
+                                      # 'Tag': ['data name', 'color in plot', channel uses, on/off],
+                                      # 'ResNet Ne20 human': [dn + 'ResNet14_MNIST_Ne20_human', 'k--x', 0, True],
+                                      # 'SINFONY ntx56 Ne20 snr-4 6 human': [dn + 'sinfony14_MNIST_ntx56_Ne20_snr-4_6_human', 'k-', 56, True],
+                                      'SINFONY ntx14 nrx56 Ne20 snr-4 6 human': [dn + 'sinfony14_MNIST_ntx14_Ne20_snr-4_6_human', 'k--^', 14, True],
+                                      'GCM prob Ne1 + SINFONY ntx14 Ne20 snr-4 6 human': [dn + 'GCM+sinfony14_MNIST_ntx14_Ne20_snr-4_6_human', 'r-x', 14, True],
+                                      'GCM opt Ne1 + SINFONY ntx14 Ne20 snr-4 6 human': [dn + 'opt_GCM+sinfony14_MNIST_ntx14_Ne20_snr-4_6_human', 'r--x', 14, True],
+                                      'GCM prob Ne1 joint training Nalt20 Ne1 + SINFONY ntx14 Ne20 snr-4 6 human': [dn + 'GCM+sinfony14_MNIST_ntx14_Ne20_snr-4_6_human+joint_training', 'y-*', 14, True],
+                                      'GCM opt Ne1 joint training Nalt20 Ne1 + SINFONY ntx14 Ne20 snr-4 6 human': [dn + 'opt_GCM+sinfony14_MNIST_ntx14_Ne20_snr-4_6_human+joint_training', 'y--*', 14, True],
+                                      # 'GCM prob Ne1 joint training Nalt100 Ne1 + SINFONY ntx14 Ne20 snr-4 6 human': [dn + 'GCM_Ne100+sinfony14_MNIST_ntx14_Ne20_snr-4_6_human+joint_training', 'g-*', 14, True],
+                                      # 'GCM opt Ne1 joint training Nalt100 Ne1 + SINFONY ntx14 Ne20 snr-4 6 human': [dn + 'opt_GCM_Ne100+sinfony14_MNIST_ntx14_Ne20_snr-4_6_human+joint_training', 'g--*', 14, True],
+                                      'GCM prob Ne1 joint training Nalt20 Ne3 + SINFONY ntx14 Ne20 snr-4 6 human': [dn + 'GCM_Ne3+sinfony14_MNIST_ntx14_Ne20_snr-4_6_human+joint_training', 'g-*', 14, True],
+                                      'GCM opt Ne1 joint training Nalt20 Ne3 + SINFONY ntx14 Ne20 snr-4 6 human': [dn + 'opt_GCM_Ne3+sinfony14_MNIST_ntx14_Ne20_snr-4_6_human+joint_training', 'g--*', 14, True],
+                                      # 'GCM Nfeat max Ne1 + SINFONY ntx14 Ne20 snr-4 6 human': [dn + 'GCM_Nfeatures-1+sinfony14_MNIST_ntx14_Ne20_snr-4_6_human', 'c--', 14, True],
+                                      # 'GCM Nfeat max Ne1 joint training Nalt20 Ne10 + SINFONY ntx14 Ne20 snr-4 6 human': [dn + 'GCM_Nfeatures-1+sinfony14_MNIST_ntx14_Ne20_snr-4_6_human+joint_training', 'c-*', 14, True],
+                                      }
+    selected_plots.append(gcm_mnist_ntx14_joint_training)
+
+    gcm_opt_mnist_ntx14 = {'title': ['SINFONY: GCM MNIST ntx14 optimal policy', 'mnist', 56, False],
+                           # 'Tag': ['data name', 'color in plot', channel uses, on/off],
+                           'ResNet Ne20 human': [dn + 'ResNet14_MNIST_Ne20_human', 'k--x', 0, True],
+                           'SINFONY ntx14 Ne20 snr-4 6 human': [dn + 'sinfony14_MNIST_ntx14_Ne20_snr-4_6_human', 'k-', 56, True],
+                           'GCM opt Ne1 + SINFONY ntx14 Ne20 snr-4 6 human': [dn + 'opt_GCM+sinfony14_MNIST_ntx14_Ne20_snr-4_6_human', 'r-x', 14, True],
+                           'GCM opt Ne10 + SINFONY ntx14 Ne20 snr-4 6 human': [dn + 'opt_GCM_Ne10+sinfony14_MNIST_ntx14_Ne20_snr-4_6_human', 'r--x', 14, True],
+                           'GCM Nfeat 5 Ne1 + SINFONY ntx14 Ne20 snr-4 6 human': [dn + 'opt_GCM_Nfeatures5+sinfony14_MNIST_ntx14_Ne20_snr-4_6_human', 'm--', 14, True],
+                           'GCM Nfeat 10 Ne1 + SINFONY ntx14 Ne20 snr-4 6 human': [dn + 'opt_GCM_Nfeatures10+sinfony14_MNIST_ntx14_Ne20_snr-4_6_human', 'g--', 14, True],
+                           'GCM Nfeat 20 Ne1 + SINFONY ntx14 Ne20 snr-4 6 human': [dn + 'opt_GCM_Nfeatures20+sinfony14_MNIST_ntx14_Ne20_snr-4_6_human', 'y--', 14, True],
+                           'GCM Nfeat 40 Ne1 + SINFONY ntx14 Ne20 snr-4 6 human': [dn + 'opt_GCM_Nfeatures40+sinfony14_MNIST_ntx14_Ne20_snr-4_6_human', 'b--', 14, True],
+                           'GCM Nfeat max Ne1 + SINFONY ntx14 Ne20 snr-4 6 human': [dn + 'opt_GCM_Nfeatures-1+sinfony14_MNIST_ntx14_Ne20_snr-4_6_human', 'c--', 14, True],
+                           }
+    # selected_plots.append(gcm_opt_mnist_ntx14)
 
     # hirise dataset idea for joint results with Psychologists and Sociologists: Deprecated
     # [Unpublished]

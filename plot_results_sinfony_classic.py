@@ -101,7 +101,7 @@ if __name__ == '__main__':
                             }
     selected_plots.append(semcom_mnist_classic)
 
-    # Investigation for CIFAR10 dataset
+    # Investigation for CIFAR dataset
     # [Partly Published, prepared for PhD thesis]
     semcom_cifar_classic = {'title': ['SINFONY vs Classic communications on CIFAR10', '', 64, False],
                             # 'Tag': ['data name', 'color in plot', channel uses, on/off],

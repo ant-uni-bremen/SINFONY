@@ -19,6 +19,7 @@ sys.path.append('..')                       # NOQA
 # LOADED PACKAGES
 # Python packages
 import os
+import gc
 import numpy as np
 from matplotlib import pyplot as plt
 import time
@@ -36,7 +37,7 @@ import my_float as mfl
 # Note: Important to load models from old files, there a reference to mf including layers is hardcoded
 import my_training as mf
 import my_training as mt
-from my_functions import print_time, savemodule
+from my_functions import print_time, get_ram, savemodule
 import my_math_operations as mop
 
 
@@ -178,10 +179,7 @@ def image_transmission(images, blocks, huffman, information_word_length, encoder
         reconstructed_source[number_blocks * blocks:, :] = classic_digital_communication(source_signal[number_blocks * blocks:, :].flatten(
         ), huffman, information_word_length, encoder, mapper, channel, demapper, decoder, interleaver, deinterleaver, snr, floatx=floatx, probability_bit=probability_bit).reshape((number_remaining_blocks, -1))
     reconstructed_source = reconstructed_source.reshape(images.shape)
-    # reconstructed_source = datasets.preprocess_pixels_image(
-    #     reconstructed_source)
-    # number_classes = model.predict(reconstructed_source)
-    return reconstructed_source  # number_classes
+    return reconstructed_source
 
 
 def feature_transmission(source_signal, blocks, huffman, information_word_length, encoder, mapper, channel, demapper, decoder, interleaver, deinterleaver, snr, floatx=None, probability_bit=None):
@@ -209,7 +207,7 @@ if __name__ == '__main__':
     # Get the script's directory
     path_script = os.path.dirname(os.path.abspath(__file__))
     # Default: 'classic/config_classic.yaml'
-    SETTINGS_FILE = 'classic/config_classic.yaml'
+    SETTINGS_FILE = 'classic/config_classic_urban.yaml'
     # Load the provided configuration file or the default one
     # python SINFONY.py semantic_config.yaml
     # Workaround for interactive sessions: Only allow config file names starting 'semantic_config'
@@ -243,12 +241,15 @@ if __name__ == '__main__':
     dataset = dataset_settings['dataset']
     # Show first dataset examples, just for demonstration
     show_dataset = dataset_settings['show_dataset']
+    validation_split = dataset_settings['validation_split']
+    image_split = dataset_settings['image_split']
     train_input, train_labels, test_input, test_labels = datasets.load_dataset(
-        dataset)
+        dataset, validation_split=validation_split, image_split=True, preprocess=False)
 
     # Automatic decision for model with dataset
     if dataset == 'mnist':
         subpath = 'mnist'
+        RGB_entries = True
         if classic == 2:
             # NOTE: Only simulated for 'ResNet14_MNIST'
             # File for central image classification
@@ -257,18 +258,36 @@ if __name__ == '__main__':
             filename = 'ResNet14_MNIST2_Ne20'
     elif dataset == 'cifar10':
         subpath = 'cifar10'
+        RGB_entries = True
         if classic == 2:
             filename = 'ResNet20_CIFAR'
         else:
             filename = 'ResNet20_CIFAR2'
     elif dataset == 'fraeser':
         subpath = 'fraeser'
+        RGB_entries = True
         if classic == 2:
             filename = 'ResNet18_fraeser'               # ResNet18_fraeser_test
         else:
             # NOTE: Should be SINFONY version without noise and transceiver layers, not, e.g., sinfony18_fraeser_lr1e-3_3
+            # Due to default image split, the same file can be used here
             filename = 'ResNet18_fraeser'
+    elif dataset == 'speech_commands':
+        subpath = 'speechcommands'
+        RGB_entries = False
+        if classic == 2:
+            filename = 'ResNet18_speechcommands_imagenet'
+        else:
+            print('SINFONY version without noise and transceiver layers missing.')
+    elif dataset == 'urbansound8k':
+        subpath = 'urbansound8k'
+        RGB_entries = False
+        if classic == 2:
+            filename = 'ResNet18_urbansound8k_imagenet'
+        else:
+            print('SINFONY version without noise and transceiver layers missing.')
     else:
+        RGB_entries = False
         print('Dataset not implemented into script.')
 
     # Path for SINFONY model
@@ -317,9 +336,16 @@ if __name__ == '__main__':
         model.summary()
 
     # Preprocess Data set
-    [train_input_normalized, test_input_normalized] = datasets.preprocess_pixels(
-        train_input, test_input)
-    # test_input_normalized = datasets.preprocess_pixels_image(test_input)
+    if RGB_entries is True:
+        [train_input_normalized, test_input_normalized] = datasets.preprocess_pixels(
+            train_input, test_input)
+    else:
+        train_input_normalized = datasets.preprocess_spectrograms(train_input)
+        test_input_normalized = datasets.preprocess_spectrograms(test_input)
+        # Data to be transmitted are normalized spectrograms for simplification
+        train_input = train_input_normalized
+        test_input = test_input_normalized
+
     if show_dataset is True:
         datasets.summarize_dataset(train_input, train_labels,
                                    test_input, test_labels)
@@ -356,8 +382,20 @@ if __name__ == '__main__':
         for test_input_item in test_input:
             test_input_flattened.append(test_input_item.flatten())
         test_input_flattened = np.concatenate(test_input_flattened)
-        probability_sequence = sequence_prior_data_int(
-            test_input_flattened, bit_integer_maximum=number_categorical)
+        if np.issubdtype(test_input[0].dtype, np.integer):
+            probability_sequence = sequence_prior_data_int(
+                test_input_flattened, bit_integer_maximum=number_categorical)
+            floatx = None
+            probability_bit = None
+        else:
+            # Non-image transmission
+            floatx = mfl.float_toolbox(float_name)
+            number_bits = floatx.N_bits
+            bits_poss = floatx.b_poss
+            probability_sequence = mfl.sequence_prior_data(
+                floatx, data=test_input_flattened)
+            probability_bit = mfl.compute_single_bitprob(
+                floatx, probability_sequence)
     elif classic == 1:
         # Features to be transmitted are floating point values
         # Each value is one symbol for huffman encoding
@@ -449,9 +487,14 @@ if __name__ == '__main__':
                 reconstructed_sources = []
                 for test_input_item in test_input:
                     reconstructed_source = image_transmission(
-                        test_input_item, blocks, huffman, information_word_length, encoder, mapper, channel, demapper, decoder, interleaver, deinterleaver, snr)
-                    reconstructed_sources.append(datasets.preprocess_pixels_image(
-                        reconstructed_source))
+                        test_input_item, blocks, huffman, information_word_length, encoder, mapper, channel, demapper, decoder, interleaver, deinterleaver, snr, floatx=floatx, probability_bit=probability_bit)
+                    if RGB_entries is True:
+                        reconstructed_sources.append(
+                            datasets.preprocess_pixels_image(reconstructed_source))
+                    else:
+                        # No negative values for spectrogram
+                        reconstructed_sources.append(
+                            np.clip(reconstructed_source, a_min=0, a_max=None))
                 # Extract semantics based on all received images
                 number_classes = model.predict(reconstructed_sources)
             # Calculate average loss and accuracy
@@ -464,14 +507,16 @@ if __name__ == '__main__':
                 (validation_round + 1)
             accuracy_i = (validation_round * accuracy_i +
                           accuracy_ii) / (validation_round + 1)
+            # Free RAM, otherwise it accumulates
+            gc.collect()
             print(
-                f'Validation Round: {validation_round + 1}/{validation_rounds}, CE: {loss_i:.4f}, Acc: {accuracy_i:.2f}, Time: {print_time(time.time() - start_time2)}')
+                f'Validation Round: {validation_round + 1}/{validation_rounds}, CE: {loss_i:.4f}, Acc: {accuracy_i:.2f}, Time: {print_time(time.time() - start_time2)}, RAM: {get_ram():.2f} GB')
 
         # Append list with evaluation for each SNR value
         evaluation_measures[0].append(loss_i)
         evaluation_measures[1].append(accuracy_i)
         print(
-            f'Iteration: {snr_index + 1}/{len(snrs)}, SNR: {snr}, CE: {loss_i:.4f}, Acc: {accuracy_i:.2f}, Time: {print_time(time.time() - start_time)}')
+            f'Iteration: {snr_index + 1}/{len(snrs)}, SNR: {snr}, CE: {loss_i:.4f}, Acc: {accuracy_i:.2f}, Time: {print_time(time.time() - start_time)}, RAM: {get_ram():.2f} GB')
 
     accuracy = np.array(evaluation_measures[1])
     loss = np.array(evaluation_measures[0])

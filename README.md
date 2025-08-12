@@ -23,6 +23,17 @@ This code was tested with TensorFlow 2.6 and should also run with version 2.10-2
 
 Run the script as `python3 sinfony.py "semantic_config.yaml"`, `python3 sinfony_classic.py "classic/config_classic.yaml"`, `python3 sinfony_classic_features_autoencoder.py "classic/config_classic_features_autoencoder.yaml"`, or `python3 semantic_floating_point.py` to reproduce the results of the articles. To do so, set the parameters in the configuration files to the values in the articles. Exemplary configurations are given in the folder `settings` and its subfolders named according to the used datasets.
 
+## Dependencies
+The dependencies are:
+```
+python3 -m pip install numpy matplotlib tensorflow pandas
+```
+With Conda:
+```
+bash conda install -y numpy matplotlib pandas
+pip install tensorflow
+```
+
 # Acknowledgements
 
 This work was partly funded by the Federal State of Bremen and the University of Bremen as part of the Humans on Mars Initiative, by the German Ministry of Education and Research (BMBF) under grant 16KISK016 (Open6GHub), and by the German Research Foundation (DFG) under grant 500260669 (SCIL).

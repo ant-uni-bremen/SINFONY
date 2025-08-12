@@ -85,28 +85,43 @@ class ResnetConfigurationImageNet(ResnetConfiguration):
                          preactivation=preactivation, bottleneck=bottleneck, **kwargs)
 
 
-class Residual(tf.keras.Model):
+def clone_initializer(initializer):
+    '''If initializer object, the initializer is cloned to avoid same initalization across layers.
+    Otherwise, default behavior.
+    '''
+    if isinstance(initializer, tf.keras.initializers.Initializer):
+        return type(initializer)(**initializer.get_config())
+    else:
+        # if string or config dict
+        return tf.keras.initializers.get(initializer)
+
+
+@tf.keras.utils.register_keras_serializable()
+class Residual(tf.keras.layers.Layer):
     """The Residual block of ResNet for ResNet-18/34 and ResNet-CIFAR10.
     For ReLU activations weight initialization with he_uniform is better than glorot
     Preactivation version for better training
     """
 
-    def __init__(self, number_channels, use_1x1conv=False, strides=1, kernel_initializer=None, kernel_regularizer=None, preactivation=True, batch_normalization=True):
-        super().__init__()
+    def __init__(self, number_channels, use_1x1conv=False, strides=1, kernel_initializer=None, kernel_regularizer=None, preactivation=True, batch_normalization=True, **kwargs):
+        super().__init__(**kwargs)
+
+        self.number_channels = number_channels
+        self.use_1x1conv = use_1x1conv
+        self.strides = strides
+        self.batch_normalization = batch_normalization
+
         self.preactivation = preactivation
-        self.kernel_regularizer = tf.keras.regularizers.get(kernel_regularizer)
-        self.kernel_initializer = tf.keras.initializers.get(kernel_initializer)
-        self.kernel_initializer2 = tf.keras.initializers.get(
-            kernel_initializer)
-        self.kernel_initializer3 = tf.keras.initializers.get(
-            kernel_initializer)
+        self.kernel_regularizer = kernel_regularizer
+        self.kernel_initializer = kernel_initializer
+
         self.conv1 = tf.keras.layers.Conv2D(number_channels, padding='same', kernel_size=3, strides=strides,
-                                            kernel_initializer=self.kernel_initializer, kernel_regularizer=self.kernel_regularizer)
+                                            kernel_initializer=clone_initializer(self.kernel_initializer), kernel_regularizer=self.kernel_regularizer)
         self.conv2 = tf.keras.layers.Conv2D(number_channels, padding='same', kernel_size=3,
-                                            kernel_initializer=self.kernel_initializer2, kernel_regularizer=self.kernel_regularizer)
+                                            kernel_initializer=clone_initializer(self.kernel_initializer), kernel_regularizer=self.kernel_regularizer)
         if use_1x1conv:
             self.conv3 = tf.keras.layers.Conv2D(number_channels, kernel_size=1, strides=strides,
-                                                kernel_initializer=self.kernel_initializer3, kernel_regularizer=self.kernel_regularizer)
+                                                kernel_initializer=clone_initializer(self.kernel_initializer), kernel_regularizer=self.kernel_regularizer)
         else:
             self.conv3 = None
         if batch_normalization:
@@ -139,34 +154,49 @@ class Residual(tf.keras.Model):
             output_tensor = tf.keras.activations.relu(output_tensor)
         return output_tensor
 
+    def get_config(self):
+        config = super().get_config()
+        config.update({
+            "number_channels": self.number_channels,
+            "use_1x1conv": self.use_1x1conv,
+            "strides": self.strides,
+            "kernel_initializer": self.kernel_initializer,
+            "kernel_regularizer": self.kernel_regularizer,
+            "preactivation": self.preactivation,
+            "batch_normalization": self.batch_normalization,
+        })
+        return config
 
-class ResidualBottleneck(tf.keras.Model):
+
+@tf.keras.utils.register_keras_serializable()
+class ResidualBottleneck(tf.keras.layers.Layer):
     """The Residual block of ResNet in bottleneck version for ResNet-50/101/152.
     For ReLU activations weight initialization with he_uniform is better than glorot
     Preactivation version for better training
     (Identity shortcuts are essential for efficient training with less parameters, but not used in preactivation paper...)
     """
 
-    def __init__(self, number_channels, use_1x1conv=False, strides=1, kernel_initializer=None, kernel_regularizer=None, preactivation=True, batch_normalization=True):
-        super().__init__()
+    def __init__(self, number_channels, use_1x1conv=False, strides=1, kernel_initializer=None, kernel_regularizer=None, preactivation=True, batch_normalization=True, **kwargs):
+        super().__init__(**kwargs)
+
+        self.number_channels = number_channels
+        self.use_1x1conv = use_1x1conv
+        self.strides = strides
+        self.batch_normalization = batch_normalization
+
         self.preactivation = preactivation
-        self.kernel_regularizer = tf.keras.regularizers.get(kernel_regularizer)
-        self.kernel_initializer = tf.keras.initializers.get(kernel_initializer)
-        self.kernel_initializer2 = tf.keras.initializers.get(
-            kernel_initializer)
-        self.kernel_initializer3 = tf.keras.initializers.get(
-            kernel_initializer)
-        self.kernel_initializer4 = tf.keras.initializers.get(
-            kernel_initializer)
+        self.kernel_regularizer = kernel_regularizer
+        self.kernel_initializer = kernel_initializer
+
         self.conv1 = tf.keras.layers.Conv2D(number_channels, padding='same', kernel_size=1, strides=strides,
-                                            kernel_initializer=self.kernel_initializer, kernel_regularizer=self.kernel_regularizer)
+                                            kernel_initializer=clone_initializer(self.kernel_initializer), kernel_regularizer=self.kernel_regularizer)
         self.conv2 = tf.keras.layers.Conv2D(number_channels, padding='same', kernel_size=3,
-                                            kernel_initializer=self.kernel_initializer2, kernel_regularizer=self.kernel_regularizer)
+                                            kernel_initializer=clone_initializer(self.kernel_initializer), kernel_regularizer=self.kernel_regularizer)
         self.conv3 = tf.keras.layers.Conv2D(4 * number_channels, padding='same', kernel_size=1,
-                                            kernel_initializer=self.kernel_initializer3, kernel_regularizer=self.kernel_regularizer)
+                                            kernel_initializer=clone_initializer(self.kernel_initializer), kernel_regularizer=self.kernel_regularizer)
         if use_1x1conv:
             self.conv4 = tf.keras.layers.Conv2D(4 * number_channels, kernel_size=1, strides=strides,
-                                                kernel_initializer=self.kernel_initializer4, kernel_regularizer=self.kernel_regularizer)
+                                                kernel_initializer=clone_initializer(self.kernel_initializer), kernel_regularizer=self.kernel_regularizer)
         else:
             self.conv4 = None
         if batch_normalization:
@@ -205,14 +235,40 @@ class ResidualBottleneck(tf.keras.Model):
             output_tensor = tf.keras.activations.relu(output_tensor)
         return output_tensor
 
+    def get_config(self):
+        '''Get config for custom objects
+        '''
+        config = super().get_config()
+        config.update({
+            "number_channels": self.number_channels,
+            "use_1x1conv": self.use_1x1conv,
+            "strides": self.strides,
+            "kernel_initializer": self.kernel_initializer,
+            "kernel_regularizer": self.kernel_regularizer,
+            "preactivation": self.preactivation,
+            "batch_normalization": self.batch_normalization
+        })
+        return config
 
-class ResnetBlock(tf.keras.Model):  # tf.keras.layers.Layer
+
+@tf.keras.utils.register_keras_serializable()
+class ResnetBlock(tf.keras.layers.Layer):
     '''ResNet block
     '''
 
     def __init__(self, number_channels, number_residuals, first_block=False, kernel_initializer=None, kernel_regularizer=None, preactivation=True, bottleneck=False, batch_normalization=True,
                  **kwargs):
-        super(ResnetBlock, self).__init__(**kwargs)
+        super().__init__(**kwargs)
+
+        self.number_channels = number_channels
+        self.number_residuals = number_residuals
+        self.first_block = first_block
+        self.kernel_initializer = kernel_initializer
+        self.kernel_regularizer = kernel_regularizer
+        self.preactivation = preactivation
+        self.bottleneck = bottleneck
+        self.batch_normalization = batch_normalization
+
         self.residual_layers = []
         for i in range(number_residuals):
             if bottleneck:
@@ -233,9 +289,25 @@ class ResnetBlock(tf.keras.Model):  # tf.keras.layers.Layer
     def call(self, input_tensor):
         '''Execute ResNet block
         '''
-        for layer in self.residual_layers:  # TODO: Test for self.residual_layers instead of self.residual_layers.layers
+        for layer in self.residual_layers:
             input_tensor = layer(input_tensor)
         return input_tensor
+
+    def get_config(self):
+        '''Get config for custom objects
+        '''
+        config = super().get_config()
+        config.update({
+            "number_channels": self.number_channels,
+            "number_residuals": self.number_residuals,
+            "first_block": self.first_block,
+            "kernel_initializer": self.kernel_initializer,
+            "kernel_regularizer": self.kernel_regularizer,
+            "preactivation": self.preactivation,
+            "bottleneck": self.bottleneck,
+            "batch_normalization": self.batch_normalization
+        })
+        return config
 
 
 def list2first_element(input_list):

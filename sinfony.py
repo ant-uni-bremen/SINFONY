@@ -46,28 +46,63 @@ if os.name.lower() == 'nt':
     os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
 
-def compute_confusion_matrix(true_labels, pred_labels, num_classes):
+def ensure_directory_exists(folder_path):
+    """
+    Checks whether a directory exists, and creates it if it doesn't.
+
+    Args:
+        folder_path (str): Path to the target directory.
+    """
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+        print(f"Created directory: {folder_path}")
+    else:
+        print(f"Directory already exists: {folder_path}")
+
+
+def try_load_model(pathfile, custom_objects=None):
+    '''Try loading keras file in pathfile with different save format
+    '''
+    tried_paths = [pathfile, pathfile + '.keras',
+                   pathfile + '.hdf5', pathfile + '.h5']
+
+    for model_path in tried_paths:
+        try:
+            if os.path.exists(model_path):
+                print(f"Trying to load model from: {model_path}")
+                if not custom_objects:
+                    model = tf.keras.models.load_model(model_path)
+                else:
+                    model = tf.keras.models.load_model(
+                        model_path, custom_objects=custom_objects)
+                print(f"Successfully loaded model from: {model_path}")
+                return model
+        except Exception as e:
+            print(f"Failed to load model from {model_path}: {e}")
+
+    raise FileNotFoundError(
+        f"Model not found at '{pathfile}'")
+
+
+def compute_confusion_matrix(true_labels, pred_labels):
     """
     Compute the confusion matrix manually.
 
     Parameters:
-    - true_labels: List or array of true class labels.
-    - pred_labels: List or array of predicted class labels.
+    - true_labels: List or array of true class labels. One-hot
+    - pred_labels: List or array of predicted class labels. One-hot
     - num_classes: Number of classes in the labels.
 
     Returns:
     - Confusion matrix as a 2D numpy array.
     """
+    num_classes = true_labels.shape[-1]
+    true_labels = np.argmax(true_labels, axis=-1)
+    pred_labels = np.argmax(pred_labels, axis=-1)
     conf_matrix = np.zeros((num_classes, num_classes), dtype=int)
     for t, p in zip(true_labels, pred_labels):
         conf_matrix[t, p] += 1
     return conf_matrix
-
-# aprob = model(test_input_normalized)
-# num_classes = 5
-# true_labels= np.argmax(test_labels, axis=1)
-# pred_labels= np.argmax(aprob, axis=1)
-# compute_confusion_matrix(true_labels, pred_labels, num_classes)
 
 
 def visualize_tsne_embedding(visualized_model, snr_evaluation_test, test_input, test_labels, visualized_dataset):
@@ -188,6 +223,7 @@ if __name__ == '__main__':
     iterations_per_epoch = dataset_size / batch_size
     # Number of epochs, 200 in CIFAR original implementation, 20 for MNIST
     number_epochs = training_settings['number_epochs']
+    total_number_iterations = number_epochs * iterations_per_epoch
     # Choose validation data set size: None/0, 100, 1000, test_input[0].shape[0]
     validation_dataset_size = training_settings['validation_dataset_size']
     if validation_dataset_size == 'full':
@@ -219,7 +255,6 @@ if __name__ == '__main__':
             # training with noise
             sigma_train = mop.snr2standard_deviation(
                 np.array([model_settings['noise']['snr_min_train'], model_settings['noise']['snr_max_train']]))[::-1]
-    total_number_iterations = number_epochs * iterations_per_epoch
     # TODO: l2 regularization only for ResNet feature extractor? Yes, better performance
     if model_settings['resnet']['weight_decay'] == 0:
         weight_decay = None
@@ -333,12 +368,12 @@ if __name__ == '__main__':
 
     # TRAINING AND EVALUATION SCRIPT
 
-    # Preprocessing
-    train_input_normalized, test_input_normalized = datasets.preprocess_pixels(
-        train_input, test_input)
+    # Preprocessing -> moved to dataset loading
+    # train_input_normalized, test_input_normalized = datasets.preprocess_pixels(
+    #     train_input, test_input)
     # If computational heavy (RL approach), use subset of validation set
     valY = test_labels[:validation_dataset_size, ...]
-    valX = mt.create_batch(test_input_normalized, validation_dataset_size, 0)
+    valX = mt.create_batch(test_input, validation_dataset_size, 0)
     # Summarize loaded dataset
     if show_dataset is True:
         datasets.summarize_dataset(
@@ -394,11 +429,10 @@ if __name__ == '__main__':
             elif rl == 2:
                 model = resnet_rl_sinfony.ResnetAE2(
                     resnet_config=resnet_config, communication_config=communication_config)
-            model.load_weights(os.path.join(
-                path_script, pathfile, filename))
+            model.load_weights(os.path.join(pathfile, filename))
         else:
             # Load SINFONY model
-            model = tf.keras.models.load_model(pathfile)
+            model = try_load_model(pathfile)
         print('Model loaded.')
 
     if rl == 0:
@@ -410,12 +444,14 @@ if __name__ == '__main__':
         if rl >= 1:
             # RL-SINFONY
             sigma_train = tf.constant(sigma_train, dtype='float32')
-            results = resnet_rl_sinfony.rl_based_training(model, train_input_normalized, train_labels, optimizer, optimizer_tx, optimizer_rx2, validation_input=valX,
+            results = resnet_rl_sinfony.rl_based_training(model, train_input, train_labels, optimizer, optimizer_tx, optimizer_rx2, validation_input=valX,
                                                           validation_labels=valY, epochs=number_epochs, training_batch_size=batch_size, sigma=sigma_train, stochastic_policy_gradient_config=spg_config)
             # Save model weights:
             print('Saving model weights...')
+            folder_path = os.path.join(path_script, pathfile)
+            ensure_directory_exists(folder_path)
             model.save_weights(os.path.join(
-                path_script, pathfile, filename))
+                folder_path, filename))
             print('Model weigths saved.')
             # Save training history to avoid data loss, if validation fails
             print('Save training history...')
@@ -424,12 +460,13 @@ if __name__ == '__main__':
             # Note: For loading, compile is not necessary: optimizer, loss and metric are saved with model
             model.compile(
                 optimizer=optimizer, loss='categorical_crossentropy', metrics=['accuracy'])
-            history = model.fit(train_input_normalized, train_labels, epochs=number_epochs, batch_size=batch_size, validation_data=(
+            history = model.fit(train_input, train_labels, epochs=number_epochs, batch_size=batch_size, validation_data=(
                 valX, valY), callbacks=[batch_tracking, model_checkpoint, early_stopping], verbose=VERBOSE)
             results = history.history
             # Save Keras model:
             print('Saving model...')
-            model.save(pathfile)
+            ensure_directory_exists(os.path.dirname(pathfile))
+            model.save(pathfile + '.keras')
             print('Model saved.')
             # Save history
             print('Save training history...')
@@ -466,23 +503,23 @@ if __name__ == '__main__':
         if transceiver_split == 1:
             # SINFONY/RL-SINFONY
             if rl >= 1:
-                accuracy, loss = model_evaluation.evaluate_rlsinfony(model, test_input_normalized, test_labels,
+                accuracy, loss = model_evaluation.evaluate_rlsinfony(model, test_input, test_labels,
                                                                      snrs=snrs, validation_rounds=validation_rounds)
             else:
-                accuracy, loss = model_evaluation.evaluate_sinfony(model, test_input_normalized, test_labels,
+                accuracy, loss = model_evaluation.evaluate_sinfony(model, test_input, test_labels,
                                                                    snrs=snrs, validation_rounds=validation_rounds)
         else:
             # Standard image recognition: Evaluate model accuracy once for test data
             if rl >= 1:
                 _, _, loss_i, accuracy_i = model(
-                    test_input_normalized, test_labels, sigma=tf.constant([0, 0], dtype='float32'))
+                    test_input, test_labels, sigma=tf.constant([0, 0], dtype='float32'))
             else:
                 accuracy_i, loss_i = model_evaluation.evaluate_image_classifier(
-                    model, test_input_normalized, test_labels)
+                    model, test_input, test_labels)
             # Independent from SNR / constant, but plotted over SNR range
             loss = np.array(loss_i) * np.ones(snrs.shape)
             accuracy = np.array(accuracy_i) * np.ones(snrs.shape)
-            print(f'> {accuracy_i * 100.0:.3f}')
+            print(f'Validation Accuracy: {accuracy_i * 100.0:.3f}%')
         # Show performance curve
         plt.figure(1)
         plt.semilogy(snrs, 1 - accuracy)
@@ -505,6 +542,7 @@ if __name__ == '__main__':
         # t-SNE embedding for visualization
         if rl == 0:
             visualize_tsne_embedding(
-                model, snr_evaluation, test_input_normalized, test_labels, dataset)
+                model, snr_evaluation, test_input, test_labels, dataset)
+
 
 # EOF

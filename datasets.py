@@ -9,9 +9,10 @@ Module for loading and preprocessing numerous datasets
 Belongs to simulation framework for numerical results of the articles:
 1. Edgar Beck, Carsten Bockelmann, and Armin Dekorsy, “Semantic Information Recovery in Wireless Networks,” MDPI Sensors, vol. 23, no. 14, p. 6347, 2023. https://doi.org/10.3390/s23146347 (First draft version: E. Beck, C. Bockelmann, and A. Dekorsy, “Semantic communication: An information bottleneck view,” arXiv:2204.13366, Apr. 2022)
 2. Edgar Beck, Carsten Bockelmann, and Armin Dekorsy, "Model-free Reinforcement Learning of Semantic Communication by Stochastic Policy Gradient,” in IEEE International Conference on Machine Learning for Communication and Networking (ICMLCN 2024), vol. 1, Stockholm, Sweden, May 2024.
+3. E. Beck, H.-Y. Lin, P. Rückert, Y. Bao, B. von Helversen, S. Fehrler, K. Tracht, and A. Dekorsy, “Integrating Semantic Communication and Human Decision-Making into an End-to-End Sensing-Decision Framework”, arXiv preprint: 2412.05103, Dec. 2024. doi: 10.48550/arXiv.2412.05103.
 """
 
-import sys                                  # NOQA
+import sys
 # Include current folder, where start simulation script and packages are
 sys.path.append('.')                        # NOQA
 # Include parent folder, where own packages are
@@ -23,6 +24,11 @@ import numpy as np
 from matplotlib import pyplot as plt
 # Pandas required for dataset import
 import pandas as pd
+# Audio datasets
+from tqdm import tqdm
+import tensorflow_datasets as tfds
+import librosa
+import soundata
 
 # Tensorflow 2 packages
 import tensorflow as tf
@@ -32,7 +38,7 @@ import my_training as mt
 
 
 # Dataset functions
-def load_dataset(dataset='mnist', validation_split=0.85, image_split=True):
+def load_dataset(dataset='mnist', validation_split=0.85, image_split=True, preprocess=True):
     '''Load dataset
     mnist: Handwritten digits 0-9
     cifar10: Images of animals, vehicles, ..., with 10 classes
@@ -42,6 +48,7 @@ def load_dataset(dataset='mnist', validation_split=0.85, image_split=True):
     fraeser: Images from bime (processing/production) with decent and damaged tools
     validation_split: If there is no explicit definition of the validation set, use this split ratio
     image_split: If the dataset images contain more than one image, then we can split them into multiple images
+    preprocess: Preprocess images for DNN input
     '''
     dataset = dataset.lower()
     # Load dataset
@@ -50,18 +57,21 @@ def load_dataset(dataset='mnist', validation_split=0.85, image_split=True):
                                       validation_labels) = tf.keras.datasets.cifar10.load_data()
         train_input = [train_input]
         validation_input = [validation_input]
+        RGB_entries = True
     elif dataset == 'mnist':
         (train_input, train_labels), (validation_input,
                                       validation_labels) = tf.keras.datasets.mnist.load_data()
         # Reshape dataset to have a single color channel
         train_input = [train_input[..., np.newaxis]]
         validation_input = [validation_input[..., np.newaxis]]
+        RGB_entries = True
     elif dataset == 'fashion_mnist':
         (train_input, train_labels), (validation_input,
                                       validation_labels) = tf.keras.datasets.fashion_mnist.load_data()
         # Reshape dataset to have a single color channel
         train_input = [train_input[..., np.newaxis]]
         validation_input = [validation_input[..., np.newaxis]]
+        RGB_entries = True
     elif dataset[0:6] == 'hirise':
         # Extract logic from dataset name
         if dataset[:12] == 'hirisecrater':
@@ -78,6 +88,7 @@ def load_dataset(dataset='mnist', validation_split=0.85, image_split=True):
                 resolution = None
         train_input, validation_input, train_labels, validation_labels, _, _ = load_dataset_hirise(
             resolution=resolution, hirisecrater=hirisecrater)
+        RGB_entries = True
     elif dataset[0:7] == 'fraeser':
         # Extract resolution from dataset name
         if dataset[7:].isdigit():
@@ -88,6 +99,7 @@ def load_dataset(dataset='mnist', validation_split=0.85, image_split=True):
             resolution=resolution, image_split=image_split, number_augmentations=0, validation_split=validation_split, validation_diverse=False, shuffle=False)
         # train_input, validation_input, train_labels, validation_labels = load_dataset_tools_with_greater_4mm(
         #     resolution=resolution, image_split=image_split, number_augmentations=0, validation_split=validation_split)
+        RGB_entries = True
     elif dataset[0:4] == 'hise':
         if dataset[4:].isdigit():
             resolution = int(dataset[4:])
@@ -98,8 +110,32 @@ def load_dataset(dataset='mnist', validation_split=0.85, image_split=True):
             dataset_hise = None
         train_input, validation_input, train_labels, validation_labels = load_dataset_hise(
             dataset=dataset_hise, resolution=resolution, validation_split=validation_split, number_augmentations=0, image_split=image_split)
+        RGB_entries = True
+    elif dataset[0:12] == 'urbansound8k':
+        train_input, validation_input, train_labels, validation_labels = load_dataset_urbansound8k(
+            validation_split=validation_split)
+        train_input = [train_input.numpy()[..., np.newaxis]]
+        validation_input = [validation_input.numpy()[..., np.newaxis]]
+        RGB_entries = False
+    elif dataset[0:15] == 'speech_commands':
+        # Validation dataset
+        # train_input, validation_input, _, train_labels, validation_labels, _ = load_dataset_speech_commands2spectrogram()
+        # Test dataset
+        train_input, _, validation_input, train_labels, _, validation_labels = load_dataset_speech_commands2spectrogram()
+        train_input = [train_input[..., np.newaxis]]
+        validation_input = [validation_input[..., np.newaxis]]
+        RGB_entries = False
     else:
+        RGB_entries = False
         print('Dataset not available.')
+    # Preprocessing
+    if preprocess is True:
+        if RGB_entries is True:
+            train_input, validation_input = preprocess_pixels(
+                train_input, validation_input)
+        else:
+            train_input = preprocess_spectrograms(train_input)
+            validation_input = preprocess_spectrograms(validation_input)
     # One hot encode target values (Note: dtype = float32)
     train_labels = tf.keras.utils.to_categorical(train_labels)
     validation_labels = tf.keras.utils.to_categorical(validation_labels)
@@ -699,11 +735,251 @@ def load_dataset_tools_with_greater_4mm(resolution=None, image_split=True, numbe
     return train_input, validation_input, train_labels, validation_labels
 
 
+def pad_or_trim(audio, target_len):
+    '''Pad or trim audio
+    audio: audio numpy array
+    target_len: uniform target array length (lenghtiest audio file)
+    '''
+    if len(audio) < target_len:
+        audio = np.pad(audio, (0, target_len - len(audio)))
+    else:
+        audio = audio[:target_len]
+    return audio
+
+
+def load_dataset_speech_commands():
+    '''Load tensorflow speech commands dataset
+    '''
+    # Speech Commands dataset
+    splits, ds_info = tfds.load(
+        'speech_commands',
+        split=['train', 'validation', 'test'],
+        as_supervised=True,
+        with_info=True,
+        shuffle_files=False,
+    )
+
+    data_waveforms = []
+    data_labels = []
+    duration = 1
+    sr_target = 16000
+    target_len = sr_target * duration
+
+    for ds in splits:
+        waveforms = []
+        labels = []
+        for audio, label in tqdm(ds):
+            audio = pad_or_trim(audio.numpy(), target_len)
+            waveforms.append(audio)
+            labels.append(label.numpy())
+
+        # Normalization of waveforms
+        waveforms = np.stack(waveforms, axis=0)
+        data_waveforms.append(waveforms)
+        data_labels.append(np.array(labels))
+    return data_waveforms, data_labels
+
+
+def stft_dataset_in_partitions(data_waveforms):
+    '''STFT for spectrogram
+    '''
+    data_spectrograms = []
+    number_partitions = 20
+    # Normalization by maximum value 32768.0 to avoid overflow
+    normalization_constant = 32768.0
+    for waveforms in data_waveforms:
+        partition_size = waveforms.shape[0] // number_partitions
+        spectrograms = []
+        for ind in tqdm(range(0, number_partitions)):
+            start = ind * partition_size
+            end = start + partition_size
+            spectrogram = tf.abs(
+                tf.signal.stft(
+                    waveforms[start:end, ...].astype(
+                        'float32') / normalization_constant,
+                    frame_length=255,
+                    frame_step=128,
+                )
+            ) ** 2
+            spectrograms.append(spectrogram)
+        spectrogram = tf.abs(
+            tf.signal.stft(
+                waveforms[end:, ...].astype(
+                    'float32') / normalization_constant,
+                frame_length=255,
+                frame_step=128,
+            )
+        ) ** 2
+        spectrograms.append(spectrogram)
+        spectrograms = np.concatenate(spectrograms, axis=0)
+        data_spectrograms.append(spectrograms)
+    return data_spectrograms
+
+
+def load_dataset_speech_commands2spectrogram():
+    '''Load and preprocess speech commands dataset
+    '''
+    print('Loading speech commands dataset...')
+    # data_waveforms and data_labels include training, validation and test set
+    data_waveforms, data_labels = load_dataset_speech_commands()
+
+    print('Computing spectrograms by stft...')
+    data_spectrograms = stft_dataset_in_partitions(data_waveforms)
+    return data_spectrograms[0], data_spectrograms[1], data_spectrograms[2], data_labels[0], data_labels[1], data_labels[2]
+
+
+def load_soundata_set(dataset, sr_target=16000, duration=4):
+    '''Load dataset with soundata
+    dataset: Soundata object
+    sr_target: Sampling rate in [kHz]
+    duration: Clip duration in [s]
+    '''
+    target_len = sr_target * duration
+
+    # Arrays to collect data
+    waveforms_by_fold = {}
+    class_ids_by_fold = {}
+
+    # Load and process all clips
+    for clip_id in tqdm(dataset.clip_ids):
+        clip = dataset.clip(clip_id)
+
+        # Load audio
+        audio, sr = clip.audio
+        if audio is None or len(audio) == 0:
+            continue
+
+        # Resample if needed
+        if sr != sr_target:
+            audio = librosa.resample(audio, orig_sr=sr, target_sr=sr_target)
+
+        audio = pad_or_trim(audio, target_len)
+
+        # Use clip.class_id instead of tags
+        if clip.class_id is None:
+            continue
+
+        # Sorting by folds
+        fold = clip.fold
+        if fold not in waveforms_by_fold:
+            waveforms_by_fold[fold] = []
+        if fold not in class_ids_by_fold:
+            class_ids_by_fold[fold] = []
+        waveforms_by_fold[fold].append(audio)
+        class_ids_by_fold[fold].append(clip.class_id)
+
+    # Final arrays
+    for key, waveforms in waveforms_by_fold.items():
+        waveforms_by_fold[key] = np.stack(waveforms)
+    for key, class_ids in class_ids_by_fold.items():
+        class_ids_by_fold[key] = np.stack(class_ids)
+
+    return waveforms_by_fold, class_ids_by_fold
+
+
+def load_dataset_urbansound8k(validation_split=0.9):
+    '''Load and preprocess urbansound8k dataset
+    '''
+    data_directory = os.path.join(os.path.dirname(os.path.abspath(
+        __file__)), 'Datasets', 'urbansound8k')
+    dataset = soundata.initialize('urbansound8k', data_home=data_directory)
+    # dataset.download()
+    # dataset.validate()
+    print('Loading urbansound8k dataset...')
+    data_audio, data_labels = load_soundata_set(dataset)
+
+    # Dataset only dividable across folds
+    number_training_folds = int(np.round(10 * validation_split))
+
+    data_audio_training = []
+    data_labels_training = []
+    data_audio_validation = []
+    data_labels_validation = []
+    for key, audio in data_audio.items():
+        if key <= number_training_folds:
+            data_audio_training.append(audio)
+            data_labels_training.append(data_labels[key])
+        else:
+            data_audio_validation.append(audio)
+            data_labels_validation.append(data_labels[key])
+    data_list = [data_audio_training, data_audio_validation,
+                 data_labels_training, data_labels_validation]
+    for idx, datum in enumerate(data_list):
+        data_list[idx] = np.concatenate(datum, axis=0)
+
+    # Compute spectrograms
+    print('Computing spectrograms by stft...')
+    spectrogram_list = []
+    for datum in tqdm(data_list[0:2]):
+        spectrograms = tf.abs(tf.signal.stft(
+            datum,
+            frame_length=512,
+            frame_step=256,
+            fft_length=512
+        )) ** 2
+        spectrogram_list.append(spectrograms)
+    return spectrogram_list[0], spectrogram_list[1], data_list[2], data_list[3]
+
+
+def preprocess_spectrograms(spectrograms, use_global=True, logarithmic_scale=True):
+    '''Preprocess spectrograms as input to DNN
+    '''
+    if not isinstance(spectrograms, list):
+        spectrograms = [spectrograms]
+
+    spectrograms_preprocessed = []
+    for spectrogram in spectrograms:
+        if logarithmic_scale is True:
+            spectrogram = 10 * np.log10(spectrogram)
+            spectrogram[np.isneginf(spectrogram)] = np.min(
+                spectrogram[~np.isneginf(spectrogram)])
+        spectrogram = normalize_spectrogram(
+            spectrogram, use_global=use_global)
+        spectrograms_preprocessed.append(spectrogram)
+    return spectrograms_preprocessed
+
+
+def normalize_spectrogram(spec, use_global=True):
+    """
+    Normalize spectrogram(s) to range [0, 1] for DNN input.
+
+    Parameters:
+    - spec: single or batch of spectrograms
+    - use_global: bool, normalize over entire array (True) or per sample (False)
+
+    Returns:
+    - Normalized spectrogram(s) in [0, 1]
+    """
+    if use_global:
+        min_val = np.min(spec)
+        max_val = np.max(spec)
+    else:
+        # Reduce over all dims except the first (batch dim if present)
+        min_val = np.min(spec, axis=(1, 2), keepdims=True)
+        max_val = np.max(spec, axis=(1, 2), keepdims=True)
+    norm_spec = (spec - min_val) / (max_val - min_val)
+
+    return norm_spec
+
+
 if __name__ == '__main__':
     #     my_func_main()
     # def my_func_main():
 
     # train_input, validation_input, train_labels, validation_labels = load_dataset_tools(
     #     resolution=64, image_split=True, number_augmentations=0, validation_split=0.85)
-    train_input, validation_input, train_labels, validation_labels = load_dataset_hise(
-        dataset='HiSE256', resolution=None, number_augmentations=0, validation_split=0.85, image_split=False)
+    # train_input, validation_input, train_labels, validation_labels = load_dataset_hise(
+    #     dataset='HiSE256', resolution=None, number_augmentations=0, validation_split=0.85, image_split=False)
+    # Urbansounds8k dataset
+    train_input, validation_input, train_labels, validation_labels = load_dataset_urbansound8k(
+        validation_split=0.9)
+    train_input, validation_input = preprocess_spectrograms(
+        [train_input, validation_input])
+    summarize_dataset([train_input], train_labels,
+                      [validation_input], validation_labels)
+    # Speech Commands dataset
+    # train_input, validation_input, _, train_labels, validation_labels, _ = load_dataset_speech_commands2spectrogram()
+    # train_input, validation_input = preprocess_spectrograms(
+    #     [train_input, validation_input])
+    # summarize_dataset([train_input], train_labels,
+    #                   [validation_input], validation_labels)

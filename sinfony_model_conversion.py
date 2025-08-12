@@ -9,7 +9,7 @@ Simulation framework for numerical results of the articles:
 2. Edgar Beck, Carsten Bockelmann, and Armin Dekorsy, "Model-free Reinforcement Learning of Semantic Communication by Stochastic Policy Gradient,” in IEEE International Conference on Machine Learning for Communication and Networking (ICMLCN 2024), vol. 1, Stockholm, Sweden, May 2024.
 """
 
-import sys                                  # NOQA
+import sys
 # Include current folder, where start simulation script and packages are
 sys.path.append('.')                        # NOQA
 # Include parent folder, where own packages are
@@ -45,6 +45,17 @@ if os.name.lower() == 'nt':
     os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
 
+from tensorflow.keras.layers import TFSMLayer
+
+
+class MultiInputTFSMLayer(TFSMLayer):
+    def call(self, inputs, training=False):
+        # Assume inputs is a list or tuple of tensors matching the model inputs
+        # Pack inputs into a tuple or dict as expected by SavedModel
+        # Here, assuming tuple:
+        return super().call(tuple(inputs), training=training)
+
+
 if __name__ == '__main__':
     #     my_func_main()
     # def my_func_main():
@@ -52,7 +63,7 @@ if __name__ == '__main__':
     # Load parameters from configuration file
     # Get the script's directory
     path_script = os.path.dirname(os.path.abspath(__file__))
-    SETTINGS_FILE = 'cifar10/semantic_config_cifar_sinfony.yaml'
+    SETTINGS_FILE = 'hise/semantic_config_hise_sinfony64.yaml'
     # Avoid error messages
     # import logging
     # tf.get_logger().setLevel(logging.ERROR)
@@ -267,54 +278,83 @@ if __name__ == '__main__':
         number_resnet_blocks, number_residual_units, model_settings['resnet']['bottleneck'])
     print('ResNet', resnet_layer_number, ' chosen')
 
-    if load is False:
-        # Check whether multi-image input and choose model accordingly
-        if len(image_shapes) == 1:
-            # Create new model:
-            if transceiver_split == 1:
+    # if load is False:
+    # Check whether multi-image input and choose model accordingly
+    if len(image_shapes) == 1:
+        # image_shapes = image_shapes[0]
+        # number_filters = number_filters[0]
+        # Create new model:
+        if transceiver_split == 1:
+            # Select SINFONY or RL-SINFONY
+            if rl == 1:
+                # RL-SINFONY
+                model = resnet_rl_sinfony.ResnetRLSinfony(
+                    resnet_config=resnet_config, communication_config=communication_config)
+            elif rl == 2:
+                # SINFONY trained via RL-SINFONY training loop
+                model = resnet_rl_sinfony.ResnetAE2(
+                    resnet_config=resnet_config, communication_config=communication_config)
+            else:
                 # SINFONY
                 model, tx, rx = resnet_sinfony.resnet_sinfony_imagesplit(
                     resnet_config=resnet_config, communication_config=communication_config)
-            else:
-                # Standard image recognition based on total image
-                model = resnet.resnet(resnet_config=resnet_config)
         else:
-            # Multiple images models
-            if transceiver_split == 1:
+            # Standard image recognition based on total image
+            model = resnet.resnet(resnet_config=resnet_config)
+    else:
+        # Multiple images models
+        if transceiver_split == 1:
+            if rl == 1:
+                print('Not implemented yet.')
+            else:
                 model, tx, rx = resnet_sinfony.resnet_sinfony(
                     resnet_config=resnet_config, communication_config=communication_config)
+        else:
+            model = resnet_sinfony.resnet_multi_image(resnet_config=resnet_config, number_combination_layer=model_settings[
+                'resnet']['multi_image_layer_number'], combination_layer_width=model_settings['resnet']['multi_image_layer_width'])
 
     # Convert models to new Tensorflow version
     # Load existing model and extract weights:
     # MNIST: ResNet14_MNIST4_Ne20_snr-4_6, ResNet14_MNIST6_Ne20_snr-4_6
     # CIFAR10: ResNet20_CIFAR4_snr-4_6, ResNet20_CIFAR6_snr-4_6
-    filename2 = 'ResNet20_CIFAR4_snr-4_6'
-    print('Loading model...')
-    # Load SINFONY model
-    model2 = tf.keras.models.load_model(
-        os.path.join(path_script, subpath_results, filename2))
-    print('Model loaded.')
+    save_only_weights = False
+    load_from_weights = False
+    filename2 = 'sinfony_hise64_v2'
 
     model.summary()
-    model2.summary()
-
+    pathfile_model2_results = os.path.join(path_script, subpath_results,
+                                           load_settings['simulation_filename_prefix'] + filename2)
     # Set weights to that of old model
-    model.set_weights(model2.get_weights())
-    pathfile_model2 = os.path.join(path_script, subpath_results,
-                                   load_settings['simulation_filename_prefix'] + filename2)
+    if load_from_weights is True:
+        pathfile_weights = os.path.join(
+            path_script, subpath_results, 'weights', filename2 + '.weights.h5')
+        model.load_weights(pathfile_weights)
+    else:
+        print('Loading model...')
+        # Load SINFONY model
+        pathfile_model2 = os.path.join(path_script, subpath_results, filename2)
+        model2 = tf.keras.models.load_model(pathfile_model2)
+        # model2 = tf.keras.layers.TFSMLayer(
+        #     pathfile_model2, call_endpoint="serving_default")
+        print('Model loaded.')
+        model2.summary()
+        model.set_weights(model2.get_weights())
     model.compile(
         optimizer=optimizer, loss='categorical_crossentropy', metrics=['accuracy'])
 
     # Save old Keras model for use in new Tensorflow version:
     # Note: Requires sionna conda env
     print('Saving model...')
-    model.save(pathfile)
+    if save_only_weights is True:
+        model.save_weights(pathfile_weights)
+    else:
+        model.save(pathfile + '.keras')
     print('Model saved.')
 
     # Compile and train model
     # Load training history to include evaluation
     print('Load training history...')
-    results = saveobj.load(pathfile_model2)
+    results = saveobj.load(pathfile_model2_results)
     if results is None:
         results = {}
     else:
@@ -331,6 +371,13 @@ if __name__ == '__main__':
         # SINFONY
         accuracy, loss = model_evaluation.evaluate_sinfony(model, test_input_normalized, test_labels,
                                                            snrs=snrs, validation_rounds=validation_rounds)
+    else:
+        accuracy_i, loss_i = model_evaluation.evaluate_image_classifier(
+            model, test_input_normalized, test_labels)
+        # Independent from SNR / constant, but plotted over SNR range
+        loss = np.array(loss_i) * np.ones(snrs.shape)
+        accuracy = np.array(accuracy_i) * np.ones(snrs.shape)
+        print(f'> {accuracy_i * 100.0:.3f}')
     # Show performance curve
     plt.figure(1)
     plt.semilogy(snrs, 1 - accuracy)

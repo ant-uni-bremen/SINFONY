@@ -71,8 +71,10 @@ def copy_published_models2repository(selected_plots, datapath='models', simulati
                     # If the destination simulation file exists, remove it
                     if os.path.exists(destination_simulation_file):
                         os.remove(destination_simulation_file)
+
                     # Check if the destination folder exists, if not, create it
                     print(destination_folder)
+
                     if not os.path.exists(destination_folder):
                         os.makedirs(destination_folder)
                     try:
@@ -82,13 +84,21 @@ def copy_published_models2repository(selected_plots, datapath='models', simulati
                                      destination_simulation_file)
                         print(
                             f"File '{source_simulation_file}' copied to '{destination_simulation_file}' successfully.")
-                        if os.path.exists(source_folder):
-                            # Copy the entire folder to the destination folder
-                            shutil.copytree(source_folder, destination_files)
-                            print(
-                                f"Folder '{source_folder}' copied to '{destination_files}' successfully.")
-                        else:
-                            print(f"Folder '{source_folder}' not found.")
+                        # Copy model to destination folder
+                        tried_paths = [source_folder, source_folder + '.keras',
+                                       source_folder + '.hdf5', source_folder + '.h5']
+                        for idx_path, model_path in enumerate(tried_paths):
+                            if os.path.exists(model_path):
+                                # Copy the entire folder to the destination folder
+                                if idx_path == 0:
+                                    shutil.copytree(
+                                        model_path, destination_files)
+                                else:
+                                    shutil.copy2(model_path, destination_files)
+                                print(
+                                    f"Model '{model_path}' copied to '{destination_files}' successfully.")
+                            else:
+                                print(f"Model '{model_path}' not found.")
                     except IOError as e:
                         print(f"Error: {e}")
 
@@ -156,10 +166,16 @@ def plot_results_semcom(selected_plots, x_axis='snr', y_axis='val_acc', datapath
             x, y_validation = load_result(table_entries, path, x_axis=x_axis, y_axis=y_axis,
                                           error_mode=error_mode, x_axis_normalization=x_axis_normalization)
             if x is not None and y_validation is not None:
-                if logplot is True:
+                if logplot == 1 or logplot is True:
                     # Use absolute value if logarithmic plot
                     plt.semilogy(x, np.abs(y_validation),
                                  table_entries[1], label=table_key)
+                elif logplot == 2:
+                    plt.semilogx(x, y_validation,
+                                 table_entries[1], label=table_key)
+                elif logplot == 2:
+                    plt.loglog(x, np.abs(y_validation),
+                               table_entries[1], label=table_key)
                 else:
                     # Linear plot
                     plt.plot(x, y_validation,
@@ -408,7 +424,7 @@ if __name__ == '__main__':
 
     # Set here one dictionary to be analyzed
     if select_plot is True:
-        selected_plots = [cifar]
+        selected_plots = [mnist_rx]
 
     if copy_models:
         copy_published_models2repository(
