@@ -150,7 +150,7 @@ def evaluate_gcm_working_memory(evaluated_model, test_input, test_labels, valida
     size_attention_weights = raw_attention_weights0.shape[-1]
 
     if not working_memory_sizes:
-        working_memory_sizes = range(-size_attention_weights+1,
+        working_memory_sizes = range(-size_attention_weights,  # -size_attention_weights+1
                                      size_attention_weights+1)
 
     for idx_memory, working_memory_size in enumerate(working_memory_sizes):

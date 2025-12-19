@@ -159,6 +159,7 @@ def mimo_coding(c, Nt, M, arch):
                 c1.shape[-1] / np.log2(M)), int(np.log2(M)))), (0, 2, 1, 3))
     else:
         print('Architecture not available.')
+        c2 = c
     return c2
 
 
@@ -190,6 +191,7 @@ def mimo_decoding(llr_c, n, Nt, M, arch):
             llr_c2 = llr_c1[:, :n]
     else:
         print('Architecture not available.')
+        llr_c2 = llr_c
     return llr_c2
 
 
@@ -342,11 +344,11 @@ def mimoequ_decoding(fr, dataobj, sim_par, mimo_arch, H, decoder, it_dec):
     decoder: Decoder type ('syn': syndrome, 'bp': belief propagation)
     it_dec: Number of decoding iterations
     '''
-    k = H.shape[1]          # Code word length
+    n = H.shape[1]          # Code word length
 
     # TODO: a-posteriori, but extrinsic information (a-posteriori / a-priori) required?
     llr_c2, _ = symprob2llr(fr, sim_par.mod.M)
-    llr_c_perm = mimo_decoding(llr_c2, k, sim_par.Nt, sim_par.mod.M, mimo_arch)
+    llr_c_perm = mimo_decoding(llr_c2, n, sim_par.Nt, sim_par.mod.M, mimo_arch)
     llr_c = dataobj.intleav.deinterleave(llr_c_perm)
 
     if decoder == 'syn':

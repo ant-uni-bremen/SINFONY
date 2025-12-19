@@ -112,10 +112,17 @@ def load_dataset(dataset='mnist', validation_split=0.85, image_split=True, prepr
             dataset=dataset_hise, resolution=resolution, validation_split=validation_split, number_augmentations=0, image_split=image_split)
         RGB_entries = True
     elif dataset[0:12] == 'urbansound8k':
-        train_input, validation_input, train_labels, validation_labels = load_dataset_urbansound8k(
-            validation_split=validation_split)
-        train_input = [train_input.numpy()[..., np.newaxis]]
-        validation_input = [validation_input.numpy()[..., np.newaxis]]
+        if dataset == 'urbansound8k_full':
+            train_input, validation_input, train_labels, validation_labels = load_dataset_urbansound8k_wo_downsampling(
+                validation_split=validation_split, number_partitions=20)
+        elif dataset == 'urbansound8k_half':
+            train_input, validation_input, train_labels, validation_labels = load_dataset_urbansound8k(
+                validation_split=validation_split, sr_target=22050, number_partitions=20)
+        else:
+            train_input, validation_input, train_labels, validation_labels = load_dataset_urbansound8k(
+                validation_split=validation_split)
+        train_input = [train_input[..., np.newaxis]]
+        validation_input = [validation_input[..., np.newaxis]]
         RGB_entries = False
     elif dataset[0:15] == 'speech_commands':
         # Validation dataset
@@ -747,7 +754,7 @@ def pad_or_trim(audio, target_len):
     return audio
 
 
-def load_dataset_speech_commands():
+def load_dataset_speech_commands(duration=1):
     '''Load tensorflow speech commands dataset
     '''
     # Speech Commands dataset
@@ -761,9 +768,9 @@ def load_dataset_speech_commands():
 
     data_waveforms = []
     data_labels = []
-    duration = 1
-    sr_target = 16000
-    target_len = sr_target * duration
+    # duration = 1
+    sr = 16000
+    target_len = sr * duration
 
     for ds in splits:
         waveforms = []
@@ -780,39 +787,45 @@ def load_dataset_speech_commands():
     return data_waveforms, data_labels
 
 
-def stft_dataset_in_partitions(data_waveforms):
+def stft_dataset_in_partitions(data_waveforms, frame_length, frame_step, number_partitions=20, normalization_constant=1, dtype='float32'):
     '''STFT for spectrogram
     '''
     data_spectrograms = []
-    number_partitions = 20
-    # Normalization by maximum value 32768.0 to avoid overflow
-    normalization_constant = 32768.0
-    for waveforms in data_waveforms:
-        partition_size = waveforms.shape[0] // number_partitions
-        spectrograms = []
-        for ind in tqdm(range(0, number_partitions)):
-            start = ind * partition_size
-            end = start + partition_size
+    if number_partitions == 1:
+        for waveforms in data_waveforms:
+            spectrograms = tf.abs(tf.signal.stft(
+                waveforms.astype(dtype) / normalization_constant,
+                frame_length=frame_length,
+                frame_step=frame_step,
+            )) ** 2
+            data_spectrograms.append(spectrograms)
+    else:
+        for waveforms in data_waveforms:
+            partition_size = waveforms.shape[0] // number_partitions
+            spectrograms = []
+            for ind in tqdm(range(0, number_partitions)):
+                start = ind * partition_size
+                end = start + partition_size
+                spectrogram = tf.abs(
+                    tf.signal.stft(
+                        waveforms[start:end, ...].astype(
+                            dtype) / normalization_constant,
+                        frame_length=frame_length,
+                        frame_step=frame_step,
+                    )
+                ) ** 2
+                spectrograms.append(spectrogram)
             spectrogram = tf.abs(
                 tf.signal.stft(
-                    waveforms[start:end, ...].astype(
-                        'float32') / normalization_constant,
-                    frame_length=255,
-                    frame_step=128,
+                    waveforms[end:, ...].astype(
+                        dtype) / normalization_constant,
+                    frame_length=frame_length,
+                    frame_step=frame_step,
                 )
             ) ** 2
             spectrograms.append(spectrogram)
-        spectrogram = tf.abs(
-            tf.signal.stft(
-                waveforms[end:, ...].astype(
-                    'float32') / normalization_constant,
-                frame_length=255,
-                frame_step=128,
-            )
-        ) ** 2
-        spectrograms.append(spectrogram)
-        spectrograms = np.concatenate(spectrograms, axis=0)
-        data_spectrograms.append(spectrograms)
+            spectrograms = np.concatenate(spectrograms, axis=0)
+            data_spectrograms.append(spectrograms)
     return data_spectrograms
 
 
@@ -824,16 +837,21 @@ def load_dataset_speech_commands2spectrogram():
     data_waveforms, data_labels = load_dataset_speech_commands()
 
     print('Computing spectrograms by stft...')
-    data_spectrograms = stft_dataset_in_partitions(data_waveforms)
+    # Normalization in speech commands by maximum value 32768.0 to avoid overflow
+    data_spectrograms = stft_dataset_in_partitions(
+        data_waveforms, frame_length=255, frame_step=128, normalization_constant=32768.0)
     return data_spectrograms[0], data_spectrograms[1], data_spectrograms[2], data_labels[0], data_labels[1], data_labels[2]
 
 
-def load_soundata_set(dataset, sr_target=16000, duration=4):
+def load_soundata_set(dataset, sr_target=None, duration=1):
     '''Load dataset with soundata
     dataset: Soundata object
-    sr_target: Sampling rate in [kHz]
-    duration: Clip duration in [s]
+    sr_target: Sampling rate in [kHz], 44.1 kHz by default, downsampling needed to avoid OOM
+    duration: Maximum clip duration in [s]
     '''
+    if sr_target is None:
+        _, sr = dataset.clip(dataset.clip_ids[0]).audio
+        sr_target = sr
     target_len = sr_target * duration
 
     # Arrays to collect data
@@ -877,16 +895,31 @@ def load_soundata_set(dataset, sr_target=16000, duration=4):
     return waveforms_by_fold, class_ids_by_fold
 
 
-def load_dataset_urbansound8k(validation_split=0.9):
+def load_dataset_urbansound8k_wo_downsampling(validation_split=0.9, frame_length=1023, frame_step=512, number_partitions=20):
+    '''Load and preprocess urbansound8k dataset
+    Without downsampling with most close-to-quadratic-shape of specrogram parametrization of STFT
+    '''
+    train_input, test_input, train_labels, test_labels = load_dataset_urbansound8k(
+        validation_split=validation_split, sr_target=None, frame_length=frame_length, frame_step=frame_step, number_partitions=number_partitions)
+    return train_input, test_input, train_labels, test_labels
+
+
+def load_dataset_urbansound8k(validation_split=0.9, sr_target=16000, frame_length=511, frame_step=256, number_partitions=1):
     '''Load and preprocess urbansound8k dataset
     '''
     data_directory = os.path.join(os.path.dirname(os.path.abspath(
         __file__)), 'Datasets', 'urbansound8k')
     dataset = soundata.initialize('urbansound8k', data_home=data_directory)
-    # dataset.download()
-    # dataset.validate()
     print('Loading urbansound8k dataset...')
-    data_audio, data_labels = load_soundata_set(dataset)
+    try:
+        data_audio, data_labels = load_soundata_set(
+            dataset, sr_target=sr_target, duration=4)
+    except Exception as e:
+        print(f"Failed to load dataset: {e}\n Downloading...")
+        dataset.download()
+        dataset.validate()
+        data_audio, data_labels = load_soundata_set(
+            dataset, sr_target=sr_target, duration=4)
 
     # Dataset only dividable across folds
     number_training_folds = int(np.round(10 * validation_split))
@@ -909,15 +942,8 @@ def load_dataset_urbansound8k(validation_split=0.9):
 
     # Compute spectrograms
     print('Computing spectrograms by stft...')
-    spectrogram_list = []
-    for datum in tqdm(data_list[0:2]):
-        spectrograms = tf.abs(tf.signal.stft(
-            datum,
-            frame_length=512,
-            frame_step=256,
-            fft_length=512
-        )) ** 2
-        spectrogram_list.append(spectrograms)
+    spectrogram_list = stft_dataset_in_partitions(
+        data_list[0:2], frame_length=frame_length, frame_step=frame_step, number_partitions=number_partitions)
     return spectrogram_list[0], spectrogram_list[1], data_list[2], data_list[3]
 
 
@@ -966,20 +992,22 @@ if __name__ == '__main__':
     #     my_func_main()
     # def my_func_main():
 
+    mt.gpu_select(number=-1, memory_growth=True, cpus=64)
+
     # train_input, validation_input, train_labels, validation_labels = load_dataset_tools(
-    #     resolution=64, image_split=True, number_augmentations=0, validation_split=0.85)
+    #     resolution=None, image_split=True, number_augmentations=0, validation_split=0.85)
     # train_input, validation_input, train_labels, validation_labels = load_dataset_hise(
     #     dataset='HiSE256', resolution=None, number_augmentations=0, validation_split=0.85, image_split=False)
     # Urbansounds8k dataset
-    train_input, validation_input, train_labels, validation_labels = load_dataset_urbansound8k(
-        validation_split=0.9)
-    train_input, validation_input = preprocess_spectrograms(
-        [train_input, validation_input])
-    summarize_dataset([train_input], train_labels,
-                      [validation_input], validation_labels)
-    # Speech Commands dataset
-    # train_input, validation_input, _, train_labels, validation_labels, _ = load_dataset_speech_commands2spectrogram()
+    # train_input, validation_input, train_labels, validation_labels = load_dataset_urbansound8k(
+    #     validation_split=0.9)
     # train_input, validation_input = preprocess_spectrograms(
     #     [train_input, validation_input])
     # summarize_dataset([train_input], train_labels,
     #                   [validation_input], validation_labels)
+    # Speech Commands dataset
+    train_input, validation_input, _, train_labels, validation_labels, _ = load_dataset_speech_commands2spectrogram()
+    train_input, validation_input = preprocess_spectrograms(
+        [train_input, validation_input])
+    summarize_dataset([train_input], train_labels,
+                      [validation_input], validation_labels)

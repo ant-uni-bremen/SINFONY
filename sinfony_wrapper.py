@@ -60,13 +60,17 @@ class ResNetWrapper():
             self.model_full = self.model
             self.model = self.model.layers[-2]
 
-    def __call__(self, image_data, batch_size=32):
+    def __call__(self, image_data, batch_size=32, preprocess=False):
         '''Execute ResNet classifier given image data image_data
         INPUT
         image_data: Image data as RGB values
+        batch_size: Batch size for evaluation
+        preprocess: Include image preprocessing in wrapper
         OUTPUT
         semantic_probs: Semantic class predictions with probabilities (array of floats) or features with last_layer_input==True
         '''
+        if preprocess:
+            image_data = datasets.preprocess_pixels_image(image_data)
         semantic_probs = self.model.predict(image_data, batch_size=batch_size)
         return semantic_probs
 
@@ -186,15 +190,19 @@ class SinfonyWrapper():
             noise_layer.set_weights([sigma_test])
         self.get_snr()
 
-    def __call__(self, image_data, snr=6, batch_size=32):
+    def __call__(self, image_data, snr=6, batch_size=32, preprocess=False):
         '''Execute SINFONY given image data image_data for SNR value snr
         INPUT
         image_data: Image data as RGB values
+        batch_size: Batch size for evaluation
+        preprocess: Include image preprocessing in wrapper
         snr: Signal-to-Noise-Ratio - scalar snr or interval [snr_min, snr_max] (SINFONY is trained within -4 to 6 but usable outside this interval)
         dist: TODO - Distances from robots/rovers for calculation of simple line of sight path loss
         OUTPUT
         semantic_probs: Semantic class predictions with probabilities (array of floats) or features with last_layer_input==True
         '''
+        if preprocess:
+            image_data = datasets.preprocess_pixels_image(image_data)
         self.set_snr(snr)
         # Execution of SINFONY
         semantic_probs = self.model.predict(image_data, batch_size=batch_size)
@@ -320,12 +328,12 @@ if __name__ == '__main__':
     sinfony, filename2 = select_sinfony(path=path2, template_files=template_files, image_split=image_split,
                                         transceiver_split=transceiver_split, sinfony_version=sinfony_version, last_layer_input=last_layer_input2)
 
-    train_input, train_labels, test_input, test_labels = datasets.load_dataset(
-        dataset_name, image_split=image_split)
-    train_input_norm, test_input_norm = datasets.preprocess_pixels(
-        train_input, test_input)
+    train_input_norm, train_labels, test_input_norm, test_labels = datasets.load_dataset(
+        dataset_name, image_split=image_split, preprocess=True)
+    # train_input_norm, test_input_norm = datasets.preprocess_pixels(
+    #     train_input, test_input)
     datasets.summarize_dataset(
-        train_input, train_labels, test_input, test_labels)
+        train_input_norm, train_labels, test_input_norm, test_labels)
 
     # Evaluation of model
 

@@ -1,6 +1,6 @@
 load_settings:
   load: True                              # start new training: 0 / load saved training: 1
-  filename: sinfony18_fraeser_fullimage   # mnist, cifar10, fashion_mnist, hirise64, hirisecrater, fraeser64
+  filename: sinfony18_fraeser_lr1e-3_3    # mnist, cifar10, fashion_mnist, hirise64, hirisecrater, fraeser64
   path: models/fraeser                    # path of simulation and model files
   save_format: npz                        # save format
   simulation_filename_prefix: RES_        # name prefix of simulation file
@@ -11,7 +11,7 @@ dataset:
   dataset: fraeser                        # mnist, cifar10, fashion_mnist, hirise64, hirisecrater, fraeser64
   show_dataset: True                      # Show first dataset examples, just for demonstration
   validation_split: 0.85                  # If dataset is not split yet into training and validation data
-  image_split: False                      # Only for fraeser, default: True, split image according to given dataset rules
+  image_split: True                       # Only for fraeser, default: True, split image according to given dataset rules
 
 training:
   optimizer: sgd                          # sgd, adam, (sgdlrs) SGD with learning rate schedule
@@ -35,8 +35,8 @@ model:
   communication:
     transceiver_split: 1                  # (0) only image recognition, (1) with (multi) com. system inbetween
     power_normalization_axis: 0           # (0) batch dimension, (1) encode vector dimension n_tx
-    number_channel_uses: 0                # 14/16| Tx layer length: (-1) without, (0) same length as layer before Tx, (>0) adjust length
-    rx_layer_width: 0                     # 56/64| Rx layer width: (-1) without, (0) same length as Tx layer, (>0) adjust length
+    number_channel_uses: 128              # 14/16| Tx layer length: (-1) without, (0) same length as layer before Tx, (>0) adjust length
+    rx_layer_width: 1024                  # 56/64| Rx layer width: (-1) without, (0) same length as Tx layer, (>0) adjust length
     # For comparison/orientation:
     # 1. One ReLU layer at Tx/Rx: [36/16]/64 in "Learning Task-Oriented Communication for Edge Inference: An Information Bottleneck Approach"
     # 2. Two ReLU layer at Tx: (128->)256->16 / at Rx: 256->128(->128) from "Deep Learning Enabled Semantic Communication Systems"

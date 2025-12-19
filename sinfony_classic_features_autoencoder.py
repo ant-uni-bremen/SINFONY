@@ -206,8 +206,10 @@ if __name__ == '__main__':
     dataset = dataset_settings['dataset']
     # Show first dataset examples, just for demonstration
     show_dataset = dataset_settings['show_dataset']
+    validation_split = dataset_settings['validation_split']
+    image_split = dataset_settings['image_split']
     train_input, train_labels, test_input, test_labels = datasets.load_dataset(
-        dataset)
+        dataset, validation_split=validation_split, image_split=True, preprocess=False)
     # NOTE: Not implemented for input list of images
     train_input = train_input[0]
     test_input = test_input[0]

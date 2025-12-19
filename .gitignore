@@ -1,1 +1,15 @@
-__pycache__
+__*__
+*.code-workspace
+Archive/
+plots/
+settings_saved/
+models/
+models_output/
+Datasets/Fraeser_Aufnahmen_220824_Inkl_Verkippt/
+Datasets/Fraeser_Aufnahmen_Bis_220823/
+Datasets/Fraeser_KI_Cafe2/
+Datasets/hirise-map-proj-v3_2/
+Datasets/urbansound8k/
+Datasets/wine+quality/
+Datasets/HiSE_dataset_generation/dataset_HiSE64/
+Datasets/HiSE_dataset_generation/dataset_HiSE256/
