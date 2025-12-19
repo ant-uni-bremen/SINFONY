@@ -35,10 +35,10 @@ from tensorflow.keras.optimizers import SGD, Adam  # , Nadam
 # Own packages
 import datasets
 # Note: Important to load models from old files, there a reference to mf including layers is hardcoded
-import my_training as mf
-import my_training as mt
-from my_functions import print_time, savemodule
-import my_math_operations as mop
+import utilities.my_training as mf
+import utilities.my_training as mt
+from utilities.my_functions import print_time, savemodule
+import utilities.my_math_operations as mop
 
 
 # Only necessary for Windows, otherwise kernel crashes
@@ -179,7 +179,7 @@ if __name__ == '__main__':
     # Get the script's directory
     path_script = os.path.dirname(os.path.abspath(__file__))
     # Default: 'classic/config_classic_features_autoencoder.yaml'
-    SETTINGS_FILE = 'classic/config_classic_features_autoencoder_cifar.yaml'
+    SETTINGS_FILE = 'classic/config_classic_features_autoencoder.yaml'
     # Load the provided configuration file or the default one
     # python SINFONY.py semantic_config.yaml
     # Workaround for interactive sessions: Only allow config file names starting 'semantic_config'
@@ -222,6 +222,8 @@ if __name__ == '__main__':
         filename = 'ResNet20_CIFAR2'
     else:
         print('Dataset not implemented into script.')
+        subpath = ''
+        filename = ''
     # Path for SINFONY model
     path_sinfony = os.path.join(load_settings['path_models'], subpath)
 

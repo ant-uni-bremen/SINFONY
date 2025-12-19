@@ -11,7 +11,7 @@ sys.path.append('.')                        # NOQA
 sys.path.append('..')                       # NOQA
 
 # Own packages
-from my_functions import savemodule
+from utilities.my_functions import savemodule
 import numpy as np
 import matplotlib.pyplot as plt
 import tikzplotlib as tplt
@@ -37,7 +37,7 @@ def copy_published_models2repository(selected_plots, datapath='models', simulati
     '''
     import shutil
     # Copy all selected curves
-    git_path = '../github/SINFONY/'
+    git_path = './models_selected'
     load = savemodule()
     load_format = 'npz'
     for plot in selected_plots:

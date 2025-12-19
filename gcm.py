@@ -25,11 +25,11 @@ from matplotlib import pyplot as plt
 import time
 
 import datasets
-import my_training as mt
+import utilities.my_training as mt
 import sinfony_wrapper as sw
 import model_evaluation
-import my_math_operations as mop
-from my_functions import savemodule, print_time, get_ram
+import utilities.my_math_operations as mop
+from utilities.my_functions import savemodule, print_time, get_ram
 
 
 def logarithmic_scale(N):
@@ -466,7 +466,7 @@ def epoch2iterationboundaries(epoch_bound, dataset_size, batch_size):
 
 if __name__ == '__main__':
 
-    # mt.gpu_select(number=-2, memory_growth=True, cpus=64)
+    mt.gpu_select(number=-2, memory_growth=True, cpus=64)
     keras_version = 2           # If keras 3 model saves available: 3, otherwise: 2
 
     # Choose project/dataset
@@ -639,10 +639,13 @@ if __name__ == '__main__':
             test_exemplars = compute_gcm_input_data(
                 test_input_norm, gcm_input, sinfony, transceiver_split, snr_training, batch_size=validation_batch_size)
             test_exemplars_labels = test_labels
-            # Easily OOM if not enough RAM! Lines are for debugging
-            # number_exemplars = 10000  # 60000
-            # exemplars = exemplars[0:number_exemplars, ...]
-            # exemplar_labels = exemplar_labels[0:number_exemplars, ...]
+        else:
+            test_exemplars = 0
+            test_exemplars_labels = 0
+        # Easily OOM if not enough RAM! Lines are for debugging
+        # number_exemplars = 10000  # 60000
+        # exemplars = exemplars[0:number_exemplars, ...]
+        # exemplar_labels = exemplar_labels[0:number_exemplars, ...]
 
         # GCM model and training
         if load is False:
@@ -792,11 +795,11 @@ if __name__ == '__main__':
                 if gcm_input == 2:
                     # GCM image recognition
                     accuracy_i, loss_i = model_evaluation.evaluate_image_classifier(
-                        gcm, test_exemplars, test_exemplars_labels, gcm=gcm_decision_policy)
+                        gcm, test_exemplars, test_exemplars_labels, with_gcm=gcm_decision_policy)
                 else:
                     # Standard image recognition: Evaluate model accuracy once for test data
                     accuracy_i, loss_i = model_evaluation.evaluate_image_classifier(
-                        sinfony_gcm, test_input_norm, test_labels, gcm=gcm_decision_policy)
+                        sinfony_gcm, test_input_norm, test_labels, with_gcm=gcm_decision_policy)
                 # Independent from SNR / constant, but plotted over SNR range
                 loss = np.array(loss_i) * np.ones(snrs.shape)
                 if gcm_decision_policy is True:

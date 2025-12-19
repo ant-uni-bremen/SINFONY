@@ -31,14 +31,14 @@ import sionna as sn
 
 
 # Own packages
-import huffman_coding as hc
+import utilities.huffman_coding as hc
 import datasets
-import my_float as mfl
+import utilities.my_float as mfl
 # Note: Important to load models from old files, there a reference to mf including layers is hardcoded
-import my_training as mf
-import my_training as mt
-from my_functions import print_time, get_ram, savemodule
-import my_math_operations as mop
+import utilities.my_training as mf
+import utilities.my_training as mt
+from utilities.my_functions import print_time, get_ram, savemodule
+import utilities.my_math_operations as mop
 
 
 # Only necessary for Windows, otherwise kernel crashes
@@ -72,6 +72,7 @@ def classic_digital_communication(source_signal, huffman, information_word_lengt
             number_bits = 8
         else:
             print('Not implemented!')
+            number_bits = 0
     else:
         # Transform source signal into floating point bits
         bit_integer, _ = floatx.float2bitint(source_signal)
@@ -207,7 +208,7 @@ if __name__ == '__main__':
     # Get the script's directory
     path_script = os.path.dirname(os.path.abspath(__file__))
     # Default: 'classic/config_classic.yaml'
-    SETTINGS_FILE = 'classic/config_classic_urban.yaml'
+    SETTINGS_FILE = 'classic/config_classic.yaml'
     # Load the provided configuration file or the default one
     # python SINFONY.py semantic_config.yaml
     # Workaround for interactive sessions: Only allow config file names starting 'semantic_config'
@@ -289,6 +290,8 @@ if __name__ == '__main__':
     else:
         RGB_entries = False
         print('Dataset not implemented into script.')
+        subpath = ''
+        filename = ''
 
     # Path for SINFONY model
     path_sinfony = os.path.join(load_settings['path_models'], subpath)
@@ -311,6 +314,8 @@ if __name__ == '__main__':
         algorithm = 'classic'
     elif classic == 2:
         algorithm = 'classic_image'
+    else:
+        algorithm = None
 
     # Evaluation parameters
     if modulation == 'qam':
@@ -412,6 +417,9 @@ if __name__ == '__main__':
             floatx, data=data_validation_flattened)
         probability_bit = mfl.compute_single_bitprob(
             floatx, probability_sequence)
+    else:
+        bits_poss = None
+        probability_bit = None
     # Definition of communication blocks
     huffman = hc.huffman_coder(symbols=bits_poss, probs=probability_sequence)
     # Compute total gain of the Huffman encoding
@@ -497,6 +505,8 @@ if __name__ == '__main__':
                             np.clip(reconstructed_source, a_min=0, a_max=None))
                 # Extract semantics based on all received images
                 number_classes = model.predict(reconstructed_sources)
+            else:
+                number_classes = None
             # Calculate average loss and accuracy
             loss_ii = np.mean(model.loss(test_labels, number_classes))
             accuracy_ii = np.mean(np.argmax(number_classes, axis=-1) ==

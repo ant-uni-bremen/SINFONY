@@ -86,12 +86,15 @@ def convergence_analysis(y_list, plot, select_rl_loss=1, number_averaged_batches
         number_epochs_rx = y2.shape[0] - number_epochs
     else:
         number_epochs = y2.shape[0]
+        number_epochs_rx = 0
 
     # Separation of Rx and Tx alternating training steps
     if select_rl_loss == 1 or select_rl_loss == 2:
         y2_rl = y2[:number_epochs, ...]
         y2_rl2 = y2_rl[..., :int(y2_rl.shape[-1] / rl_alternating_steps) *
                        rl_alternating_steps].reshape((y2_rl.shape[0], y2_rl.shape[1], -1, 10))
+    else:
+        y2_rl2 = 0
     if select_rl_loss == 1:
         # Extract Rx training steps
         y3 = y2_rl2[:, :, 0::2, :].reshape(

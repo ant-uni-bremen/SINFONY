@@ -29,11 +29,11 @@ import tensorflow as tf
 
 
 # Own packages
-import my_math_operations as mop
+import utilities.my_math_operations as mop
 import datasets
 import model_evaluation
 from sinfony import try_load_model
-import resnet
+import sinfony_architectures.resnet as resnet
 
 
 class ResNetWrapper():
@@ -310,7 +310,7 @@ if __name__ == '__main__':
     # Choose project/dataset
     # Possible data sets: mnist, cifar10, fraeser (human rover), fraeser64, hise, hise64, hise256, speechcommands, urbansound8k
     # Number after dataset name is the resolution of the images
-    wrapper = 'hise'
+    wrapper = 'mnist'
 
     last_layer_input2 = False
     transceiver_split = 1       # image recognition: 0, sinfony: 1

@@ -32,12 +32,13 @@ from tensorflow.keras.optimizers import SGD, Adam  # , Nadam
 # Own packages
 import datasets
 import model_evaluation
-import resnet
-import resnet_sinfony
-import resnet_rl_sinfony
-import my_math_operations as mop
-from my_functions import savemodule
-import my_training as mt
+import sinfony_architectures.resnet as resnet
+import sinfony_architectures.resnet_sinfony as resnet_sinfony
+import sinfony_architectures.resnet_rl_sinfony as resnet_rl_sinfony
+import utilities.my_math_operations as mop
+from utilities.my_functions import savemodule
+import utilities.my_training as mt
+import utilities.my_training_tf1 as mt1
 # Note: Important to load models from old files, there a reference to mf including layers is hardcoded
 import my_training as mf
 
@@ -286,6 +287,11 @@ if __name__ == '__main__':
         model_checkpoint = []
         # Track training loss and accuracy of each batch iteration
         batch_tracking = mt.BatchTrackingCallback()
+    else:
+        VERBOSE = 'auto'
+        batch_tracking = None
+        model_checkpoint = None
+        early_stopping = None
 
     # Optimizer
     if training_settings['learning_rate_schedule']['active']:
@@ -309,11 +315,15 @@ if __name__ == '__main__':
         if rl != 0:
             # Optimizer for tx training
             optimizer_tx = Adam(learning_rate=learning_rate)
+        else:
+            optimizer_tx = None
     else:
         # Default: Stochastic Gradient Descent with momentum 0.9 as in ResNet paper
         optimizer = SGD(learning_rate=learning_rate, momentum=momentum)
         if rl != 0:
             optimizer_tx = SGD(learning_rate=learning_rate, momentum=momentum)
+        else:
+            optimizer_tx = None
     # Optimizer for rx finetuning: None (default, i.e., optimizer)
     if rl_settings['own_optimizer_rxfinetuning']:
         optimizer_rx2 = optimizer
@@ -322,6 +332,8 @@ if __name__ == '__main__':
     if rl != 0:
         spg_config = resnet_rl_sinfony.StochasticPolicyGradientConfiguration(rx_steps=rl_settings['rx_steps'], tx_steps=rl_settings['tx_steps'], receiver_finetuning_epochs=rl_settings[
             'number_epochs_receiver_finetuning'], exploration_variance_schedule=exploration_variance, print_iteration=rl_settings['iteration_print'])
+    else:
+        spg_config = None
 
     # ResNet20 model
     number_classes = train_labels.shape[1]			# 10 classes for CIFAR10, MNIST
@@ -373,7 +385,7 @@ if __name__ == '__main__':
     #     train_input, test_input)
     # If computational heavy (RL approach), use subset of validation set
     valY = test_labels[:validation_dataset_size, ...]
-    valX = mt.create_batch(test_input, validation_dataset_size, 0)
+    valX = mt1.create_batch(test_input, validation_dataset_size, 0)
     # Summarize loaded dataset
     if show_dataset is True:
         datasets.summarize_dataset(
@@ -429,6 +441,8 @@ if __name__ == '__main__':
             elif rl == 2:
                 model = resnet_rl_sinfony.ResnetAE2(
                     resnet_config=resnet_config, communication_config=communication_config)
+            else:
+                model = None
             model.load_weights(os.path.join(pathfile, filename))
         else:
             # Load SINFONY model

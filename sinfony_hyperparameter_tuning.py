@@ -19,9 +19,6 @@ sys.path.append('..')                       # NOQA
 import os
 import numpy as np
 import yaml
-from matplotlib import pyplot as plt
-from matplotlib.lines import Line2D
-from sklearn.manifold import TSNE
 
 # Tensorflow 2 packages
 import tensorflow as tf
@@ -34,13 +31,12 @@ import keras_tuner as kt
 
 # Own packages
 import datasets
-import model_evaluation
-import resnet
-import resnet_sinfony
-import resnet_rl_sinfony
-import my_math_operations as mop
-from my_functions import savemodule
-import my_training as mt
+import sinfony_architectures.resnet as resnet
+import sinfony_architectures.resnet_sinfony as resnet_sinfony
+import sinfony_architectures.resnet_rl_sinfony as resnet_rl_sinfony
+import utilities.my_math_operations as mop
+from utilities.my_functions import savemodule
+import utilities.my_training as mt
 # Note: Important to load models from old files, there a reference to mf including layers is hardcoded
 import my_training as mf
 

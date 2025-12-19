@@ -34,10 +34,38 @@ import soundata
 import tensorflow as tf
 
 # Own packages
-import my_training as mt
+import utilities.my_training as mt
+import utilities.my_training_tf1 as mt1
 
+
+def test_get_batches():
+    '''Test get_batch functions
+    '''
+    train_input, train_labels, _, _ = load_dataset('mnist')
+    train_input, _ = preprocess_pixels(train_input, [])
+    training_batch_size = 500
+    epoch = 0
+    epochs = 3
+    number_batches = len(train_input[0]) // training_batch_size
+    number_image_inputs = len(train_input)
+    for epoch in range(epochs):
+        batch_number = 0
+        train_input, train_labels = mt1.shuffle_dataset(
+            train_input, train_labels)
+        if not dimensions_same:
+            break
+        for batch_x, _ in mt1.get_batch_dataset(train_input, train_labels, training_batch_size):
+            print_str = f'[Rx] Epoch: {epoch + 1}/{epochs}, Batch: {batch_number + 1}/{number_batches}'
+            print(print_str)
+            batch_number = batch_number + 1
+            dimensions_same = len(batch_x) == number_image_inputs
+            if not dimensions_same:
+                break
+    return dimensions_same
 
 # Dataset functions
+
+
 def load_dataset(dataset='mnist', validation_split=0.85, image_split=True, preprocess=True):
     '''Load dataset
     mnist: Handwritten digits 0-9
@@ -242,7 +270,7 @@ def load_dataset_tools(resolution=None, image_split=True, number_augmentations=0
 
     # Shuffle training and validation dataset -> avoids reproducability
     if shuffle:
-        data_input_split, data_labels = mt.shuffle_dataset(
+        data_input_split, data_labels = mt1.shuffle_dataset(
             data_input_split, data_labels)
 
     # Split into training and validation data
@@ -259,9 +287,9 @@ def load_dataset_tools(resolution=None, image_split=True, number_augmentations=0
         train_labels, validation_labels = indices2validationsplit(
             validation_indices, data_labels)
     else:
-        train_input, validation_input = mt.dataset_split(
+        train_input, validation_input = mt1.dataset_split(
             data_input_split, validation_split=validation_split)
-        train_labels, validation_labels = mt.dataset_split(
+        train_labels, validation_labels = mt1.dataset_split(
             data_labels, validation_split=validation_split)
 
     # Data augmentation for training set
@@ -346,9 +374,9 @@ def load_dataset_hise(dataset=None, resolution=None, validation_split=0.85, numb
         train_labels = data_labels[0::number_images, ...]
 
     # Split into training and validation data
-    train_input, validation_input = mt.dataset_split(
+    train_input, validation_input = mt1.dataset_split(
         train_input, validation_split=validation_split)
-    train_labels, validation_labels = mt.dataset_split(
+    train_labels, validation_labels = mt1.dataset_split(
         train_labels, validation_split=validation_split)
 
     # Data augmentation
@@ -412,6 +440,13 @@ def convert_dataset_to_npz(dataset_name):
             __file__)), 'Datasets', 'Fraeser_Aufnahmen_220824_Inkl_Verkippt')
     else:
         print('Dataset not available')
+        train_input = []
+        validation_input = []
+        test_input = []
+        train_labels = []
+        validation_labels = []
+        test_labels = []
+        data_directory = ''
 
     # Save pixel values as integers
     for imageset_index, imageset in enumerate(train_input):
@@ -713,13 +748,13 @@ def load_dataset_tools_with_greater_4mm(resolution=None, image_split=True, numbe
         data_input_greater_4mm_split[1][:, :x_dimension, ...], data_input_4mm_split[1].shape[1], data_input_4mm_split[1].shape[2], interpolation='bilinear')
 
     # Split into training and validation data
-    train_input_4mm, validation_input_4mm = mt.dataset_split(
+    train_input_4mm, validation_input_4mm = mt1.dataset_split(
         data_input_4mm_split, validation_split=validation_split)
-    train_labels_4mm, validation_labels_4mm = mt.dataset_split(
+    train_labels_4mm, validation_labels_4mm = mt1.dataset_split(
         data_labels_4mm, validation_split=validation_split)
-    train_input_greater_4mm, validation_input_greater_4mm = mt.dataset_split(
+    train_input_greater_4mm, validation_input_greater_4mm = mt1.dataset_split(
         data_input_greater_4mm_split, validation_split=validation_split)
-    train_labels_greater_4mm, validation_labels_greater_4mm = mt.dataset_split(
+    train_labels_greater_4mm, validation_labels_greater_4mm = mt1.dataset_split(
         data_labels_greater_4mm, validation_split=validation_split)
 
     train_input = [np.concatenate([train_input_4mm[0], train_input_greater_4mm[0]]), np.concatenate(

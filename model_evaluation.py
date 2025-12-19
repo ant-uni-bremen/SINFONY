@@ -28,8 +28,8 @@ import numpy as np
 import tensorflow as tf
 
 # Own packages
-from my_functions import print_time, get_ram
-import my_math_operations as mop
+from utilities.my_functions import print_time, get_ram
+import utilities.my_math_operations as mop
 import gcm as gcm
 
 
@@ -77,6 +77,9 @@ def evaluate_gcm_memory(gcm_input, sinfony, transceiver_split, train_input, trai
             train_input, gcm_input, sinfony, transceiver_split, snr_training, batch_size=validation_batch_size)
         test_exemplars = gcm.compute_gcm_input_data(
             test_input, gcm_input, sinfony, transceiver_split, snr_test, batch_size=validation_batch_size)
+    else:
+        exemplars = 0
+        test_exemplars = 0
 
     for idx_memory, memory_size in enumerate(memory_sizes):
         loss_i = 0
@@ -324,10 +327,10 @@ def evaluate_rlsinfony(evaluated_model, test_input, test_labels, snrs=np.linspac
     return accuracy, loss
 
 
-def evaluate_image_classifier(evaluated_model, test_input, test_labels, batch_size=32, gcm=False):
+def evaluate_image_classifier(evaluated_model, test_input, test_labels, batch_size=32, with_gcm=False):
     '''Evaluate image classifier Keras model on validation/test set
     '''
-    if gcm is True:
+    if with_gcm is True:
         # GCM + SINFONY validation step
         # GCM suboptimal random decision policy
         accuracy_i, accuracy_i_2, loss_i = evaluate_gcm(
