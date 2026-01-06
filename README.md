@@ -21,7 +21,7 @@ Further, the source code of the proposed semantics-aware, i.e., seismic explorat
 
 This code was tested with TensorFlow 2.6 and should also run with version 2.10-2.15. For the script `sinfony_classic.py`, further sionna (>=0.9.0) is required.
 
-Run the script as `python3 sinfony.py "semantic_config.yaml"`, `python3 sinfony_classic.py "classic/config_classic.yaml"`, `python3 sinfony_classic_features_autoencoder.py "classic/config_classic_features_autoencoder.yaml"`, or `python3 semantic_floating_point.py` to reproduce the results of the articles. To do so, set the parameters in the configuration files to the values in the articles. Exemplary configurations are given in the folder `settings` and its subfolders named according to the used datasets.
+Run the script as `python3 sinfony.py "semantic_config.yaml"`, `python3 sinfony_classic.py "classic/config_classic.yaml"`, `python3 sinfony_classic_features_autoencoder.py "classic/config_classic_features_autoencoder.yaml"`, `python3 gcm.py`, or `python3 semantic_floating_point.py` to reproduce the results of the articles. To do so, set the parameters in the configuration files to the values in the articles. Exemplary configurations are given in the folder `settings` and its subfolders named according to the used datasets.
 
 ## Dependencies
 The dependencies are provided in the conda environment files `conda_env_tf26.yml`, `conda_env_tf215.yml`, and `conda_env_keras3.yml` that were used throughout the progression in the SINFONY code over the years.
