@@ -4,7 +4,7 @@
 
 Source code from the PhD thesis [1] and the scientific research articles [2, 3] about the semantic communication approach SINFONY:
 
-1. Edgar Beck, Advancing Semantic and Digital Communications through Machine Learning, ser. Dissertations from the Department of Communications Engineering, University of Bremen. Düren: Shaker Verlag, Dec. 2025, vol. 15. https://doi.org/10.26092/elib/4791
+1. Edgar Beck, Advancing Semantic and Digital Communications through Machine Learning, ser. Dissertations from the Department of Communications Engineering, University of Bremen, A. Dekorsy, Ed. Düren: Shaker Verlag, Dec. 2025, vol. 15. https://doi.org/10.26092/elib/4791
 
 2. Edgar Beck, Carsten Bockelmann, and Armin Dekorsy, “Semantic Information Recovery in Wireless Networks,” MDPI Sensors, vol. 23, no. 14, p. 6347, 2023. https://doi.org/10.3390/s23146347
 (First draft version: E. Beck, C. Bockelmann, and A. Dekorsy, “Semantic communication: An information bottleneck view,” arXiv:2204.13366, Apr. 2022)
