@@ -40,7 +40,7 @@ from utilities.my_functions import savemodule
 import utilities.my_training as mt
 import utilities.my_training_tf1 as mt1
 # Note: Important to load models from old files, there a reference to mf including layers is hardcoded
-import my_training as mf
+import utilities.my_training as mf
 
 # Only necessary for Windows, otherwise kernel crashes
 if os.name.lower() == 'nt':
