@@ -4,6 +4,7 @@
 @author: beck
 """
 
+import os
 import sys                                  # NOQA
 # Include current folder, where start simulation script and packages are
 sys.path.append('.')                        # NOQA
@@ -13,19 +14,8 @@ sys.path.append('..')                       # NOQA
 # Own packages
 from utilities.my_functions import savemodule
 import numpy as np
-import matplotlib.pyplot as plt
-import tikzplotlib as tplt
-import os
-
-
-def tikzplotlib_fix_ncols(obj):
-    """
-    workaround for matplotlib 3.6 renamed legend's _ncol to _ncols, which breaks tikzplotlib
-    """
-    if hasattr(obj, "_ncols"):
-        obj._ncol = obj._ncols
-    for child in obj.get_children():
-        tikzplotlib_fix_ncols(child)
+import matplotlib.pyplot as plt  # NOQA
+import matplot2tikz as tplt  # NOQA
 
 
 ACCURACY_MEASURES = ['val_acc', 'accuracy', 'val_accuracy',
@@ -191,7 +181,6 @@ def plot_results_semcom(selected_plots, x_axis='snr', y_axis='val_acc', datapath
 
         # Save curves with tikzplotlib
         pathfile = "plots/SINFONY" + str(plot_index) + ".tikz"
-        tikzplotlib_fix_ncols(figure)
         tplt.save(pathfile)
         print('Saved performance curves to "' + pathfile + '".')
 
@@ -241,7 +230,8 @@ if __name__ == '__main__':
     copy_models = False     # Copy published models to public repository
     # Fixed
     datapath = 'models'
-    filename_prefix = 'RES_'
+    filename_prefix = ''
+    suf = '_results'
     if copy_models:
         dn = ''
     else:
@@ -277,45 +267,45 @@ if __name__ == '__main__':
         # Options: ['title', subpath, x_axis_normalization, False],
         'title': ['SINFONY design: CIFAR', 'cifar10', 64, False],
         # 'Tag': ['data name', 'color in plot', channel uses, on/off],
-        'CIFAR1': [dn + 'ResNet20_CIFAR', 'k--', 0, True],
-        # 'CIFAR1 test': [dn + 'ResNet20_CIFAR_test', 'k--', 0, True],
-        'CIFAR2': [dn + 'ResNet20_CIFAR2_nosnr', 'b--', 0, True],
-        'CIFAR2 snr': [dn + 'ResNet20_CIFAR2', 'b-', 64, True],
-        # 'CIFAR3 snr6 16': [dn + 'ResNet20_CIFAR3', 'b--x', 64, True],
-        'CIFAR3 snr-4 6': [dn + 'ResNet20_CIFAR3_snr-4_6', 'b-x', 64, True],
-        # 'CIFAR4 ntx16 nrx64 snr6 16': [dn + 'ResNet20_CIFAR4', 'g--D', 16, True],
-        'CIFAR4 ntx16 nrx64 snr-4_6': [dn + 'ResNet20_CIFAR4_snr-4_6', 'g-D', 16, True],
-        'CIFAR4 ntx16 nrx64 rx individual snr-4 6': [dn + 'ResNet20_CIFAR4_rx_snr-4_6', 'g--x', 16, True],
-        'CIFAR4 ntx16 nrx64 rx individual snr-4 6 2': [dn + 'ResNet20_CIFAR4_rx_snr-4_6_2', 'g--', 16, True],
-        # 'CIFAR5 ntx16': [dn + 'ResNet20_CIFAR5', 'g--', 0, True],
-        # 'CIFAR6 ntx64 nrx64 snr6 16': [dn + 'ResNet20_CIFAR6', 'r--s', 64, True],
-        'CIFAR6 ntx64 nrx64 snr-4_6': [dn + 'ResNet20_CIFAR6_snr-4_6', 'r-s', 64, True],
-        # 'CIFAR7 ntx64': [dn + 'ResNet20_CIFAR7', 'r--', 0, True],
+        'CIFAR1': [dn + 'ResNet20_CIFAR' + suf, 'k--', 0, True],
+        # 'CIFAR1 test': [dn + 'ResNet20_CIFAR_test' + suf, 'k--', 0, True],
+        'CIFAR2': [dn + 'ResNet20_CIFAR2_nosnr' + suf, 'b--', 0, True],
+        'CIFAR2 snr': [dn + 'ResNet20_CIFAR2' + suf, 'b-', 64, True],
+        # 'CIFAR3 snr6 16': [dn + 'ResNet20_CIFAR3' + suf, 'b--x', 64, True],
+        'CIFAR3 snr-4 6': [dn + 'ResNet20_CIFAR3_snr-4_6' + suf, 'b-x', 64, True],
+        # 'CIFAR4 ntx16 nrx64 snr6 16': [dn + 'ResNet20_CIFAR4' + suf, 'g--D', 16, True],
+        'CIFAR4 ntx16 nrx64 snr-4_6': [dn + 'ResNet20_CIFAR4_snr-4_6' + suf, 'g-D', 16, True],
+        'CIFAR4 ntx16 nrx64 rx individual snr-4 6': [dn + 'ResNet20_CIFAR4_rx_snr-4_6' + suf, 'g--x', 16, True],
+        'CIFAR4 ntx16 nrx64 rx individual snr-4 6 2': [dn + 'ResNet20_CIFAR4_rx_snr-4_6_2' + suf, 'g--', 16, True],
+        # 'CIFAR5 ntx16': [dn + 'ResNet20_CIFAR5' + suf, 'g--', 0, True],
+        # 'CIFAR6 ntx64 nrx64 snr6 16': [dn + 'ResNet20_CIFAR6' + suf, 'r--s', 64, True],
+        'CIFAR6 ntx64 nrx64 snr-4_6': [dn + 'ResNet20_CIFAR6_snr-4_6' + suf, 'r-s', 64, True],
+        # 'CIFAR7 ntx64': [dn + 'ResNet20_CIFAR7' + suf, 'r--', 0, True],
     }
     selected_plots.append(cifar)
 
     # [Published]
     mnist = {'title': ['SINFONY design: MNIST', 'mnist', 56, False],
              # 'Tag': ['data name', 'color in plot', channel uses, on/off],
-             # 'MNIST1 Ne10': [dn + 'ResNet14_MNIST', 'k:', 0, True],
-             'MNIST1 Ne20': [dn + 'ResNet14_MNIST_Ne20', 'k--', 0, True],
-             # 'MNIST2 Ne10': [dn + 'ResNet14_MNIST2_nosnr', 'b.', 0, True],
-             'MNIST2 Ne20': [dn + 'ResNet14_MNIST2_Ne20', 'b--', 0, True],
-             # 'MNIST2 Ne10 snr': [dn + 'ResNet14_MNIST2', 'b-.', 56, True],
-             'MNIST2 Ne20 snr': [dn + 'ResNet14_MNIST2_Ne20_snr', 'b-', 56, True],
-             # 'MNIST3 Ne10 snr6 16': [dn + 'ResNet14_MNIST3', 'b--x', 56, True],
-             # 'MNIST3 Ne10 snr-4 6': [dn + 'ResNet14_MNIST3_snr-4_6', 'b--x', 56, True],
-             'MNIST3 Ne20 snr-4 6': [dn + 'ResNet14_MNIST3_Ne20_snr-4_6', 'b-x', 56, True],
-             # 'MNIST4 ntx14 Ne10 snr6 16': [dn + 'ResNet14_MNIST4', 'g--D', 14, True],
-             # 'MNIST4 ntx14 Ne10 snr-4 6': [dn + 'ResNet14_MNIST4_snr-4_6', 'g--d', 14, True],
-             'MNIST4 ntx14 nrx56 Ne20 snr-4 6': [dn + 'ResNet14_MNIST4_Ne20_snr-4_6', 'g-D', 14, True],
-             # 'MNIST4 ntx14 nrx56 Ne20 snr-4 6 2': [dn + 'ResNet14_MNIST4_Ne20_snr-4_6_2', 'g-d', 14, True],
-             # 'MNIST5 ntx14 Ne10': [dn + 'ResNet14_MNIST5', 'g--', 14, True],
-             # 'MNIST6 ntx56 Ne10 snr6 16': [dn + 'ResNet14_MNIST6', 'r--s', 56, True],
-             # 'MNIST6 ntx56 Ne10 snr-4 6': [dn + 'ResNet14_MNIST6snr-4_6', 'r--s', 56, True],
-             'MNIST6 ntx56 Ne20 snr-4 6': [dn + 'ResNet14_MNIST6_Ne20_snr-4_6', 'r-s', 56, True],
-             # 'MNIST6 ntx56 Ne10 snr-10 10': [dn + 'ResNet14_MNIST6_snr-10_10', 'r-x', 56, True],
-             # 'MNIST7 ntx56 Ne10': [dn + 'ResNet14_MNIST7', 'r--', 56, True],
+             # 'MNIST1 Ne10': [dn + 'ResNet14_MNIST' + suf, 'k:', 0, True],
+             'MNIST1 Ne20': [dn + 'ResNet14_MNIST_Ne20' + suf, 'k--', 0, True],
+             # 'MNIST2 Ne10': [dn + 'ResNet14_MNIST2_nosnr' + suf, 'b.', 0, True],
+             'MNIST2 Ne20': [dn + 'ResNet14_MNIST2_Ne20' + suf, 'b--', 0, True],
+             # 'MNIST2 Ne10 snr': [dn + 'ResNet14_MNIST2' + suf, 'b-.', 56, True],
+             'MNIST2 Ne20 snr': [dn + 'ResNet14_MNIST2_Ne20_snr' + suf, 'b-', 56, True],
+             # 'MNIST3 Ne10 snr6 16': [dn + 'ResNet14_MNIST3' + suf, 'b--x', 56, True],
+             # 'MNIST3 Ne10 snr-4 6': [dn + 'ResNet14_MNIST3_snr-4_6' + suf, 'b--x', 56, True],
+             'MNIST3 Ne20 snr-4 6': [dn + 'ResNet14_MNIST3_Ne20_snr-4_6' + suf, 'b-x', 56, True],
+             # 'MNIST4 ntx14 Ne10 snr6 16': [dn + 'ResNet14_MNIST4' + suf, 'g--D', 14, True],
+             # 'MNIST4 ntx14 Ne10 snr-4 6': [dn + 'ResNet14_MNIST4_snr-4_6' + suf, 'g--d', 14, True],
+             'MNIST4 ntx14 nrx56 Ne20 snr-4 6': [dn + 'ResNet14_MNIST4_Ne20_snr-4_6' + suf, 'g-D', 14, True],
+             # 'MNIST4 ntx14 nrx56 Ne20 snr-4 6 2': [dn + 'ResNet14_MNIST4_Ne20_snr-4_6_2' + suf, 'g-d', 14, True],
+             # 'MNIST5 ntx14 Ne10': [dn + 'ResNet14_MNIST5' + suf, 'g--', 14, True],
+             # 'MNIST6 ntx56 Ne10 snr6 16': [dn + 'ResNet14_MNIST6' + suf, 'r--s', 56, True],
+             # 'MNIST6 ntx56 Ne10 snr-4 6': [dn + 'ResNet14_MNIST6snr-4_6' + suf, 'r--s', 56, True],
+             'MNIST6 ntx56 Ne20 snr-4 6': [dn + 'ResNet14_MNIST6_Ne20_snr-4_6' + suf, 'r-s', 56, True],
+             # 'MNIST6 ntx56 Ne10 snr-10 10': [dn + 'ResNet14_MNIST6_snr-10_10' + suf, 'r-x', 56, True],
+             # 'MNIST7 ntx56 Ne10': [dn + 'ResNet14_MNIST7' + suf, 'r--', 56, True],
              }
     selected_plots.append(mnist)
 
@@ -323,19 +313,19 @@ if __name__ == '__main__':
     # [Unpublished]
     mnist_ntx = {'title': ['SINFONY MNIST: Number of channel uses NTx', 'mnist', 56, False],
                  # 'Tag': ['data name', 'color in plot', channel uses, on/off],
-                 'MNIST1': [dn + 'ResNet14_MNIST', 'k--', 0, True],
-                 'MNIST2': [dn + 'ResNet14_MNIST2_nosnr', 'b--', 0, True],
-                 # 'MNIST6 ntx56 nrx56 snr6 16': [dn + 'ResNet14_MNIST6', 'r--s', 56, True],
-                 'MNIST6 ntx56 nrx56 snr-4 6': [dn + 'ResNet14_MNIST6snr-4_6', 'r-s', 56, True],
-                 # 'MNIST4 ntx14 nrx56 snr6 16': [dn + 'ResNet14_MNIST4', 'g--D', 14, True],
-                 'MNIST4 ntx14 nrx56 snr-4 6': [dn + 'ResNet14_MNIST4_snr-4_6', 'g-D', 14, True],
-                 # 'MNIST ntx7 nrx28 snr6 16': [dn + 'ResNet14_MNIST4_ntx7', 'g--x', 7, True],
-                 'MNIST ntx7 nrx28 snr-4 6': [dn + 'ResNet14_MNIST_ntx7snr-4_6', 'g-x', 7, True],
-                 # 'MNIST ntx4 nrx14 snr6 16': [dn + 'ResNet14_MNIST_ntx4', 'g--o', 4, True],
-                 'MNIST ntx4 nrx14 snr-4 6': [dn + 'ResNet14_MNIST_ntx4snr-4_6', 'g-o', 4, True],
-                 # 'MNIST ntx2 nrx8 snr6 16': [dn + 'ResNet14_MNIST_ntx2', 'g--^', 2, True],
-                 'MNIST ntx2 nrx8 snr-4 6': [dn + 'ResNet14_MNIST_ntx2_snr-4_6', 'g-^', 2, True],
-                 # 'MNIST ntx2 nrx4 snr-4 6': [dn + 'ResNet14_MNIST4_ntx2_nrx4_snr-4_6', 'g-<', 2, True],
+                 'MNIST1': [dn + 'ResNet14_MNIST' + suf, 'k--', 0, True],
+                 'MNIST2': [dn + 'ResNet14_MNIST2_nosnr' + suf, 'b--', 0, True],
+                 # 'MNIST6 ntx56 nrx56 snr6 16': [dn + 'ResNet14_MNIST6' + suf, 'r--s', 56, True],
+                 'MNIST6 ntx56 nrx56 snr-4 6': [dn + 'ResNet14_MNIST6snr-4_6' + suf, 'r-s', 56, True],
+                 # 'MNIST4 ntx14 nrx56 snr6 16': [dn + 'ResNet14_MNIST4' + suf, 'g--D', 14, True],
+                 'MNIST4 ntx14 nrx56 snr-4 6': [dn + 'ResNet14_MNIST4_snr-4_6' + suf, 'g-D', 14, True],
+                 # 'MNIST ntx7 nrx28 snr6 16': [dn + 'ResNet14_MNIST4_ntx7' + suf, 'g--x', 7, True],
+                 'MNIST ntx7 nrx28 snr-4 6': [dn + 'ResNet14_MNIST_ntx7snr-4_6' + suf, 'g-x', 7, True],
+                 # 'MNIST ntx4 nrx14 snr6 16': [dn + 'ResNet14_MNIST_ntx4' + suf, 'g--o', 4, True],
+                 'MNIST ntx4 nrx14 snr-4 6': [dn + 'ResNet14_MNIST_ntx4snr-4_6' + suf, 'g-o', 4, True],
+                 # 'MNIST ntx2 nrx8 snr6 16': [dn + 'ResNet14_MNIST_ntx2' + suf, 'g--^', 2, True],
+                 'MNIST ntx2 nrx8 snr-4 6': [dn + 'ResNet14_MNIST_ntx2_snr-4_6' + suf, 'g-^', 2, True],
+                 # 'MNIST ntx2 nrx4 snr-4 6': [dn + 'ResNet14_MNIST4_ntx2_nrx4_snr-4_6' + suf, 'g-<', 2, True],
                  }
     # selected_plots.append(mnist_ntx)
 
@@ -343,17 +333,17 @@ if __name__ == '__main__':
     # [Published]
     mnist_ntx_nrx56 = {'title': ['SINFONY MNIST: Number of channel uses NTx with equal Nw=56', 'mnist', 56, False],
                        # 'Tag': ['data name', 'color in plot', channel uses, on/off],
-                       'MNIST2': [dn + 'ResNet14_MNIST2_nosnr', 'b--', 0, True],
-                       'MNIST6 ntx56 nrx56 Ne20 snr-4 6': [dn + 'ResNet14_MNIST6_Ne20_snr-4_6', 'r-s', 56, True],
-                       'MNIST4 ntx14 nrx56 Ne20 snr-4 6': [dn + 'ResNet14_MNIST4_Ne20_snr-4_6', 'g-D', 14, True],
-                       # 'MNIST ntx7 nrx56 snr-4 6': [dn + 'ResNet14_MNIST4_ntx7_nrx56_snr-4_6', 'g--x', 7, True],
-                       'MNIST ntx7 nrx56 Ne20 snr-4 6': [dn + 'ResNet14_MNIST_ntx7_Ne20_snr-4_6', 'm-x', 7, True],
-                       # 'MNIST ntx7 nrx56 Ne20 snr6 16': [dn + 'ResNet14_MNIST_ntx7_Ne20_snr6_16', 'm--x', 7, True],
-                       'MNIST ntx7 nrx56 Ne20 snr10 20': [dn + 'ResNet14_MNIST_ntx7_Ne20_snr10_20', 'm:x', 7, True],
-                       # 'MNIST ntx4 nrx56 snr-4 6': [dn + 'ResNet14_MNIST4_ntx4_nrx56_snr-4_6', 'g--o', 4, True],
-                       'MNIST ntx4 nrx56 Ne20 snr-4 6': [dn + 'ResNet14_MNIST_ntx4_Ne20_snr-4_6', 'm-o', 4, True],
-                       # 'MNIST ntx2 nrx56 snr-4 6': [dn + 'ResNet14_MNIST4_ntx2_nrx56_snr-4_6', 'g--^', 2, True],
-                       'MNIST ntx2 nrx56 Ne20 snr-4 6': [dn + 'ResNet14_MNIST_ntx2_Ne20_snr-4_6', 'm-^', 2, True],
+                       'MNIST2': [dn + 'ResNet14_MNIST2_nosnr' + suf, 'b--', 0, True],
+                       'MNIST6 ntx56 nrx56 Ne20 snr-4 6': [dn + 'ResNet14_MNIST6_Ne20_snr-4_6' + suf, 'r-s', 56, True],
+                       'MNIST4 ntx14 nrx56 Ne20 snr-4 6': [dn + 'ResNet14_MNIST4_Ne20_snr-4_6' + suf, 'g-D', 14, True],
+                       # 'MNIST ntx7 nrx56 snr-4 6': [dn + 'ResNet14_MNIST4_ntx7_nrx56_snr-4_6' + suf, 'g--x', 7, True],
+                       'MNIST ntx7 nrx56 Ne20 snr-4 6': [dn + 'ResNet14_MNIST_ntx7_Ne20_snr-4_6' + suf, 'm-x', 7, True],
+                       # 'MNIST ntx7 nrx56 Ne20 snr6 16': [dn + 'ResNet14_MNIST_ntx7_Ne20_snr6_16' + suf, 'm--x', 7, True],
+                       'MNIST ntx7 nrx56 Ne20 snr10 20': [dn + 'ResNet14_MNIST_ntx7_Ne20_snr10_20' + suf, 'm:x', 7, True],
+                       # 'MNIST ntx4 nrx56 snr-4 6': [dn + 'ResNet14_MNIST4_ntx4_nrx56_snr-4_6' + suf, 'g--o', 4, True],
+                       'MNIST ntx4 nrx56 Ne20 snr-4 6': [dn + 'ResNet14_MNIST_ntx4_Ne20_snr-4_6' + suf, 'm-o', 4, True],
+                       # 'MNIST ntx2 nrx56 snr-4 6': [dn + 'ResNet14_MNIST4_ntx2_nrx56_snr-4_6' + suf, 'g--^', 2, True],
+                       'MNIST ntx2 nrx56 Ne20 snr-4 6': [dn + 'ResNet14_MNIST_ntx2_Ne20_snr-4_6' + suf, 'm-^', 2, True],
                        }
     selected_plots.append(mnist_ntx_nrx56)
 
@@ -361,16 +351,16 @@ if __name__ == '__main__':
     # [Unpublished]
     mnist_txrxlayers = {'title': ['SINFONY MNIST: Number of Tx/Rx layers', 'mnist', 56, False],
                         # 'Tag': ['data name', 'color in plot', channel uses, on/off],
-                        'MNIST1': [dn + 'ResNet14_MNIST', 'k--', 0, True],
-                        'MNIST2': [dn + 'ResNet14_MNIST2_nosnr', 'b--', 0, True],
-                        # 'MNIST6 ntx56 nrx56 snr-4 6': [dn + 'ResNet14_MNIST6snr-4_6', 'r-s', 56, True],
-                        # 'MNIST6 ntx56 nrx56 snr-4 6 2layer Ne20': [dn + 'ResNet14_MNIST6_2layer_snr-4_6', 'm--s', 56, True],
-                        # 'MNIST4 ntx14 nrx56 snr-4 6': [dn + 'ResNet14_MNIST4_snr-4_6', 'g-d', 14, True],
-                        'MNIST4 ntx14 nrx56 snr-4 6 Ne20': [dn + 'ResNet14_MNIST4_Ne20_snr-4_6', 'g--d', 14, True],
-                        # 'MNIST4 ntx14 nrx56 snr-4 6 1layer': [dn + 'ResNet14_MNIST4_1layer_snr-4_6', 'm--', 14, True],
-                        'MNIST4 ntx14 nrx56 snr-4 6 2layer Ne20': [dn + 'ResNet14_MNIST4_2layer_snr-4_6', 'm-d', 14, True],
-                        # 'MNIST4 ntx14 nrx56 snr-4 6 2layer Ne10': [dn + 'ResNet14_MNIST4_layer2Ne10_snr-4_6', 'm-D', 14, True],
-                        'MNIST4 ntx14 nrx56 snr-4 6 3layer Ne20': [dn + 'ResNet14_MNIST4_3layer_snr-4_6', 'm--x', 14, True],
+                        'MNIST1': [dn + 'ResNet14_MNIST' + suf, 'k--', 0, True],
+                        'MNIST2': [dn + 'ResNet14_MNIST2_nosnr' + suf, 'b--', 0, True],
+                        # 'MNIST6 ntx56 nrx56 snr-4 6': [dn + 'ResNet14_MNIST6snr-4_6' + suf, 'r-s', 56, True],
+                        # 'MNIST6 ntx56 nrx56 snr-4 6 2layer Ne20': [dn + 'ResNet14_MNIST6_2layer_snr-4_6' + suf, 'm--s', 56, True],
+                        # 'MNIST4 ntx14 nrx56 snr-4 6': [dn + 'ResNet14_MNIST4_snr-4_6' + suf, 'g-d', 14, True],
+                        'MNIST4 ntx14 nrx56 snr-4 6 Ne20': [dn + 'ResNet14_MNIST4_Ne20_snr-4_6' + suf, 'g--d', 14, True],
+                        # 'MNIST4 ntx14 nrx56 snr-4 6 1layer': [dn + 'ResNet14_MNIST4_1layer_snr-4_6' + suf, 'm--', 14, True],
+                        'MNIST4 ntx14 nrx56 snr-4 6 2layer Ne20': [dn + 'ResNet14_MNIST4_2layer_snr-4_6' + suf, 'm-d', 14, True],
+                        # 'MNIST4 ntx14 nrx56 snr-4 6 2layer Ne10': [dn + 'ResNet14_MNIST4_layer2Ne10_snr-4_6' + suf, 'm-D', 14, True],
+                        'MNIST4 ntx14 nrx56 snr-4 6 3layer Ne20': [dn + 'ResNet14_MNIST4_3layer_snr-4_6' + suf, 'm--x', 14, True],
                         }
     selected_plots.append(mnist_txrxlayers)
 
@@ -381,25 +371,25 @@ if __name__ == '__main__':
     # [Unpublished, but prepared for PhD Thesis]
     mnist_rx = {'title': ['SINFONY MNIST: Rx design', 'mnist', 56, False],
                 # 'Tag': ['data name', 'color in plot', channel uses, on/off],
-                'MNIST1': [dn + 'ResNet14_MNIST', 'k--', 0, True],
-                'MNIST2': [dn + 'ResNet14_MNIST2_nosnr', 'b--', 0, True],
-                # 'MNIST6 ntx56 nrx56 snr-4 6': [dn + 'ResNet14_MNIST6snr-4_6', 'r-s', 56, True],
-                # 'MNIST6 rx Ne10 snr-4 6': [dn + 'ResNet14_MNIST6_rx_snr-4_6', 'r--', 56, True],
-                # 'MNIST6 rx Ne20 snr-4 6': [dn + 'ResNet14_MNIST6_rx_Ne20_snr-4_6', 'r--d', 56, True],
-                # 'MNIST6 rx Ne30 snr-4 6': [dn + 'ResNet14_MNIST6_rx_Ne30_snr-4_6', 'r--o', 56, True],
-                # 'MNIST6 rxjoint Ne10 snr-4 6': [dn + 'ResNet14_MNIST6_rxjointNe10_snr-4_6', 'r-.x', 56, True],
-                # 'MNIST6 rxjoint Ne20 snr-4 6': [dn + 'ResNet14_MNIST6_rxjointNe20_snr-4_6', 'r:x', 56, True],
-                # 'MNIST6 rxjoint Ne30 snr-4 6': [dn + 'ResNet14_MNIST6_rxjointNe30_snr-4_6', 'r--x', 56, True],
-                # 'MNIST4 ntx14 nrx56 snr-4 6': [dn + 'ResNet14_MNIST4_snr-4_6', 'g-d', 14, True],
-                # 'MNIST4 snr-4 6 test': [dn + 'ResNet14_MNIST4_snr-4_6_test', 'm--', 14, True],
-                'MNIST4 ntx14 nrx56 snr-4 6 Ne20': [dn + 'ResNet14_MNIST4_Ne20_snr-4_6', 'g--d', 14, True],
-                # 'MNIST4 rx Ne10 snr-4 6': [dn + 'ResNet14_MNIST4_rxNe10_snr-4_6', 'm-<', 14, True],
-                'MNIST4 rx Ne20 snr-4 6': [dn + 'ResNet14_MNIST4_rx_snr-4_6', 'm-d', 14, True],
-                # 'MNIST4 rx Ne20 2layer snr-4 6': [dn + 'ResNet14_MNIST4_rx_2layer_snr-4_6', 'm-x', 14, True],
-                # 'MNIST4 rxjoint Ne10 snr-4 6': [dn + 'ResNet14_MNIST4_rxjoint_snr-4_6', 'm-x', 14, True],
-                # 'MNIST4 rxjoint Ne20 snr-4 6': [dn + 'ResNet14_MNIST4_rxjointNe20_snr-4_6', 'm--', 14, True],
-                'MNIST4 rxjoint Ne30 snr-4 6': [dn + 'ResNet14_MNIST4_rxjointNe30_snr-4_6', 'm--x', 14, True],
-                # 'MNIST4 rxjoint Ne30 2layer snr-4 6': [dn + 'ResNet14_MNIST4_rxjoint_2layerNe30_snr-4_6', 'm-x', 14, True],
+                'MNIST1': [dn + 'ResNet14_MNIST' + suf, 'k--', 0, True],
+                'MNIST2': [dn + 'ResNet14_MNIST2_nosnr' + suf, 'b--', 0, True],
+                # 'MNIST6 ntx56 nrx56 snr-4 6': [dn + 'ResNet14_MNIST6snr-4_6' + suf, 'r-s', 56, True],
+                # 'MNIST6 rx Ne10 snr-4 6': [dn + 'ResNet14_MNIST6_rx_snr-4_6' + suf, 'r--', 56, True],
+                # 'MNIST6 rx Ne20 snr-4 6': [dn + 'ResNet14_MNIST6_rx_Ne20_snr-4_6' + suf, 'r--d', 56, True],
+                # 'MNIST6 rx Ne30 snr-4 6': [dn + 'ResNet14_MNIST6_rx_Ne30_snr-4_6' + suf, 'r--o', 56, True],
+                # 'MNIST6 rxjoint Ne10 snr-4 6': [dn + 'ResNet14_MNIST6_rxjointNe10_snr-4_6' + suf, 'r-.x', 56, True],
+                # 'MNIST6 rxjoint Ne20 snr-4 6': [dn + 'ResNet14_MNIST6_rxjointNe20_snr-4_6' + suf, 'r:x', 56, True],
+                # 'MNIST6 rxjoint Ne30 snr-4 6': [dn + 'ResNet14_MNIST6_rxjointNe30_snr-4_6' + suf, 'r--x', 56, True],
+                # 'MNIST4 ntx14 nrx56 snr-4 6': [dn + 'ResNet14_MNIST4_snr-4_6' + suf, 'g-d', 14, True],
+                # 'MNIST4 snr-4 6 test': [dn + 'ResNet14_MNIST4_snr-4_6_test' + suf, 'm--', 14, True],
+                'MNIST4 ntx14 nrx56 snr-4 6 Ne20': [dn + 'ResNet14_MNIST4_Ne20_snr-4_6' + suf, 'g--d', 14, True],
+                # 'MNIST4 rx Ne10 snr-4 6': [dn + 'ResNet14_MNIST4_rxNe10_snr-4_6' + suf, 'm-<', 14, True],
+                'MNIST4 rx Ne20 snr-4 6': [dn + 'ResNet14_MNIST4_rx_snr-4_6' + suf, 'm-d', 14, True],
+                # 'MNIST4 rx Ne20 2layer snr-4 6': [dn + 'ResNet14_MNIST4_rx_2layer_snr-4_6' + suf, 'm-x', 14, True],
+                # 'MNIST4 rxjoint Ne10 snr-4 6': [dn + 'ResNet14_MNIST4_rxjoint_snr-4_6' + suf, 'm-x', 14, True],
+                # 'MNIST4 rxjoint Ne20 snr-4 6': [dn + 'ResNet14_MNIST4_rxjointNe20_snr-4_6' + suf, 'm--', 14, True],
+                'MNIST4 rxjoint Ne30 snr-4 6': [dn + 'ResNet14_MNIST4_rxjointNe30_snr-4_6' + suf, 'm--x', 14, True],
+                # 'MNIST4 rxjoint Ne30 2layer snr-4 6': [dn + 'ResNet14_MNIST4_rxjoint_2layerNe30_snr-4_6' + suf, 'm-x', 14, True],
                 }
     selected_plots.append(mnist_rx)
 
@@ -407,18 +397,18 @@ if __name__ == '__main__':
     # [Unpublished]
     cifar_ntx = {'title': ['SINFONY CIFAR: Number of channel uses NTx', 'cifar10', 64, False],
                  # 'Tag': ['data name', 'color in plot', channel uses, on/off],
-                 'CIFAR1': [dn + 'ResNet20_CIFAR', 'k--', 0, True],
-                 'CIFAR2': [dn + 'ResNet20_CIFAR2_nosnr', 'b--', 0, True],
-                 # 'CIFAR6 ntx64 nrx64 snr6 16': [dn + 'ResNet20_CIFAR6', 'r--s', 64, True],
-                 'CIFAR6 ntx64 nrx64 snr-4_6': [dn + 'ResNet20_CIFAR6_snr-4_6', 'r-s', 64, True],
-                 # 'CIFAR4 ntx16 nrx64 snr6 16': [dn + 'ResNet20_CIFAR4', 'g--D', 16, True],
-                 'CIFAR4 ntx16 nrx64 snr-4_6': [dn + 'ResNet20_CIFAR4_snr-4_6', 'g-D', 16, True],
-                 # 'CIFAR ntx8 nrx32 snr6 16': [dn + 'ResNet20_CIFAR4_ntx8', 'g-x', 8, True],
-                 'CIFAR ntx8 nrx32 snr-4 6': [dn + 'ResNet20_CIFAR_ntx8_snr-4_6', 'g--x', 8, True],
-                 # 'CIFAR ntx4 nrx16 snr6 16': [dn + 'ResNet20_CIFAR_ntx4', 'g-o', 4, True],
-                 'CIFAR ntx4 nrx16 snr-4 6': [dn + 'ResNet20_CIFAR_ntx4_snr-4_6', 'g--o', 4, True],
-                 'CIFAR ntx2 nrx8 snr6 16': [dn + 'ResNet20_CIFAR_ntx2', 'g-^', 2, True],
-                 'CIFAR ntx2 nrx8 snr-4 6': [dn + 'ResNet20_CIFAR_ntx2_snr-4_6', 'g--^', 2, True],
+                 'CIFAR1': [dn + 'ResNet20_CIFAR' + suf, 'k--', 0, True],
+                 'CIFAR2': [dn + 'ResNet20_CIFAR2_nosnr' + suf, 'b--', 0, True],
+                 # 'CIFAR6 ntx64 nrx64 snr6 16': [dn + 'ResNet20_CIFAR6' + suf, 'r--s', 64, True],
+                 'CIFAR6 ntx64 nrx64 snr-4_6': [dn + 'ResNet20_CIFAR6_snr-4_6' + suf, 'r-s', 64, True],
+                 # 'CIFAR4 ntx16 nrx64 snr6 16': [dn + 'ResNet20_CIFAR4' + suf, 'g--D', 16, True],
+                 'CIFAR4 ntx16 nrx64 snr-4_6': [dn + 'ResNet20_CIFAR4_snr-4_6' + suf, 'g-D', 16, True],
+                 # 'CIFAR ntx8 nrx32 snr6 16': [dn + 'ResNet20_CIFAR4_ntx8' + suf, 'g-x', 8, True],
+                 'CIFAR ntx8 nrx32 snr-4 6': [dn + 'ResNet20_CIFAR_ntx8_snr-4_6' + suf, 'g--x', 8, True],
+                 # 'CIFAR ntx4 nrx16 snr6 16': [dn + 'ResNet20_CIFAR_ntx4' + suf, 'g-o', 4, True],
+                 'CIFAR ntx4 nrx16 snr-4 6': [dn + 'ResNet20_CIFAR_ntx4_snr-4_6' + suf, 'g--o', 4, True],
+                 'CIFAR ntx2 nrx8 snr6 16': [dn + 'ResNet20_CIFAR_ntx2' + suf, 'g-^', 2, True],
+                 'CIFAR ntx2 nrx8 snr-4 6': [dn + 'ResNet20_CIFAR_ntx2_snr-4_6' + suf, 'g--^', 2, True],
                  }
     selected_plots.append(cifar_ntx)
 

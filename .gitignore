@@ -1,5 +1,6 @@
 __*__
 *.code-workspace
+.vscode
 Archive/
 plots/
 settings_saved/

@@ -15,8 +15,10 @@ Belongs to simulation framework for numerical results of the articles:
 import numpy as np
 # Tensorflow 2 packages
 import tensorflow as tf
-from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Input, Dense, Flatten
+# import tf.keras as keras
+import keras
+from keras.models import Model
+from keras.layers import Input, Dense, Flatten
 
 import sinfony_architectures.resnet as resnet
 import utilities.my_training as mt
@@ -171,13 +173,15 @@ def resnet_multi_transmitter_imagesplit(resnet_config=resnet.ResnetConfiguration
     transmitter_output_list = [[], []]
     for index_x in range(0, encoding_config.image_split_factor):
         for index_y in range(0, encoding_config.image_split_factor):
-            transmitter_output_list[index_x].append(tf.expand_dims(tf.expand_dims(tx_list[index_x][index_y](transmitter_input[:, int(
+            transmitter_output_list[index_x].append(keras.ops.expand_dims(keras.ops.expand_dims(tx_list[index_x][index_y](transmitter_input[:, int(
                 index_x * im_div1):int((index_x + 1) * im_div1), int(index_y * im_div2):int((index_y + 1) * im_div2), :]), axis=1), axis=2))
+            # transmitter_output_list[index_x].append(tf.expand_dims(tf.expand_dims(tx_list[index_x][index_y](transmitter_input[:, int(
+            #     index_x * im_div1):int((index_x + 1) * im_div1), int(index_y * im_div2):int((index_y + 1) * im_div2), :]), axis=1), axis=2))
     transmitter_output_x_list = []
     for index_y in range(0, encoding_config.image_split_factor):
-        transmitter_output_x_list.append(tf.keras.layers.Concatenate(
+        transmitter_output_x_list.append(keras.layers.Concatenate(
             axis=1)(transmitter_output_list[:][index_y]))
-    transmitter_output = tf.keras.layers.Concatenate(
+    transmitter_output = keras.layers.Concatenate(
         axis=2)(transmitter_output_x_list)
     transmitter = Model(inputs=transmitter_input, outputs=transmitter_output)
     return transmitter
@@ -203,7 +207,7 @@ def resnet_receiver_imagesplit(received_signal_shape, number_classes=10, image_s
                 # All layers the same vs. adjustable here in code
                 decoder_layerlist.append(Dense(
                     decoding_layer_width, activation="relu", kernel_initializer=decoding_config.weight_initialization, kernel_regularizer=decoding_config.weight_decay, name="rx_layer" + str(indl)))
-            decoder = tf.keras.Sequential(decoder_layerlist)
+            decoder = keras.Sequential(decoder_layerlist)
         if rx_list is False and decoding_config.rx_joint_layers == 1:
             # x_tensor = decoder(receiver_input) acts on each dimension
             x_tensor = decoder(receiver_input)
@@ -217,14 +221,16 @@ def resnet_receiver_imagesplit(received_signal_shape, number_classes=10, image_s
                         for indl in range(0, number_decoding_layer):
                             decoder_layerlist.append(Dense(
                                 decoding_layer_width, activation="relu", kernel_initializer=decoding_config.weight_initialization, kernel_regularizer=decoding_config.weight_decay, name="rx_layer" + str(indl)))
-                        decoder = tf.keras.Sequential(decoder_layerlist)
-                    decoder_list[index_x].append(tf.expand_dims(tf.expand_dims(
+                        decoder = keras.Sequential(decoder_layerlist)
+                    decoder_list[index_x].append(keras.ops.expand_dims(keras.ops.expand_dims(
                         decoder(receiver_input[:, index_x, index_y, :]), axis=1), axis=2))
+                    # decoder_list[index_x].append(tf.expand_dims(tf.expand_dims(
+                    #     decoder(receiver_input[:, index_x, index_y, :]), axis=1), axis=2))
             decoder_x_list = []
             for index_y in range(0, image_split_factor):
-                decoder_x_list.append(tf.keras.layers.Concatenate(
+                decoder_x_list.append(keras.layers.Concatenate(
                     axis=1)(decoder_list[:][index_y]))
-            x_tensor = tf.keras.layers.Concatenate(axis=2)(decoder_x_list)
+            x_tensor = keras.layers.Concatenate(axis=2)(decoder_x_list)
         elif decoding_config.rx_joint_layers == 2:
             # One joint receiver for all inputs
             decoder_layerlist = []
@@ -232,7 +238,7 @@ def resnet_receiver_imagesplit(received_signal_shape, number_classes=10, image_s
                 # layer are image_split_factor ** 2 times wider since inputs are concatenated
                 decoder_layerlist.append(Dense(image_split_factor ** 2 * decoding_layer_width, activation="relu",
                                                kernel_initializer=decoding_config.weight_initialization, kernel_regularizer=decoding_config.weight_decay, name="rx_layer" + str(indl)))
-            decoder = tf.keras.Sequential(decoder_layerlist)
+            decoder = keras.Sequential(decoder_layerlist)
             x_tensor = Flatten()(receiver_input)
             x_tensor = decoder(x_tensor)
     else:
@@ -241,8 +247,8 @@ def resnet_receiver_imagesplit(received_signal_shape, number_classes=10, image_s
         # This final Rx module layer improves performance for the AE approach on rvec and at low SNR for SINFONY at the cost of a higher error floor
         x_tensor = Dense(decoding_layer_width, activation='linear')(x_tensor)
     if image_split_factor >= 2 and decoding_config.rx_joint_layers != 2:
-        x_tensor = tf.keras.layers.GlobalAvgPool2D()(x_tensor)
-    receiver_output = tf.keras.layers.Dense(
+        x_tensor = keras.layers.GlobalAvgPool2D()(x_tensor)
+    receiver_output = Dense(
         units=number_classes, activation='softmax')(x_tensor)
     receiver = Model(inputs=receiver_input, outputs=receiver_output)
     return receiver
@@ -310,7 +316,7 @@ def resnet_multi_transmitter(resnet_config=resnet.ResnetConfiguration(), encodin
         transmit_signals.append(transmit_signal)
     resnet_config.image_shape = image_shapes
     # Concatenate the transmit signals
-    transmit_signals = tf.keras.layers.Concatenate(
+    transmit_signals = keras.layers.Concatenate(
         axis=-1)(transmit_signals)
     transmitter = Model(inputs=images, outputs=transmit_signals)
     return transmitter
@@ -333,7 +339,7 @@ def resnet_receiver(received_signal_shape, number_classes=10, decoding_config=De
                             name="rx_layer" + str(layer_number))
             x_tensor = decoder(x_tensor)
     # Final soft classifier
-    probabilityclasses = tf.keras.layers.Dense(
+    probabilityclasses = Dense(
         units=number_classes, activation='softmax')(x_tensor)
     receiver = Model(inputs=received_signals, outputs=probabilityclasses)
     return receiver
@@ -369,7 +375,7 @@ def resnet_sinfony(communication_config, resnet_config=resnet.ResnetConfiguratio
     return model, transmitters, receiver
 
 
-def resnet_multi_image(resnet_config=resnet.ResnetConfiguration(), number_combination_layer=0, combination_layer_width=0):
+def resnet_multi_image(resnet_config=resnet.ResnetConfiguration()):
     '''Function returns architecture of ResNet for list of images
     architecture: Choose architecture tailored to specific dataset
     shape: of input image with x/y dimension and channel as last dimension
@@ -388,6 +394,8 @@ def resnet_multi_image(resnet_config=resnet.ResnetConfiguration(), number_combin
 
     x_tensor = features
     # Joint preprocessing of features
+    combination_layer_width = resnet_config.combination_layer_width
+    number_combination_layer = resnet_config.number_combination_layer
     if combination_layer_width <= 0:
         combination_layer_width = feature_extractors.layers[-1].output.shape[-1]
     # number_combination_layer = 0
@@ -397,7 +405,7 @@ def resnet_multi_image(resnet_config=resnet.ResnetConfiguration(), number_combin
                             name="feature_processing_layer" + str(layer_number))
             x_tensor = decoder(x_tensor)
     # Summation of log-likelihood ratios
-    probabilityclasses = tf.keras.layers.Dense(
+    probabilityclasses = Dense(
         units=resnet_config.number_classes, activation='softmax')(x_tensor)
 
     resnet_layer_number = resnet.calculate_resnet_layer_number(

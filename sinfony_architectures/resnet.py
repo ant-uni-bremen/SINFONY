@@ -12,12 +12,12 @@ Belongs to simulation framework for numerical results of the articles:
 """
 
 # Tensorflow 2 packages
-import tensorflow as tf
+# import tensorflow as tf
+# import tf.keras as keras
+import keras
 
 
 # ResNet for image recognition
-# NOTE: Different results with tf.function decorator -> not necessary
-#       since the layers/models are just defined here, it is not a function
 
 
 def repeat_entry_2_list(number_units, number_blocks):
@@ -56,7 +56,7 @@ class ResnetConfiguration():
     number_residual_units: with 3 we arrive at ResNet20
     '''
 
-    def __init__(self, architecture='CIFAR10', image_shape=(32, 32, 3), number_classes=10, number_filters=16, number_residual_units=3, number_resnet_blocks=3, preactivation=True, bottleneck=False, batch_normalization=True, weight_initialization='he_uniform', weight_decay=tf.keras.regularizers.l2(0.0001)):
+    def __init__(self, architecture='CIFAR10', image_shape=(32, 32, 3), number_classes=10, number_filters=16, number_residual_units=3, number_resnet_blocks=3, preactivation=True, bottleneck=False, batch_normalization=True, weight_initialization='he_uniform', weight_decay=keras.regularizers.l2(0.0001), number_combination_layer=0, combination_layer_width=0):
         self.architecture = architecture
         self.image_shape = image_shape
         self.number_classes = number_classes
@@ -68,6 +68,8 @@ class ResnetConfiguration():
         self.batch_normalization = batch_normalization
         self.weight_initialization = weight_initialization
         self.weight_decay = weight_decay
+        self.number_combination_layer = number_combination_layer
+        self.combination_layer_width = combination_layer_width
 
 
 class ResnetConfigurationImageNet(ResnetConfiguration):
@@ -89,15 +91,15 @@ def clone_initializer(initializer):
     '''If initializer object, the initializer is cloned to avoid same initalization across layers.
     Otherwise, default behavior.
     '''
-    if isinstance(initializer, tf.keras.initializers.Initializer):
+    if isinstance(initializer, keras.initializers.Initializer):
         return type(initializer)(**initializer.get_config())
     else:
         # if string or config dict
-        return tf.keras.initializers.get(initializer)
+        return keras.initializers.get(initializer)
 
 
-@tf.keras.utils.register_keras_serializable()
-class Residual(tf.keras.layers.Layer):
+# @keras.utils.register_keras_serializable()
+class Residual(keras.layers.Layer):
     """The Residual block of ResNet for ResNet-18/34 and ResNet-CIFAR10.
     For ReLU activations weight initialization with he_uniform is better than glorot
     Preactivation version for better training
@@ -115,21 +117,21 @@ class Residual(tf.keras.layers.Layer):
         self.kernel_regularizer = kernel_regularizer
         self.kernel_initializer = kernel_initializer
 
-        self.conv1 = tf.keras.layers.Conv2D(number_channels, padding='same', kernel_size=3, strides=strides,
-                                            kernel_initializer=clone_initializer(self.kernel_initializer), kernel_regularizer=self.kernel_regularizer)
-        self.conv2 = tf.keras.layers.Conv2D(number_channels, padding='same', kernel_size=3,
-                                            kernel_initializer=clone_initializer(self.kernel_initializer), kernel_regularizer=self.kernel_regularizer)
+        self.conv1 = keras.layers.Conv2D(number_channels, padding='same', kernel_size=3, strides=strides,
+                                         kernel_initializer=clone_initializer(self.kernel_initializer), kernel_regularizer=self.kernel_regularizer)
+        self.conv2 = keras.layers.Conv2D(number_channels, padding='same', kernel_size=3,
+                                         kernel_initializer=clone_initializer(self.kernel_initializer), kernel_regularizer=self.kernel_regularizer)
         if use_1x1conv:
-            self.conv3 = tf.keras.layers.Conv2D(number_channels, kernel_size=1, strides=strides,
-                                                kernel_initializer=clone_initializer(self.kernel_initializer), kernel_regularizer=self.kernel_regularizer)
+            self.conv3 = keras.layers.Conv2D(number_channels, kernel_size=1, strides=strides,
+                                             kernel_initializer=clone_initializer(self.kernel_initializer), kernel_regularizer=self.kernel_regularizer)
         else:
             self.conv3 = None
         if batch_normalization:
-            self.bn1 = tf.keras.layers.BatchNormalization()
-            self.bn2 = tf.keras.layers.BatchNormalization()
+            self.bn1 = keras.layers.BatchNormalization()
+            self.bn2 = keras.layers.BatchNormalization()
         else:
-            self.bn1 = tf.keras.layers.Lambda(lambda x: x)
-            self.bn2 = tf.keras.layers.Lambda(lambda x: x)
+            self.bn1 = keras.layers.Lambda(lambda x: x)
+            self.bn2 = keras.layers.Lambda(lambda x: x)
 
     def call(self, input_tensor):
         '''Run Residual block
@@ -137,21 +139,21 @@ class Residual(tf.keras.layers.Layer):
         if self.preactivation is True:
             # New architecture: pre-activation
             output_tensor = self.conv1(
-                tf.keras.activations.relu(self.bn1(input_tensor)))
+                keras.activations.relu(self.bn1(input_tensor)))
             output_tensor = self.conv2(
-                tf.keras.activations.relu(self.bn2(output_tensor)))
+                keras.activations.relu(self.bn2(output_tensor)))
             if self.conv3 is not None:
                 input_tensor = self.conv3(input_tensor)
             output_tensor = output_tensor + input_tensor
         else:
             # Original architecture
-            output_tensor = tf.keras.activations.relu(
+            output_tensor = keras.activations.relu(
                 self.bn1(self.conv1(input_tensor)))
             output_tensor = self.bn2(self.conv2(output_tensor))
             if self.conv3 is not None:
                 input_tensor = self.conv3(input_tensor)
             output_tensor = output_tensor + input_tensor
-            output_tensor = tf.keras.activations.relu(output_tensor)
+            output_tensor = keras.activations.relu(output_tensor)
         return output_tensor
 
     def get_config(self):
@@ -168,8 +170,8 @@ class Residual(tf.keras.layers.Layer):
         return config
 
 
-@tf.keras.utils.register_keras_serializable()
-class ResidualBottleneck(tf.keras.layers.Layer):
+# @keras.utils.register_keras_serializable()
+class ResidualBottleneck(keras.layers.Layer):
     """The Residual block of ResNet in bottleneck version for ResNet-50/101/152.
     For ReLU activations weight initialization with he_uniform is better than glorot
     Preactivation version for better training
@@ -188,25 +190,25 @@ class ResidualBottleneck(tf.keras.layers.Layer):
         self.kernel_regularizer = kernel_regularizer
         self.kernel_initializer = kernel_initializer
 
-        self.conv1 = tf.keras.layers.Conv2D(number_channels, padding='same', kernel_size=1, strides=strides,
-                                            kernel_initializer=clone_initializer(self.kernel_initializer), kernel_regularizer=self.kernel_regularizer)
-        self.conv2 = tf.keras.layers.Conv2D(number_channels, padding='same', kernel_size=3,
-                                            kernel_initializer=clone_initializer(self.kernel_initializer), kernel_regularizer=self.kernel_regularizer)
-        self.conv3 = tf.keras.layers.Conv2D(4 * number_channels, padding='same', kernel_size=1,
-                                            kernel_initializer=clone_initializer(self.kernel_initializer), kernel_regularizer=self.kernel_regularizer)
+        self.conv1 = keras.layers.Conv2D(number_channels, padding='same', kernel_size=1, strides=strides,
+                                         kernel_initializer=clone_initializer(self.kernel_initializer), kernel_regularizer=self.kernel_regularizer)
+        self.conv2 = keras.layers.Conv2D(number_channels, padding='same', kernel_size=3,
+                                         kernel_initializer=clone_initializer(self.kernel_initializer), kernel_regularizer=self.kernel_regularizer)
+        self.conv3 = keras.layers.Conv2D(4 * number_channels, padding='same', kernel_size=1,
+                                         kernel_initializer=clone_initializer(self.kernel_initializer), kernel_regularizer=self.kernel_regularizer)
         if use_1x1conv:
-            self.conv4 = tf.keras.layers.Conv2D(4 * number_channels, kernel_size=1, strides=strides,
-                                                kernel_initializer=clone_initializer(self.kernel_initializer), kernel_regularizer=self.kernel_regularizer)
+            self.conv4 = keras.layers.Conv2D(4 * number_channels, kernel_size=1, strides=strides,
+                                             kernel_initializer=clone_initializer(self.kernel_initializer), kernel_regularizer=self.kernel_regularizer)
         else:
             self.conv4 = None
         if batch_normalization:
-            self.bn1 = tf.keras.layers.BatchNormalization()
-            self.bn2 = tf.keras.layers.BatchNormalization()
-            self.bn3 = tf.keras.layers.BatchNormalization()
+            self.bn1 = keras.layers.BatchNormalization()
+            self.bn2 = keras.layers.BatchNormalization()
+            self.bn3 = keras.layers.BatchNormalization()
         else:
-            self.bn1 = tf.keras.layers.Lambda(lambda x: x)
-            self.bn2 = tf.keras.layers.Lambda(lambda x: x)
-            self.bn3 = tf.keras.layers.Lambda(lambda x: x)
+            self.bn1 = keras.layers.Lambda(lambda x: x)
+            self.bn2 = keras.layers.Lambda(lambda x: x)
+            self.bn3 = keras.layers.Lambda(lambda x: x)
 
     def call(self, input_tensor):
         '''Run Residual block with bottleneck
@@ -214,25 +216,25 @@ class ResidualBottleneck(tf.keras.layers.Layer):
         if self.preactivation is True:
             # New architecture: pre-activation
             output_tensor = self.conv1(
-                tf.keras.activations.relu(self.bn1(input_tensor)))
+                keras.activations.relu(self.bn1(input_tensor)))
             output_tensor = self.conv2(
-                tf.keras.activations.relu(self.bn2(output_tensor)))
+                keras.activations.relu(self.bn2(output_tensor)))
             output_tensor = self.conv3(
-                tf.keras.activations.relu(self.bn3(output_tensor)))
+                keras.activations.relu(self.bn3(output_tensor)))
             if self.conv4 is not None:
                 input_tensor = self.conv4(input_tensor)
             output_tensor = output_tensor + input_tensor
         else:
             # Original architecture
-            output_tensor = tf.keras.activations.relu(
+            output_tensor = keras.activations.relu(
                 self.bn1(self.conv1(input_tensor)))
-            output_tensor = tf.keras.activations.relu(
+            output_tensor = keras.activations.relu(
                 self.bn2(self.conv2(output_tensor)))
             output_tensor = self.bn3(self.conv3(output_tensor))
             if self.conv4 is not None:
                 input_tensor = self.conv4(input_tensor)
             output_tensor = output_tensor + input_tensor
-            output_tensor = tf.keras.activations.relu(output_tensor)
+            output_tensor = keras.activations.relu(output_tensor)
         return output_tensor
 
     def get_config(self):
@@ -251,8 +253,8 @@ class ResidualBottleneck(tf.keras.layers.Layer):
         return config
 
 
-@tf.keras.utils.register_keras_serializable()
-class ResnetBlock(tf.keras.layers.Layer):
+# @keras.utils.register_keras_serializable()
+class ResnetBlock(keras.layers.Layer):
     '''ResNet block
     '''
 
@@ -337,15 +339,15 @@ def resnet_feature_extractor(resnet_config=ResnetConfiguration()):
         resnet_config.number_residual_units, resnet_config.number_resnet_blocks)
 
     # Step 1 (Setup Input Layer)
-    x_input = tf.keras.layers.Input(image_shape)
+    x_input = keras.layers.Input(image_shape)
     if resnet_config.architecture.lower() == 'cifar10':
         # CIFAR10 dataset
-        x_tensor = tf.keras.layers.Conv2D(number_filters, kernel_size=3, strides=1, padding='same',
-                                          kernel_initializer=resnet_config.weight_initialization, kernel_regularizer=resnet_config.weight_decay)(x_input)
+        x_tensor = keras.layers.Conv2D(number_filters, kernel_size=3, strides=1, padding='same',
+                                       kernel_initializer=resnet_config.weight_initialization, kernel_regularizer=resnet_config.weight_decay)(x_input)
     elif resnet_config.architecture.lower() == 'imagenet':
         # ImageNet dataset
-        x_tensor = tf.keras.layers.Conv2D(number_filters, kernel_size=7, strides=2, padding='same',
-                                          kernel_initializer=resnet_config.weight_initialization, kernel_regularizer=resnet_config.weight_decay)(x_input)
+        x_tensor = keras.layers.Conv2D(number_filters, kernel_size=7, strides=2, padding='same',
+                                       kernel_initializer=resnet_config.weight_initialization, kernel_regularizer=resnet_config.weight_decay)(x_input)
     else:
         print('Architecture not implemented!')
     if resnet_config.preactivation is False:
@@ -354,12 +356,12 @@ def resnet_feature_extractor(resnet_config=ResnetConfiguration()):
         # we adopt the first activation right after conv1 and before splitting into two paths"
         # No MaxPooling is mentioned
         if resnet_config.batch_normalization:
-            x_tensor = tf.keras.layers.BatchNormalization()(x_tensor)
-        x_tensor = tf.keras.layers.Activation('relu')(x_tensor)
+            x_tensor = keras.layers.BatchNormalization()(x_tensor)
+        x_tensor = keras.layers.Activation('relu')(x_tensor)
     # MaxPooling Layer in preactivation version???
     if resnet_config.architecture.lower() != 'cifar10':
         # MaxPooling Layer not in CIFAR10 version
-        x_tensor = tf.keras.layers.MaxPool2D(
+        x_tensor = keras.layers.MaxPool2D(
             pool_size=3, strides=2, padding='same')(x_tensor)
     # Step 2 (ResNet Layers)
     for index_block in range(0, resnet_config.number_resnet_blocks):
@@ -372,10 +374,10 @@ def resnet_feature_extractor(resnet_config=ResnetConfiguration()):
     # Step 3 (Final Layers)
     if resnet_config.preactivation is True:
         if resnet_config.batch_normalization:
-            x_tensor = tf.keras.layers.BatchNormalization()(x_tensor)
-        x_tensor = tf.keras.layers.Activation('relu')(x_tensor)
-    x_tensor = tf.keras.layers.GlobalAvgPool2D()(x_tensor)
-    model = tf.keras.models.Model(
+            x_tensor = keras.layers.BatchNormalization()(x_tensor)
+        x_tensor = keras.layers.Activation('relu')(x_tensor)
+    x_tensor = keras.layers.GlobalAvgPool2D()(x_tensor)
+    model = keras.models.Model(
         inputs=x_input, outputs=x_tensor)  # , name='ResNetFeatureExtractor'
     return model
 
@@ -390,14 +392,14 @@ def resnet(resnet_config=ResnetConfiguration()):
     # Input handling
     image_shape = list2first_element(resnet_config.image_shape)
     # Model definition
-    x_input = tf.keras.layers.Input(image_shape)
+    x_input = keras.layers.Input(image_shape)
     feature_extractor = resnet_feature_extractor(resnet_config=resnet_config)
     x_tensor = feature_extractor(x_input)
     # TODO: Also regularize last softmax layer?
-    x_tensor = tf.keras.layers.Dense(
+    x_tensor = keras.layers.Dense(
         units=resnet_config.number_classes, activation='softmax')(x_tensor)
     resnet_layer_number = calculate_resnet_layer_number(
         resnet_config.number_resnet_blocks, resnet_config.number_residual_units, resnet_config.bottleneck)
-    model = tf.keras.models.Model(
+    model = keras.models.Model(
         inputs=x_input, outputs=x_tensor, name=f'ResNet{resnet_layer_number}_{resnet_config.architecture.upper()}')
     return model

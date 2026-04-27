@@ -32,6 +32,8 @@ import soundata
 
 # Tensorflow 2 packages
 import tensorflow as tf
+# import tf.keras as keras
+import keras
 
 # Own packages
 import utilities.my_training as mt
@@ -82,20 +84,20 @@ def load_dataset(dataset='mnist', validation_split=0.85, image_split=True, prepr
     # Load dataset
     if dataset == 'cifar10':
         (train_input, train_labels), (validation_input,
-                                      validation_labels) = tf.keras.datasets.cifar10.load_data()
+                                      validation_labels) = keras.datasets.cifar10.load_data()
         train_input = [train_input]
         validation_input = [validation_input]
         RGB_entries = True
     elif dataset == 'mnist':
         (train_input, train_labels), (validation_input,
-                                      validation_labels) = tf.keras.datasets.mnist.load_data()
+                                      validation_labels) = keras.datasets.mnist.load_data()
         # Reshape dataset to have a single color channel
         train_input = [train_input[..., np.newaxis]]
         validation_input = [validation_input[..., np.newaxis]]
         RGB_entries = True
     elif dataset == 'fashion_mnist':
         (train_input, train_labels), (validation_input,
-                                      validation_labels) = tf.keras.datasets.fashion_mnist.load_data()
+                                      validation_labels) = keras.datasets.fashion_mnist.load_data()
         # Reshape dataset to have a single color channel
         train_input = [train_input[..., np.newaxis]]
         validation_input = [validation_input[..., np.newaxis]]
@@ -172,8 +174,8 @@ def load_dataset(dataset='mnist', validation_split=0.85, image_split=True, prepr
             train_input = preprocess_spectrograms(train_input)
             validation_input = preprocess_spectrograms(validation_input)
     # One hot encode target values (Note: dtype = float32)
-    train_labels = tf.keras.utils.to_categorical(train_labels)
-    validation_labels = tf.keras.utils.to_categorical(validation_labels)
+    train_labels = keras.utils.to_categorical(train_labels)
+    validation_labels = keras.utils.to_categorical(validation_labels)
     return train_input, train_labels, validation_input, validation_labels
 
 
@@ -220,7 +222,7 @@ def load_dataset_tools(resolution=None, image_split=True, number_augmentations=0
     full_resolution = (705, 380)
     # Two images are captured as one -> split in first dimension at 218
     split_pixel = 218
-    train_dataset = tf.keras.utils.image_dataset_from_directory(
+    train_dataset = keras.utils.image_dataset_from_directory(
         data_directory,
         labels=label_list_used.tolist(),
         label_mode='int',
@@ -294,9 +296,9 @@ def load_dataset_tools(resolution=None, image_split=True, number_augmentations=0
 
     # Data augmentation for training set
     if number_augmentations >= 1:
-        data_augmentation = tf.keras.Sequential([
-            tf.keras.layers.RandomFlip("horizontal_and_vertical"),
-            tf.keras.layers.RandomRotation(0.2),
+        data_augmentation = keras.Sequential([
+            keras.layers.RandomFlip("horizontal_and_vertical"),
+            keras.layers.RandomRotation(0.2),
         ])
         train_input, train_labels = augment_dataset(
             train_input, train_labels, data_augmentation=data_augmentation, number_augmentations=number_augmentations)
@@ -347,7 +349,7 @@ def load_dataset_hise(dataset=None, resolution=None, validation_split=0.85, numb
             full_resolution[0] / full_resolution[1] * resolution)
         image_resolution = (image_length, resolution)
 
-    train_dataset = tf.keras.utils.image_dataset_from_directory(
+    train_dataset = keras.utils.image_dataset_from_directory(
         data_directory,
         labels=labels_list.tolist(),
         label_mode='int',
@@ -381,9 +383,9 @@ def load_dataset_hise(dataset=None, resolution=None, validation_split=0.85, numb
 
     # Data augmentation
     if number_augmentations >= 1:
-        data_augmentation = tf.keras.Sequential([
-            tf.keras.layers.RandomFlip("horizontal_and_vertical"),
-            tf.keras.layers.RandomRotation(0.2),
+        data_augmentation = keras.Sequential([
+            keras.layers.RandomFlip("horizontal_and_vertical"),
+            keras.layers.RandomRotation(0.2),
         ])
         train_input, train_labels = augment_dataset(
             train_input, train_labels, data_augmentation=data_augmentation, number_augmentations=number_augmentations)
@@ -394,7 +396,7 @@ def resize_image(image, resize_length, resize_width, interpolation='bilinear'):
     '''Resize image to length resize_length and width resize_width
     interpolation: interpolation technique is default 'bilinear'
     '''
-    image_resized = tf.keras.layers.Resizing(
+    image_resized = keras.layers.Resizing(
         resize_length, resize_width, crop_to_aspect_ratio=True, interpolation=interpolation)(image).numpy()
     return image_resized
 
@@ -500,7 +502,7 @@ def load_dataset_hirise(resolution=None, hirisecrater=False, number_augmentation
         image_resolution = full_resolution
     else:
         image_resolution = (resolution, resolution)
-    train_dataset = tf.keras.utils.image_dataset_from_directory(
+    train_dataset = keras.utils.image_dataset_from_directory(
         data_directory,
         labels=labels_list.tolist(),
         label_mode='int',
@@ -535,9 +537,9 @@ def load_dataset_hirise(resolution=None, hirisecrater=False, number_augmentation
     test_labels = [data_labels[ind_set, ...]]
     # Data augmentation
     if number_augmentations >= 1:
-        data_augmentation = tf.keras.Sequential([
-            tf.keras.layers.RandomFlip("horizontal_and_vertical"),
-            tf.keras.layers.RandomRotation(0.2),
+        data_augmentation = keras.Sequential([
+            keras.layers.RandomFlip("horizontal_and_vertical"),
+            keras.layers.RandomRotation(0.2),
         ])
         train_input, train_labels = augment_dataset(
             train_input, train_labels, data_augmentation=data_augmentation, number_augmentations=number_augmentations)
@@ -583,8 +585,8 @@ def augment_dataset(train_images, train_labels, data_augmentation=None, number_a
     '''
     if data_augmentation is None:
         # Default data augmentation layers
-        data_augmentation = tf.keras.Sequential([tf.keras.layers.RandomFlip(
-            "horizontal_and_vertical"), tf.keras.layers.RandomRotation(0.2),])
+        data_augmentation = keras.Sequential([keras.layers.RandomFlip(
+            "horizontal_and_vertical"), keras.layers.RandomRotation(0.2),])
     # Data augmentation
     if number_augmentations >= 1:
         train_images = augment_input_data(train_images, data_augmentation,
@@ -648,7 +650,7 @@ def summarize_dataset(train_inputs, train_labels, test_inputs, test_labels):
 def load_images_with_split(data_directory, labels_list, full_resolution, resolution=None, image_split=False, split_pixel=None):
     '''Load images from data_directory with image split in x dimension
     '''
-    train_dataset = tf.keras.utils.image_dataset_from_directory(
+    train_dataset = keras.utils.image_dataset_from_directory(
         data_directory,
         labels=labels_list,
         label_mode='int',
@@ -768,9 +770,9 @@ def load_dataset_tools_with_greater_4mm(resolution=None, image_split=True, numbe
 
     # Data augmentation for training set
     if number_augmentations >= 1:
-        data_augmentation = tf.keras.Sequential([
-            tf.keras.layers.RandomFlip("horizontal_and_vertical"),
-            tf.keras.layers.RandomRotation(0.2),
+        data_augmentation = keras.Sequential([
+            keras.layers.RandomFlip("horizontal_and_vertical"),
+            keras.layers.RandomRotation(0.2),
         ])
         train_input, train_labels = augment_dataset(
             train_input, train_labels, data_augmentation=data_augmentation, number_augmentations=number_augmentations)
@@ -828,7 +830,7 @@ def stft_dataset_in_partitions(data_waveforms, frame_length, frame_step, number_
     data_spectrograms = []
     if number_partitions == 1:
         for waveforms in data_waveforms:
-            spectrograms = tf.abs(tf.signal.stft(
+            spectrograms = keras.ops.abs(tf.signal.stft(
                 waveforms.astype(dtype) / normalization_constant,
                 frame_length=frame_length,
                 frame_step=frame_step,
@@ -841,7 +843,7 @@ def stft_dataset_in_partitions(data_waveforms, frame_length, frame_step, number_
             for ind in tqdm(range(0, number_partitions)):
                 start = ind * partition_size
                 end = start + partition_size
-                spectrogram = tf.abs(
+                spectrogram = keras.ops.abs(
                     tf.signal.stft(
                         waveforms[start:end, ...].astype(
                             dtype) / normalization_constant,
@@ -850,7 +852,7 @@ def stft_dataset_in_partitions(data_waveforms, frame_length, frame_step, number_
                     )
                 ) ** 2
                 spectrograms.append(spectrogram)
-            spectrogram = tf.abs(
+            spectrogram = keras.ops.abs(
                 tf.signal.stft(
                     waveforms[end:, ...].astype(
                         dtype) / normalization_constant,

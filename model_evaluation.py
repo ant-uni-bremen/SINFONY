@@ -26,22 +26,14 @@ import numpy as np
 
 # Tensorflow 2 packages
 import tensorflow as tf
+# import tf.keras as keras
+import keras
 
 # Own packages
 from utilities.my_functions import print_time, get_ram
 import utilities.my_math_operations as mop
 import gcm as gcm
-
-
-def find_layer_by_name(model, name):
-    for layer in model.layers:
-        if layer.name == name:
-            return layer
-        if hasattr(layer, 'layers'):  # If the layer has sublayers (e.g., nested model)
-            found = find_layer_by_name(layer, name)
-            if found:
-                return found
-    return None  # Not found
+import sinfony_io
 
 
 def gcm_train(exemplars, exemplar_labels, test_exemplars, test_exemplars_labels, optimizer, training_epochs, batch_size):
@@ -216,15 +208,16 @@ def evaluate_sinfony(evaluated_model, test_input, test_labels, snrs=np.linspace(
     # SINFONY AE
     start_time = time.time()
     eval_meas = [[], [], []]
-    noise_layer = find_layer_by_name(evaluated_model, 'gaussian_noise2')
+    # noise_layer = find_layer_by_name(evaluated_model, "gaussian_noise2")
+    noise_layer = sinfony_io.get_noise_target(
+        evaluated_model, layer_name="gaussian_noise2", var_suffix="stddev:0")
     for snr_index, snr in enumerate(snrs):
         # Evaluate for each SNR in SNR range
-        sigma = mop.snr2standard_deviation(snr)
-        sigma_test = np.array([sigma, sigma], dtype='float32')
+        # sigma = mop.snr2standard_deviation(snr)
+        # sigma_test = np.array([sigma, sigma], dtype='float32')
         # Set standard deviation weights of Noise layer in AE approach
-        # evaluated_model.get_layer('gaussian_noise2').set_weights([sigma_test])
-        noise_layer.set_weights([sigma_test])
-        # evaluated_model.layers[-2].set_weights([sigma_test])
+        sinfony_io.set_noise_variance(noise_layer, snr)
+        # noise_layer.set_weights([sigma_test])
         loss_i = 0
         accuracy_i = 0
         accuracy_i_2 = 0
@@ -267,7 +260,7 @@ def evaluate_sinfony(evaluated_model, test_input, test_labels, snrs=np.linspace(
     return accuracy, loss
 
 
-def evaluate_gcm(evaluated_model, test_input, test_labels, batch_size=32, cce=tf.keras.losses.CategoricalCrossentropy()):
+def evaluate_gcm(evaluated_model, test_input, test_labels, batch_size=32, cce=keras.losses.CategoricalCrossentropy()):
     '''Evaluate GCM suboptimal random decision policy
     '''
     prediction_probs = evaluated_model.predict(
@@ -305,7 +298,7 @@ def evaluate_rlsinfony(evaluated_model, test_input, test_labels, snrs=np.linspac
             # Evaluate for validation_rounds with different noise realizations (akin to training epochs)
             # RL-SINFONY validation step
             _, _, loss_ii, accuracy_ii = evaluated_model(
-                test_input, test_labels, sigma=tf.constant(sigma_test, dtype='float32'))
+                test_input, test_labels, sigma=tf.convert_to_tensor(sigma_test, dtype='float32'))
 
             # Add current measures to total measures
             loss_i = (validation_round * loss_i + loss_ii) / \

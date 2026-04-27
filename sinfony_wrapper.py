@@ -25,14 +25,15 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 # Tensorflow 2 packages
-import tensorflow as tf
-
+# import tensorflow as tf
+# import tensorflow.keras as keras
+import keras
 
 # Own packages
 import utilities.my_math_operations as mop
 import datasets
 import model_evaluation
-from sinfony import try_load_model
+from sinfony_io import try_load_model
 import sinfony_architectures.resnet as resnet
 
 
@@ -82,15 +83,15 @@ def clone_model_inputs(model):
     if isinstance(inputs, list):
         # Multiple inputs
         new_inputs = [
-            tf.keras.Input(shape=inp.shape[1:], dtype=inp.dtype) for inp in inputs
+            keras.Input(shape=inp.shape[1:], dtype=inp.dtype) for inp in inputs
         ]
     else:
         # Single input
-        new_inputs = tf.keras.Input(shape=inputs.shape[1:], dtype=inputs.dtype)
+        new_inputs = keras.Input(shape=inputs.shape[1:], dtype=inputs.dtype)
     return new_inputs
 
 
-def remove_last_inner_layer(model: tf.keras.Model) -> tf.keras.Model:
+def remove_last_inner_layer(model: keras.Model) -> keras.Model:
     """
     Given a Functional Keras model whose last layer is itself a Model (nested),
     this function removes the last layer of the nested model, re-wraps it,
@@ -100,7 +101,7 @@ def remove_last_inner_layer(model: tf.keras.Model) -> tf.keras.Model:
     - model is Functional (not Sequential).
     - model.layers[-1] is a Model or Sequential.
     """
-    if not isinstance(model, tf.keras.Model) or isinstance(model, tf.keras.Sequential):
+    if not isinstance(model, keras.Model) or isinstance(model, keras.Sequential):
         raise ValueError("Expected a Functional Keras model.")
 
     outer_input = clone_model_inputs(model)
@@ -112,25 +113,25 @@ def remove_last_inner_layer(model: tf.keras.Model) -> tf.keras.Model:
         x = layer(x)
 
     last_layer = model.layers[-1]
-    if not isinstance(last_layer, tf.keras.Model):
+    if not isinstance(last_layer, keras.Model):
         raise ValueError(
             "Last layer must be a nested model (e.g., Sequential or Functional).")
 
     # Rebuild the nested model without its last layer
-    nested_input = tf.keras.Input(shape=last_layer.input_shape[1:])
+    nested_input = keras.Input(shape=last_layer.input_shape[1:])
     # nested_input = last_layer.input
     nested_x = nested_input
     for nested_layer in last_layer.layers[:-1]:
         nested_x = nested_layer(nested_x)
 
-    trimmed_nested_model = tf.keras.Model(
+    trimmed_nested_model = keras.Model(
         inputs=nested_input, outputs=nested_x, name=last_layer.name + "_trimmed")
 
     # Plug the trimmed nested model back into the graph
     x = trimmed_nested_model(x)
 
     # Reconstruct the full model
-    new_model = tf.keras.Model(
+    new_model = keras.Model(
         inputs=outer_input, outputs=x, name=model.name + "_trimmed")
 
     return new_model

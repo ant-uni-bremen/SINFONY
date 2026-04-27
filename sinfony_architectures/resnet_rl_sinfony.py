@@ -16,17 +16,20 @@ import numpy as np
 
 # Tensorflow 2 packages
 import tensorflow as tf
+# import tf.keras as keras
+import keras
 
 import sinfony_architectures.resnet as resnet
 import sinfony_architectures.resnet_sinfony as rs
 from utilities.my_functions import print_time
 import utilities.my_training as mt
+from utilities.my_training_tf1 import shuffle_dataset, get_batch_dataset
 
 
 # Reinforcement Learning version RL-SINFONY via Stochastic Policy Gradient
 # TODO: Replace gaussian_noise3 function by model
 
-class ResnetRLSinfony(tf.keras.Model):
+class ResnetRLSinfony(keras.Model):
     '''RL-SINFONY via Stochastic Policy Gradient
     ResNet multi transmitter reinforcement learning for CIFAR with [6 * number_residual_units + 2] layers without bottleneck structure
     '''
@@ -48,11 +51,11 @@ class ResnetRLSinfony(tf.keras.Model):
             # label = 'ResNet_CIFAR10_AE'
         # Rx
         self.receiver = rs.resnet_receiver_imagesplit(
-            received_signal_shape=self.transmitter.layers[-1].output_shape[1:], number_classes=resnet_config.number_classes, image_split_factor=self.image_split_factor, decoding_config=communication_config.decoding_config)
+            received_signal_shape=(communication_config.encoding_config.image_split_factor, communication_config.encoding_config.image_split_factor, communication_config.encoding_config.encoding_layer_width), number_classes=resnet_config.number_classes, image_split_factor=self.image_split_factor, decoding_config=communication_config.decoding_config)
         # model = Model(inputs = intx, outputs = outrx, name = label)
 
     @tf.function  # (jit_compile=True)
-    def __call__(self, observation, true_labels, sigma, perturbation_variance=None):
+    def call(self, observation, true_labels, sigma, perturbation_variance=None):
         '''Compute model outputs and loss/accuracy
         '''
         if perturbation_variance is None:
@@ -69,7 +72,7 @@ class ResnetRLSinfony(tf.keras.Model):
         estimated_labels = self.receiver(received_signal)
 
         # Average BCE for each baseband symbol and each batch example
-        cross_entropy_empirical = tf.keras.losses.categorical_crossentropy(
+        cross_entropy_empirical = keras.losses.categorical_crossentropy(
             true_labels, estimated_labels)
         # The RX loss is the usual average CE
         receiver_loss = tf.reduce_mean(cross_entropy_empirical)
@@ -97,7 +100,7 @@ class ResnetAE2(ResnetRLSinfony):
     ResNet multi transmitter autoencoder-like defined like in reinforcement learning version for CIFAR with [6 * number_residual_units + 2] layers without bottleneck structure
     '''
     @tf.function  # (jit_compile=True)
-    def __call__(self, observation, true_labels, sigma, perturbation_variance=None):
+    def call(self, observation, true_labels, sigma, perturbation_variance=None):
         '''Compute model outputs and loss/accuracy
         perturbation_variance not used in AE approach, but placeholder to enable integration into RL-based training function
         '''
@@ -106,7 +109,7 @@ class ResnetAE2(ResnetRLSinfony):
         estimated_labels = self.receiver(received_signal)
 
         # Average BCE loss for each baseband symbol and each batch example
-        cross_entropy_empirical = tf.keras.losses.categorical_crossentropy(
+        cross_entropy_empirical = keras.losses.categorical_crossentropy(
             true_labels, estimated_labels)
         # The RX loss is the usual average CE
         rx_loss = tf.reduce_mean(cross_entropy_empirical)
@@ -270,9 +273,9 @@ def rl_based_training(model, train_input, train_labels, opt, opt_tx=None, opt_rx
         # Receiver training is performed first to keep it ahead of the transmitter
         # as it is used for computing the losses when training the transmitter
         batch_count = 0
-        train_input, train_labels = mt.shuffle_dataset(
+        train_input, train_labels = shuffle_dataset(
             train_input, train_labels)
-        for batch_input, batch_labels in mt.get_batch_dataset(train_input, train_labels, training_batch_size):
+        for batch_input, batch_labels in get_batch_dataset(train_input, train_labels, training_batch_size):
             if batch_count % total_steps >= rx_steps:
                 # One step of transmitter training
                 rx_loss, accuracy, tx_loss = train_tx(
@@ -313,9 +316,9 @@ def rl_based_training(model, train_input, train_labels, opt, opt_tx=None, opt_rx
     print('Receiver fine-tuning... ')
     for index_epoch in range(receiver_finetuning_epochs):
         batch_count = 0
-        train_input, train_labels = mt.shuffle_dataset(
+        train_input, train_labels = shuffle_dataset(
             train_input, train_labels)
-        for batch_input, batch_labels in mt.get_batch_dataset(train_input, train_labels, training_batch_size):
+        for batch_input, batch_labels in get_batch_dataset(train_input, train_labels, training_batch_size):
             rx_loss, accuracy = train_rx2(
                 optimizer_rx2, batch_input, batch_labels, sigma)
             if (validation_input is None) or (validation_labels is None):
