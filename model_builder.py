@@ -38,11 +38,12 @@ def create_model_from_config(params, number_classes, image_shapes):
 
     resnet_config = create_resnet(
         model_settings, number_classes, image_shapes, dataset='')
-    communication_config = create_communication_module(model_settings)
+    communication_config, sigma_train = create_communication_module(
+        model_settings)
 
     model = select_model(image_shapes, resnet_config, communication_config,
                          transceiver_split=transceiver_split, reinforcement_learning=rl)
-    return model
+    return model, sigma_train
 
 
 def create_model(settings_path, number_classes, image_shapes):
@@ -61,7 +62,10 @@ def create_model(settings_path, number_classes, image_shapes):
     with open(settings_path, 'r', encoding='UTF8') as file:
         params = yaml.safe_load(file)
 
-    return create_model_from_config(params, number_classes, image_shapes)
+    model, sigma_train = create_model_from_config(
+        params, number_classes, image_shapes)
+
+    return model, sigma_train
 
 
 def select_model(image_shapes, resnet_config, communication_config, transceiver_split=0, reinforcement_learning=0):
@@ -172,16 +176,18 @@ def create_communication_module(model_settings):
     # Extract settings
     # (0) only image recognition, (1) with (multi) com. system inbetween
     transceiver_split = model_settings['communication']['transceiver_split']
-    # Number of Tx/Rx layers: 1 (default)
-    number_layer = model_settings['communication']['number_txrx_layer']
-
-    # Configure regularization
-    # TODO: l2 regularization only for ResNet feature extractor? Yes, better performance
-    weight_decay_communication = keras.regularizers.l2(
-        model_settings['communication']['weight_decay']) if model_settings['communication']['weight_decay'] != 0 else None
 
     # Configure communication components if needed
     if transceiver_split == 1:
+
+        # Number of Tx/Rx layers: 1 (default)
+        number_layer = model_settings['communication']['number_txrx_layer']
+
+        # Configure regularization
+        # TODO: l2 regularization only for ResNet feature extractor? Yes, better performance
+        weight_decay_communication = keras.regularizers.l2(
+            model_settings['communication']['weight_decay']) if model_settings['communication']['weight_decay'] != 0 else None
+
         # Create encoding configuration
         encoding_config = resnet_sinfony.EncodingConfiguration(
             transmit_normalization=True,
@@ -222,6 +228,7 @@ def create_communication_module(model_settings):
         )
     else:
         communication_config = None
+        sigma_train = None
 
     return communication_config, sigma_train
 

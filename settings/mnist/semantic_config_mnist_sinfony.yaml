@@ -1,11 +1,13 @@
 load_settings:
-  load: False                             # start new training: 0 / load saved training: 1
-  filename: sinfony14_MNIST_ntx14_Ne20_snr-4_6_human     # mnist, cifar10, fashion_mnist, hirise64, hirisecrater, fraeser64
+  load: True                             # start new training: 0 / load saved training: 1
+  filename: sinfony14_MNIST_ntx14_Ne20_snr-4_6_human # mnist, cifar10, fashion_mnist, hirise64, hirisecrater, fraeser64
   # filename: ResNet14_MNIST4_Ne20_snr-4_6
   # filename: ResNet14_MNIST6_Ne20_snr-4_6
   path: models/mnist                      # path of simulation and model files
+  use_weights: True                       # Only save weights or entire model
   save_format: npz                        # save format
-  simulation_filename_prefix: RES_        # name prefix of simulation file
+  simulation_filename_suffix: _results    # name suffix of simulation file
+  simulation_filename_prefix: ''          # name prefix of simulation file
   numerical_precision: float32            # computation accuracy: float16, float32 (default), or float64
   gpu: -2                                 # Select GPU, default: 0, -1 (CPU), -2 (automatically)
 
@@ -78,7 +80,7 @@ reinforcement_learning:
 
 evaluation:
   mode: 0                                 # Evaluation mode: (0) default: Validation for SNR range, (1) Saving probability data for interface to application, (2) t-SNE embedding for visualization
-  snr_range: [-30, 20]                    # SNR in dB range: [-30, 20] (default)
+  snr_range: [10, 20]                    # SNR in dB range: [-30, 20] (default)
   snr_step_size: 1                        # SNR in dB steps: 1 (default)
   validation_rounds: 10                   # Rounds through validation data at one SNR
   evaluation_snr: 20                      # SNR value for interface data / T-SNE embedding: -10 / 20

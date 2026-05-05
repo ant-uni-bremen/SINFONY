@@ -65,7 +65,8 @@ def classic_features_autoencoder(number_channel_uses, layer_width_transmitter, l
     transmit_layer = transmit_in
     for _ in range(0, number_txrx_layer):
         transmit_layer = Dense(layer_width_transmitter, activation='relu',
-                               kernel_initializer='he_uniform')(transmit_layer)  # for RELU
+                               # for RELU
+                               kernel_initializer='he_uniform')(transmit_layer)
     transmit_layer3 = Dense(number_channel_uses,
                             activation='linear')(transmit_layer)
     transmit_out = mt.normalize_input(
@@ -442,15 +443,17 @@ if __name__ == '__main__':
         "val_loss": loss,
         "val_acc": accuracy,
     }
-    pathfile = os.path.join(path_script, path_classic, filename_prefix +
-                            feature_input + '_' + filename + filename_extension)
+    filename_classic = feature_input + '_' + filename
+    pathfile = os.path.join(path_script, path_classic,
+                            filename_prefix + filename_classic + filename_extension)
     save_object.save(pathfile, results)
     print('Evaluation saved.')
 
     # Save settings when evaluation is done
-    SETTINGS_SAVED_FOLDER = 'settings_saved'
+    # SETTINGS_SAVED_FOLDER = 'settings_saved'
+    SETTINGS_SAVED_FOLDER = 'models/classic'
     saved_settings_path = os.path.join(path_script, SETTINGS_SAVED_FOLDER)
-    with open(os.path.join(saved_settings_path, filename + '.yaml'), 'w', encoding='utf8') as written_file:
+    with open(os.path.join(saved_settings_path, filename_classic + '.yaml'), 'w', encoding='utf8') as written_file:
         yaml.safe_dump(params, written_file, default_flow_style=False)
     print('Settings saved!')
 

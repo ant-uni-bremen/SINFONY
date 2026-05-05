@@ -548,9 +548,9 @@ if __name__ == '__main__':
     print('Evaluation saved.')
 
     # Save settings when evaluation is done
-    SETTINGS_SAVED_FOLDER = 'settings_saved'
+    SETTINGS_SAVED_FOLDER = 'models/classic'    # 'settings_saved'
     saved_settings_path = os.path.join(path_script, SETTINGS_SAVED_FOLDER)
-    with open(os.path.join(saved_settings_path, filename + '.yaml'), 'w', encoding='utf8') as written_file:
+    with open(os.path.join(saved_settings_path, algorithm + '_' + filename + '.yaml'), 'w', encoding='utf8') as written_file:
         yaml.safe_dump(params, written_file, default_flow_style=False)
     print('Settings saved!')
 

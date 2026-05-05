@@ -3,7 +3,8 @@ load_settings:
   filename: sinfony_hise64_v4_ntx16       # mnist, cifar10, fashion_mnist, hirise64, hirisecrater, fraeser64
   path: models/hise                       # path of simulation and model files
   save_format: npz                        # save format
-  simulation_filename_prefix: RES_        # name prefix of simulation file
+  simulation_filename_suffix: _results    # name suffix of simulation file
+  simulation_filename_prefix: ''          # name prefix of simulation file
   numerical_precision: float32            # computation accuracy: float16, float32 (default), or float64
   gpu: -2                                 # Select GPU, default: 0, -1 (CPU), -2 (automatically) 
 

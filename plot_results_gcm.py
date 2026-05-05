@@ -23,7 +23,7 @@ if __name__ == '__main__':
     # Settings
     # val_loss, val_acc, loss, accuracy, val_accuracy, acc, acc_val, rx_loss, rx_val_loss, tx_loss, tx_val_loss
     y_axis = 'val_acc'
-    error_mode = True       # Show classification error instead of accuracy
+    error_mode = False       # Show classification error instead of accuracy
     # (0) w/o SNR normalization, SNR normalization by [number of channel uses/number of features]
     x_axis_normalization = 0
     # (snr) snr value on x axis, (default) index on x axis

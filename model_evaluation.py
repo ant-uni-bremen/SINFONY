@@ -118,13 +118,13 @@ def evaluate_gcm_memory(gcm_input, sinfony, transceiver_split, train_input, trai
             # Free RAM, otherwise it accumulates
             gc.collect()
             print(
-                f'Validation Round: {validation_round + 1}/{validation_rounds}, CE: {loss_i:.4f}, Acc: {accuracy_i:.2f}, Time: {print_time(time.time() - start_time2)}, RAM: {get_ram():.2f} GB')
+                f'Validation Round: {validation_round + 1}/{validation_rounds}, CE: {loss_i:.4f}, Acc: {accuracy_i*100:.2f}, Time: {print_time(time.time() - start_time2)}, RAM: {get_ram():.2f} GB')
         # Append list with evaluation for each SNR value
         eval_meas[0].append(loss_i)
         eval_meas[1].append(accuracy_i)
         eval_meas[2].append(accuracy_i_2)
         print(
-            f'Iteration: {idx_memory + 1}/{len(memory_sizes)}, Memory Size: {memory_size}, CE: {loss_i:.4f}, Acc: {accuracy_i:.2f}, Time: {print_time(time.time() - start_time)}')
+            f'Iteration: {idx_memory + 1}/{len(memory_sizes)}, Memory Size: {memory_size}, CE: {loss_i:.4f}, Acc: {accuracy_i*100:.2f}, Time: {print_time(time.time() - start_time)}')
         if gcm_decision_policy is True:
             accuracy = [np.array(eval_meas[1]), np.array(eval_meas[2])]
         else:
@@ -187,12 +187,12 @@ def evaluate_gcm_working_memory(evaluated_model, test_input, test_labels, valida
             # Free RAM, otherwise it accumulates
             gc.collect()
             print(
-                f'Validation Round: {validation_round + 1}/{validation_rounds}, CE: {loss_i:.4f}, Acc: {accuracy_i:.2f}, Time: {print_time(time.time() - start_time2)}, RAM: {get_ram():.2f} GB')
+                f'Validation Round: {validation_round + 1}/{validation_rounds}, CE: {loss_i:.4f}, Acc: {accuracy_i*100:.2f}, Time: {print_time(time.time() - start_time2)}, RAM: {get_ram():.2f} GB')
         # Append list with evaluation for each SNR value
         eval_meas[0].append(loss_i)
         eval_meas[1].append(accuracy_i)
         eval_meas[2].append(accuracy_i_2)
-        print(f'Iteration: {idx_memory + 1}/{len(working_memory_sizes)}, Working Memory Size: {working_memory_size}, CE: {loss_i:.4f}, Acc: {accuracy_i:.2f}, Time: {print_time(time.time() - start_time)}')
+        print(f'Iteration: {idx_memory + 1}/{len(working_memory_sizes)}, Working Memory Size: {working_memory_size}, CE: {loss_i:.4f}, Acc: {accuracy_i*100:.2f}, Time: {print_time(time.time() - start_time)}')
     if gcm_decision_policy is True:
         accuracy = [np.array(eval_meas[1]), np.array(eval_meas[2])]
     else:
@@ -245,13 +245,13 @@ def evaluate_sinfony(evaluated_model, test_input, test_labels, snrs=np.linspace(
             # Free RAM, otherwise it accumulates
             gc.collect()
             print(
-                f'Validation Round: {validation_round + 1}/{validation_rounds}, CE: {loss_i:.4f}, Acc: {accuracy_i:.2f}, Time: {print_time(time.time() - start_time2)}, RAM: {get_ram():.2f} GB')
+                f'Validation Round: {validation_round + 1}/{validation_rounds}, CE: {loss_i:.4f}, Acc: {accuracy_i*100:.2f}, Time: {print_time(time.time() - start_time2)}, RAM: {get_ram():.2f} GB')
         # Append list with evaluation for each SNR value
         eval_meas[0].append(loss_i)
         eval_meas[1].append(accuracy_i)
         eval_meas[2].append(accuracy_i_2)
         print(
-            f'Iteration: {snr_index + 1}/{len(snrs)}, SNR: {snr}, CE: {loss_i:.4f}, Acc: {accuracy_i:.2f}, Time: {print_time(time.time() - start_time)}')
+            f'Iteration: {snr_index + 1}/{len(snrs)}, SNR: {snr}, CE: {loss_i:.4f}, Acc: {accuracy_i*100:.2f}, Time: {print_time(time.time() - start_time)}')
     if gcm_decision_policy is True:
         accuracy = [np.array(eval_meas[1]), np.array(eval_meas[2])]
     else:
@@ -308,13 +308,13 @@ def evaluate_rlsinfony(evaluated_model, test_input, test_labels, snrs=np.linspac
             # Free RAM, otherwise it accumulates
             gc.collect()
             print(
-                f'Validation Round: {validation_round + 1}/{validation_rounds}, CE: {loss_i:.4f}, Acc: {accuracy_i:.2f}, Time: {print_time(time.time() - start_time2)}, RAM: {get_ram():.2f} GB')
+                f'Validation Round: {validation_round + 1}/{validation_rounds}, CE: {loss_i:.4f}, Acc: {accuracy_i*100:.2f}, Time: {print_time(time.time() - start_time2)}, RAM: {get_ram():.2f} GB')
 
         # Append list with evaluation for each SNR value
         eval_meas[0].append(loss_i)
         eval_meas[1].append(accuracy_i)
         print(
-            f'Iteration: {snr_index + 1}/{len(snrs)}, SNR: {snr}, CE: {loss_i:.4f}, Acc: {accuracy_i:.2f}, Time: {print_time(time.time() - start_time)}')
+            f'Iteration: {snr_index + 1}/{len(snrs)}, SNR: {snr}, CE: {loss_i:.4f}, Acc: {accuracy_i*100:.2f}, Time: {print_time(time.time() - start_time)}')
     accuracy = np.array(eval_meas[1])
     loss = np.array(eval_meas[0])
     return accuracy, loss

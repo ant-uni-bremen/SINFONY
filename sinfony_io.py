@@ -150,13 +150,13 @@ def try_save(model, pathfile, to_weights=True):
             print(f'❌ Failed to save model: {e}')
 
 
-def find_layer_by_name(model, name):
+def find_layer_by_name(model, name, startswith=True):
     """Find a (sub)layer by name in a normal Keras Model."""
     for layer in getattr(model, "layers", []):
-        if layer.name == name:
+        if (startswith and layer.name.startswith(name)) or ((not startswith) and layer.name == name):
             return layer
         if hasattr(layer, "layers"):  # nested model
-            found = find_layer_by_name(layer, name)
+            found = find_layer_by_name(layer, name, startswith=startswith)
             if found is not None:
                 return found
     return None

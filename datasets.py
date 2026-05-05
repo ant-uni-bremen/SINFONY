@@ -68,6 +68,25 @@ def test_get_batches():
 # Dataset functions
 
 
+def get_data_properties(data_labels, data_input):
+    """
+    Extracts number of classes and image shapes from test data.
+
+    Args:
+        data_labels:    One-hot encoded label array of shape (samples, num_classes)
+        data_input:     List of image datasets, each of shape (samples, height, width, channels)
+
+    Returns:
+        number_classes: Number of classes (int)
+        image_shapes:   List of image shapes (without sample dimension)
+    """
+
+    number_classes = data_labels.shape[1]
+    image_shapes = [image_dataset.shape[1:] for image_dataset in data_input]
+
+    return number_classes, image_shapes
+
+
 def load_dataset(dataset='mnist', validation_split=0.85, image_split=True, preprocess=True):
     '''Load dataset
     mnist: Handwritten digits 0-9
@@ -154,7 +173,7 @@ def load_dataset(dataset='mnist', validation_split=0.85, image_split=True, prepr
         train_input = [train_input[..., np.newaxis]]
         validation_input = [validation_input[..., np.newaxis]]
         RGB_entries = False
-    elif dataset[0:15] == 'speech_commands':
+    elif dataset[0:15] == 'speechcommands':
         # Validation dataset
         # train_input, validation_input, _, train_labels, validation_labels, _ = load_dataset_speech_commands2spectrogram()
         # Test dataset

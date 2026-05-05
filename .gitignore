@@ -1,6 +1,9 @@
 __*__
 *.code-workspace
 .vscode
+.gitignore
+apikeytest.py
+datasets_keras2.py
 Archive/
 plots/
 settings_saved/

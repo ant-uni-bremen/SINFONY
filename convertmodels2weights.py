@@ -21,8 +21,8 @@ import utilities.my_training as mf
 import sinfony_io
 
 # import gcm
-from gcm import GeneralizedContextModel
-from tensorflow.keras.optimizers import SGD
+from gcm import GeneralizedContextModel, GeneralizedContextModelOld, AttentionWeightLayer
+from keras.optimizers import SGD
 import sinfony_architectures.resnet as resnet
 # import sinfony_architectures.resnet_sinfony as resnet_sinfony
 
@@ -140,7 +140,7 @@ if __name__ == '__main__':
     # Loop through all files in the directory
     for fname in os.listdir(model_dir):
         if fname.endswith(model_ext):
-            if not fname.endswith('.npz') and not fname.endswith('.h5'):
+            if not fname.endswith('.npz') and not fname.endswith('.h5') and not fname.endswith('.yaml'):
                 # fname = 'ResNet14_MNIST4_Ne20_snr-4_6'
                 # fname = 'ResNet14_MNIST4_3layer_snr-4_6'
                 # fname = 'sinfony14_MNIST_ntx14_Ne20_snr-4_6_human_test'
@@ -158,7 +158,8 @@ if __name__ == '__main__':
                     #                                             transceiver_split=transceiver_split, sinfony_version=sinfony_version, last_layer_input=last_layer_input)
                     model = sinfony_io.try_load_model(model_path,
                                                       custom_objects={
-                                                          "GeneralizedContextModel": GeneralizedContextModel,
+                                                          "GeneralizedContextModel": GeneralizedContextModelOld,
+                                                          "AttentionWeightLayer": AttentionWeightLayer,
                                                           "SGD": SGD,
                                                           "Residual": resnet.Residual,
                                                           "ResNetBlock": resnet.ResnetBlock,

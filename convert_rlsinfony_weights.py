@@ -23,9 +23,8 @@ import time
 import tensorflow as tf
 from tensorflow.keras.models import Model
 # , Add, Concatenate, Layer, GaussianNoise #, Activation
-from tensorflow.keras.layers import Input, Dense, Conv2D, MaxPooling2D, Flatten
-from tensorflow.keras.callbacks import EarlyStopping
-from tensorflow.keras.optimizers import SGD, Adam, Nadam
+from tensorflow.keras.layers import Input, Dense, Flatten
+from tensorflow.keras.optimizers import SGD, Adam
 
 from convertmodels2weights import model_fix
 import shutil
@@ -36,10 +35,6 @@ import sys
 sys.path.append('..')  # Include parent folder, where own packages are
 # Include current folder, where start simulation script and packages are
 sys.path.append('.')
-
-# Only necessary for Windows, otherwise kernel crashes
-if os.name.lower() == 'nt':
-    os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
 
 @tf.function

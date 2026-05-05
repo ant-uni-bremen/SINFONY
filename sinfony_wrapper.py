@@ -33,27 +33,32 @@ import keras
 import utilities.my_math_operations as mop
 import datasets
 import model_evaluation
-from sinfony_io import try_load_model
+from sinfony_io import try_load
 import sinfony_architectures.resnet as resnet
+import model_builder
+from sinfony_io import find_layer_by_name
 
 
 class ResNetWrapper():
     """Wrapper for ResNet classifier (Keras, Tensorflow 2) for interface within HiSE and Human Rover Journal
     """
 
-    def __init__(self, path='models/fraeser', filename='ResNet4_fraeser64_test', last_layer_input=False):
+    def __init__(self, number_classes, image_shapes, path='models/fraeser/ResNet4_fraeser64_test', last_layer_input=False):
         '''Initialize object by loading the SINFONY Keras model
         INPUT
         path: Path where the model file lies
         filename: Name of the model file
         last_layer_input: Output the input of the last layer, i.e., the extracted feature vector
         '''
-        pathfile = os.path.join(path, filename)
-        self.model = try_load_model(pathfile, custom_objects={
+        model, _ = model_builder.create_model(
+            path + '.yaml', number_classes, image_shapes)
+        self.model = try_load(model, path, custom_objects={
             "Residual": resnet.Residual,
             "ResNetBlock": resnet.ResnetBlock,
             "ResidualBottleneck": resnet.ResidualBottleneck,
         })
+        self.model.compile(loss='categorical_crossentropy',
+                           metrics=['accuracy'])
         self.model_full = None
         if last_layer_input is True:
             # Extract models last layer input features: Features = Input to last softmax layer
@@ -109,7 +114,7 @@ def remove_last_inner_layer(model: keras.Model) -> keras.Model:
     x = outer_input
 
     # Apply all layers except the final nested model
-    for layer in model.layers[:-1]:
+    for layer in model.layers[len(outer_input):-1]:
         x = layer(x)
 
     last_layer = model.layers[-1]
@@ -121,7 +126,7 @@ def remove_last_inner_layer(model: keras.Model) -> keras.Model:
     nested_input = keras.Input(shape=last_layer.input_shape[1:])
     # nested_input = last_layer.input
     nested_x = nested_input
-    for nested_layer in last_layer.layers[:-1]:
+    for nested_layer in last_layer.layers[1:-1]:
         nested_x = nested_layer(nested_x)
 
     trimmed_nested_model = keras.Model(
@@ -142,19 +147,22 @@ class SinfonyWrapper():
     TODO: Only for AE approach, no reinforcement learning included so far
     """
 
-    def __init__(self, path='models/fraeser', filename='sinfony4_fraeser64_test', last_layer_input=False):
+    def __init__(self, number_classes, image_shapes, path='models/fraeser/sinfony4_fraeser64_test', last_layer_input=False):
         '''Initialize object by loading the SINFONY Keras model
         INPUT
         path: Path where the model file lies
         filename: Name of the model file
         last_layer_input: Output the input of the last layer, i.e., the extracted feature vector
         '''
-        pathfile = os.path.join(path, filename)
-        self.model = try_load_model(pathfile, custom_objects={
+        model, _ = model_builder.create_model(
+            path + '.yaml', number_classes, image_shapes)
+        self.model = try_load(model, path, custom_objects={
             "Residual": resnet.Residual,
             "ResNetBlock": resnet.ResnetBlock,
             "ResidualBottleneck": resnet.ResidualBottleneck,
         })
+        self.model.compile(loss='categorical_crossentropy',
+                           metrics=['accuracy'])
         self.model_full = None
         if last_layer_input is True:
             # Extract models last layer input features: Features = Input to last softmax layer
@@ -167,8 +175,7 @@ class SinfonyWrapper():
     def get_snr(self):
         '''Read SNR from model
         '''
-        noise_layer = model_evaluation.find_layer_by_name(
-            self.model, 'gaussian_noise2')
+        noise_layer = find_layer_by_name(self.model, 'gaussian_noise2')
         self.snr = 10*np.log10(1 / noise_layer.get_weights()[0] ** 2)
 
     def set_snr(self, snr=6):
@@ -185,8 +192,7 @@ class SinfonyWrapper():
                 sigma_test = sigma[::-1]
             else:
                 sigma_test = sigma
-        noise_layer = model_evaluation.find_layer_by_name(
-            self.model, 'gaussian_noise2')
+        noise_layer = find_layer_by_name(self.model, 'gaussian_noise2')
         if (noise_layer.get_weights()[0] != [sigma_test]).any():
             noise_layer.set_weights([sigma_test])
         self.get_snr()
@@ -276,29 +282,36 @@ def template_models(wrapper):
     return template_files, dataset_name
 
 
-def select_sinfony(path, template_files, image_split=True, transceiver_split=1, sinfony_version=0, last_layer_input=False):
+def select_sinfony(template_files, image_split=True, transceiver_split=1, sinfony_version=0):
     '''Select and load the SINFONY model
     '''
+
     if image_split is True:
         if transceiver_split == 1:
             # SINFONY approach with communication channel:
-            filename2 = template_files[0][sinfony_version]
-            sinfony = SinfonyWrapper(path=path, filename=filename2,
-                                     last_layer_input=last_layer_input)
+            filename = template_files[0][sinfony_version]
         else:
             # Only image recognition:
-            filename2 = template_files[1]
-            sinfony = ResNetWrapper(path=path, filename=filename2,
-                                    last_layer_input=last_layer_input)
+            filename = template_files[1]
     else:
         if transceiver_split == 0:
             # Only image recognition based on one image view:
-            filename2 = template_files[2]
-            sinfony = ResNetWrapper(path=path, filename=filename2,
-                                    last_layer_input=last_layer_input)
+            filename = template_files[2]
         else:
-            sinfony = None
-    return sinfony, filename2
+            filename = None
+    return filename
+
+
+def select_wrapper(transceiver_split, number_classes, image_shapes, path, last_layer_input):
+    '''Wrapper for sinfony and ResNet
+    '''
+    if transceiver_split == 0:
+        sinfony = ResNetWrapper(number_classes, image_shapes,
+                                path=path, last_layer_input=last_layer_input)
+    else:
+        sinfony = SinfonyWrapper(number_classes, image_shapes,
+                                 path=path, last_layer_input=last_layer_input)
+    return sinfony
 
 
 if __name__ == '__main__':
@@ -311,7 +324,7 @@ if __name__ == '__main__':
     # Choose project/dataset
     # Possible data sets: mnist, cifar10, fraeser (human rover), fraeser64, hise, hise64, hise256, speechcommands, urbansound8k
     # Number after dataset name is the resolution of the images
-    wrapper = 'mnist'
+    wrapper = 'speechcommands'
 
     last_layer_input2 = False
     transceiver_split = 1       # image recognition: 0, sinfony: 1
@@ -326,15 +339,19 @@ if __name__ == '__main__':
     subpath_results = os.path.join(path_script, 'models_output')
 
     template_files, dataset_name = template_models(wrapper)
-    sinfony, filename2 = select_sinfony(path=path2, template_files=template_files, image_split=image_split,
-                                        transceiver_split=transceiver_split, sinfony_version=sinfony_version, last_layer_input=last_layer_input2)
+    filename = select_sinfony(template_files=template_files, image_split=image_split,
+                              transceiver_split=transceiver_split, sinfony_version=sinfony_version)
+    pathfile = os.path.join(path2, filename)
 
     train_input_norm, train_labels, test_input_norm, test_labels = datasets.load_dataset(
         dataset_name, image_split=image_split, preprocess=True)
-    # train_input_norm, test_input_norm = datasets.preprocess_pixels(
-    #     train_input, test_input)
     datasets.summarize_dataset(
         train_input_norm, train_labels, test_input_norm, test_labels)
+    number_classes, image_shapes = datasets.get_data_properties(
+        test_labels, test_input_norm)
+
+    sinfony = select_wrapper(transceiver_split, number_classes,
+                             image_shapes, pathfile, last_layer_input2)
 
     # Evaluation of model
 
@@ -359,7 +376,7 @@ if __name__ == '__main__':
         # Save interface data
         print('Save interface data...')
         pathfile2 = os.path.join(
-            path_script, subpath_results, 'output_' + filename2)
+            path_script, subpath_results, 'output_' + filename)
         if transceiver_split == 1:
             # Add evaluated SNR for SINFONY
             pathfile2 = pathfile2 + '_snr' + str(snr_evaluation) + 'dB'
@@ -378,7 +395,7 @@ if __name__ == '__main__':
     elif evaluation_mode == 1 and last_layer_input2 is False:
         # For demonstration: Evaluation of SINFONY over SNR range
         # Evaluation parameters
-        snr_range = [-30, 20]
+        snr_range = [10, 20]
         snr_step_size = 1
         validation_rounds = 10
         snrs = mop.snr_range2snrlist(snr_range, snr_step_size)

@@ -24,16 +24,13 @@ from matplotlib import pyplot as plt
 
 # Tensorflow 2 packages
 import tensorflow as tf
-import tensorflow.keras as keras
+# import tensorflow.keras as keras
 # import keras
-# from keras.callbacks import EarlyStopping
 
 
 # Own packages
 import datasets
 import model_evaluation
-import sinfony_architectures.resnet as resnet
-import sinfony_architectures.resnet_sinfony as resnet_sinfony
 import sinfony_architectures.resnet_rl_sinfony as resnet_rl_sinfony
 import utilities.my_math_operations as mop
 from utilities.my_functions import savemodule
@@ -42,10 +39,6 @@ import utilities.my_training_tf1 as mt1
 from sinfony_io import try_load, try_save
 from sinfony_visualization import visualize_tsne_embedding
 import model_builder
-
-# Only necessary for Windows, otherwise kernel crashes
-if os.name.lower() == 'nt':
-    os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
 
 if __name__ == '__main__':
@@ -56,10 +49,7 @@ if __name__ == '__main__':
     # Get the script's directory
     path_script = os.path.dirname(os.path.abspath(__file__))
     # Default: 'mnist/semantic_config_mnist_sinfony.yaml'
-    SETTINGS_FILE = 'mnist/semantic_config_mnist_rlsinfony_load.yaml'
-    # Avoid error messages
-    # import logging
-    # tf.get_logger().setLevel(logging.ERROR)
+    SETTINGS_FILE = 'mnist/semantic_config_mnist_sinfony.yaml'
     # Load the provided configuration file or the default one
     # python SINFONY.py semantic_config.yaml
     # Workaround for interactive sessions: Only allow config file names starting 'semantic_config'
@@ -84,7 +74,7 @@ if __name__ == '__main__':
     # Simulation
     # Load model and reevaluate: False (default) # params.get('load', False)
     load = load_settings.get('load', False)
-    use_weights = load_settings.get('use_weights_format', True)
+    use_weights = load_settings.get('use_weights', True)
     filename = load_settings['filename']
     # Sub path for saved data
     subpath_results = load_settings['path']
@@ -142,7 +132,7 @@ if __name__ == '__main__':
         early_stopping = None
 
     # Optimizer
-    optimizer, optimizer_tx, optimizer_rx2, spg_config = create_optimizer(
+    optimizer, optimizer_tx, optimizer_rx2, spg_config = model_builder.create_optimizer(
         training_settings=training_settings,
         rl_settings=rl_settings,
         iterations_per_epoch=iterations_per_epoch,
@@ -153,13 +143,11 @@ if __name__ == '__main__':
 
     # TRAINING AND EVALUATION SCRIPT
 
-    if use_weights is True:
-        # ResNet20 model
-        number_classes = test_labels.shape[1]
-        image_shapes = [image_dataset.shape[1:]
-                        for image_dataset in test_input]
-        model = model_builder.create_model_from_config(
-            params, number_classes, image_shapes)
+    # ResNet20 model
+    number_classes, image_shapes = datasets.get_data_properties(
+        test_labels, test_input)
+    model, sigma_train = model_builder.create_model_from_config(
+        params, number_classes, image_shapes)
 
     if load is True:
         # Load existing model:
@@ -172,6 +160,11 @@ if __name__ == '__main__':
         # Summarize AE-based SINFONY
         model.summary()
 
+    if rl == 0:
+        # For loading, compile is necessary
+        model.compile(optimizer=optimizer,
+                      loss='categorical_crossentropy', metrics=['accuracy'])
+
     # Compile and train model
     if load is False:
         if rl >= 1:
@@ -182,9 +175,6 @@ if __name__ == '__main__':
                                                           validation_labels=valY, epochs=number_epochs, training_batch_size=batch_size, sigma=sigma_train, stochastic_policy_gradient_config=spg_config)
         else:
             # SINFONY AE-like
-            # Note: For loading, compile is not necessary: optimizer, loss and metric are saved with model
-            model.compile(
-                optimizer=optimizer, loss='categorical_crossentropy', metrics=['accuracy'])
             history = model.fit(train_input, train_labels, epochs=number_epochs, batch_size=batch_size, validation_data=(
                 valX, valY), callbacks=[batch_tracking, model_checkpoint, early_stopping], verbose=VERBOSE)
             results = history.history
