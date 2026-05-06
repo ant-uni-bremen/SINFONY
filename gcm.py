@@ -179,7 +179,7 @@ class ExemplarMemoryLayer(keras.layers.Layer):
                 shape=labels.shape,
                 initializer=tf.constant_initializer(labels),
                 trainable=False,
-                dtype=tf.int32
+                dtype=tf.int64
             )
         elif exemplars_shape is not None and labels_shape is not None:
             self.exemplars_shape = exemplars_shape
@@ -197,7 +197,7 @@ class ExemplarMemoryLayer(keras.layers.Layer):
                 shape=labels_shape,
                 initializer='zeros',
                 trainable=False,
-                dtype=tf.int32
+                dtype=tf.int64
             )
         else:
             raise ValueError(

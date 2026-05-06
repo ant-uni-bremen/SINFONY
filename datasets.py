@@ -173,7 +173,7 @@ def load_dataset(dataset='mnist', validation_split=0.85, image_split=True, prepr
         train_input = [train_input[..., np.newaxis]]
         validation_input = [validation_input[..., np.newaxis]]
         RGB_entries = False
-    elif dataset[0:15] == 'speechcommands':
+    elif dataset[0:14] == 'speechcommands' or dataset[0:15] == 'speech_commands':
         # Validation dataset
         # train_input, validation_input, _, train_labels, validation_labels, _ = load_dataset_speech_commands2spectrogram()
         # Test dataset

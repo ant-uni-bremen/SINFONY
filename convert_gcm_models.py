@@ -179,7 +179,7 @@ class ExemplarMemoryLayer(keras.layers.Layer):
                 shape=labels.shape,
                 initializer=tf.constant_initializer(labels),
                 trainable=False,
-                dtype=tf.int32
+                dtype=tf.int64
             )
         elif exemplars_shape is not None and labels_shape is not None:
             self.exemplars_shape = exemplars_shape
@@ -197,7 +197,7 @@ class ExemplarMemoryLayer(keras.layers.Layer):
                 shape=labels_shape,
                 initializer='zeros',
                 trainable=False,
-                dtype=tf.int32
+                dtype=tf.int64
             )
         else:
             raise ValueError(
@@ -479,8 +479,8 @@ def wrap_with_output_masking(base_model, mask):
     output_tensor = base_model(input_tensor)
 
     # Apply masking or transformation
-    # masked_output = OutputSelector(mask)(output_tensor)
-    masked_output = MaskingLayer(mask)(output_tensor)
+    masked_output = OutputSelector(mask)(output_tensor)
+    # masked_output = MaskingLayer(mask)(output_tensor)
 
     return keras.Model(inputs=input_tensor, outputs=masked_output, name=base_model.name + "_masked")
 
@@ -515,21 +515,58 @@ def swap_adjacent_pairs(lst):
     return result
 
 
+def set_deterministic(seed=42):
+    """
+    Forces deterministic behavior across different machines.
+
+    Args:
+        seed: Random seed to use
+    """
+    import random
+    import platform
+    # Seeds
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    random.seed(seed)
+    np.random.seed(seed)
+    tf.random.set_seed(seed)
+
+    # Deterministische TF Operationen
+    os.environ['TF_DETERMINISTIC_OPS'] = '1'
+    os.environ['TF_CUDNN_DETERMINISTIC'] = '1'
+
+    # oneDNN deaktivieren
+    os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
+
+    # Threads fixieren
+    tf.config.threading.set_inter_op_parallelism_threads(1)
+    tf.config.threading.set_intra_op_parallelism_threads(1)
+
+    print(f"Python:     {sys.version}")
+    print(f"TensorFlow: {tf.__version__}")
+    print(f"Keras:      {keras.__version__}")
+    print(f"NumPy:      {np.__version__}")
+    print(f"CPU:        {platform.processor()}")
+
+
 if __name__ == '__main__':
 
-    mt.gpu_select(number=0, memory_growth=True, cpus=64)
+    # set_deterministic(seed=42)
+
+    mt.gpu_select(number=-2, memory_growth=True, cpus=64)
     keras_version = 3           # If keras 3 model saves available: 3, otherwise: 2
 
     # Choose project/dataset
-    # Possible data sets: mnist, cifar10, fraeser, hise, speech_commands, urbansound8k
-    wrapper = 'cifar10'
+    # Possible data sets: mnist, cifar10, fraeser, hise, speechcommands, urbansound8k
+    wrapper = 'urbansound8k'
     simulation = 'snr'          # snr, memory, working_memory
+
+    from_tfsm_model = True
 
     load = True
     filename_gcm = 'GCM_Ne1_Na20'
     gcm_input = 1               # 0: sinfony output, 1: last layer input, 2: image input
     # Number of last layer input features used by GCM [only active for gcm_input==1]
-    number_features = 5         # -1: all features are used
+    number_features = 5        # -1: all features are used
     # Probabilistic GCM decisions + Optimal policy: True, Optimal policy: False
     gcm_decision_policy = True
 
@@ -758,8 +795,6 @@ if __name__ == '__main__':
         else:
             sinfony_gcm = gcm
 
-        from_tfsm_model = True
-        
         if load is True and from_tfsm_model is False:
             # Load existing model:
             print('Loading model...')
@@ -771,27 +806,39 @@ if __name__ == '__main__':
                             loss='categorical_crossentropy', metrics=['accuracy'])
 
         if from_tfsm_model is True:
+            test_size = 100
+
             tfsm_model = sinfony_io.try_load_model(pathfile)
             if dataset_name != 'fraeser':
                 for var in tfsm_model.weights:
                     if 'stddev' in var.name:
-                        print(f"Gefunden: {var.name} = {var.numpy()}")
-                        var.assign(np.array([1/100000, 1/100000]))
-                test_result = tfsm_model(test_input_norm[0][:100, ...])[
+                        print(f"Found: {var.name} = {var.numpy()}")
+                        new_stddev = tf.constant(
+                            [1/100000, 1/100000], dtype=tf.float32)
+                        var.assign(tf.cast(new_stddev, var.dtype))
+                test_result = tfsm_model(test_input_norm[0][:test_size, ...])[
                     'generalized_context_model']
-            # tfsm_model2 = tf.saved_model.load(
-            #     pathfile)
-            # infer = tfsm_model2.signatures['serving_default']
-            # Variable finden und neu setzen
-            # for var in tfsm_model2.variables:
-            #     if 'stddev' in var.name:
-            #         print(f"Gefunden: {var.name} = {var.numpy()}")
-            #         var.assign(np.array([1/100000, 1/100000]))
-            # test_result = infer(
-            #     input_6=test_input_norm[0],
-            #     input_7=test_input_norm[1]
-            # )['generalized_context_model']
-            # sinfony_gcm.set_weights(tfsm_model.weights)
+            else:
+                tfsm_model2 = tf.saved_model.load(
+                    pathfile)
+                infer = tfsm_model2.signatures['serving_default']
+                # Variable finden und neu setzen
+                for var in tfsm_model2.variables:
+                    if 'stddev' in var.name:
+                        print(f"Found: {var.name} = {var.numpy()}")
+                        new_stddev = tf.constant(
+                            [1/100000, 1/100000], dtype=tf.float32)
+                        var.assign(tf.cast(new_stddev, var.dtype))
+                if number_features == -1:
+                    test_result = infer(
+                        input_4=test_input_norm[0][:test_size, ...],
+                        input_5=test_input_norm[1][:test_size, ...]
+                    )['generalized_context_model']
+                else:
+                    test_result = infer(
+                        input_6=test_input_norm[0][:test_size, ...],
+                        input_7=test_input_norm[1][:test_size, ...]
+                    )['generalized_context_model']
 
             # Retrieve all weights along with their names and indices
             sinfony_gcm_weight_names = [w.path.replace(
@@ -847,12 +894,14 @@ if __name__ == '__main__':
             sinfony_gcm.set_weights(sorted_weights)
 
             if dataset_name != 'fraeser':
-                # test_result2 = sinfony_gcm([test_input_norm[0], test_input_norm[1]])
-                test_result2 = sinfony_gcm(test_input_norm[0][:100, ...])
-                if np.mean(np.abs(test_result - test_result2)) <= 1e-5:
-                    print('Models have same output!')
-                else:
-                    print('Models differ!')
+                test_result2 = sinfony_gcm(test_input_norm[0][:test_size, ...])
+            else:
+                test_result2 = sinfony_gcm(
+                    [test_input_norm[0][:test_size, ...], test_input_norm[1][:test_size, ...]])
+            if np.mean(np.abs(test_result - test_result2)) <= 1e-5:
+                print('Models have same output!')
+            else:
+                print('Models differ!')
 
             sinfony_io.try_save(sinfony_gcm, pathfile)
 
