@@ -33,465 +33,7 @@ import model_evaluation
 import utilities.my_math_operations as mop
 from utilities.my_functions import savemodule, print_time, get_ram
 import sinfony_io
-
-
-def logarithmic_scale(N):
-    result = []
-    power = 0
-    while True:
-        base = 10 ** power
-        for multiplier in range(1, 10):
-            val = multiplier * base
-            if val > N:
-                return result
-            result.append(val)
-        power += 1
-
-
-def logarithmic_scale_inclusive(N):
-    scale = logarithmic_scale(N)
-    if scale[-1] != N:
-        scale.append(N)
-    return scale
-
-
-# @keras.utils.register_keras_serializable()
-@keras.saving.register_keras_serializable()
-class AttentionWeightLayer(keras.layers.Layer):
-    '''Layer to normalize attention weights to one and restrict
-    to positive values, to implement constraints
-    '''
-
-    def __init__(self, feature_dim, **kwargs):
-        super().__init__(**kwargs)
-        self.feature_dim = feature_dim
-        self.epsilon = 1e-12
-        self.attention_weights = self.add_weight(
-            name="raw_weights",
-            shape=(1, 1, self.feature_dim),
-            initializer="ones",
-            trainable=True,
-        )
-
-    def call(self, inputs=None):
-        # Optional: inputs are ignored
-        positive_weights = keras.activations.relu(self.attention_weights)
-        normalized_weights = positive_weights / (
-            tf.reduce_sum(positive_weights, axis=-1,
-                          keepdims=True) + self.epsilon
-        )
-        return normalized_weights
-
-    def get_config(self):
-        config = super().get_config()
-        config.update({
-            "feature_dim": self.feature_dim,
-        })
-        return config
-
-
-# @keras.utils.register_keras_serializable()
-@keras.saving.register_keras_serializable()
-class WeightedDistanceLayer(keras.layers.Layer):
-    def __init__(self, weight_number, **kwargs):
-        super().__init__(**kwargs)
-        self.weight_number = weight_number
-        self.epsilon = 1e-12
-        self.attention_weight_layer = AttentionWeightLayer(weight_number)
-
-    def call(self, inputs):
-        x, exemplars = inputs  # unpack inputs
-        # Normalize the weights so they sum to 1 across the feature dimension
-        attention_weights = self.attention_weight_layer(None)
-        weighted_diff = tf.square(tf.expand_dims(x, 1) - tf.expand_dims(exemplars, 0)) * \
-            attention_weights   # (B, N, D)
-        distances = tf.sqrt(tf.reduce_sum(
-            weighted_diff, axis=-1) + self.epsilon)  # (B, N)
-        return distances
-
-    def get_config(self):
-        config = super().get_config()
-        config.update({
-            "weight_number": self.weight_number,
-        })
-        return config
-
-
-# @keras.utils.register_keras_serializable()
-@keras.saving.register_keras_serializable()
-class SimilarityLayer(keras.layers.Layer):
-    def __init__(self, similarity_gradient=1.0, **kwargs):
-        super().__init__(**kwargs)
-        self.similarity_gradient = similarity_gradient
-        self.c = self.add_weight(
-            name="similarity_gradient",
-            shape=(),
-            initializer=keras.initializers.Constant(self.similarity_gradient),
-            trainable=True,
-        )
-
-    def call(self, inputs):
-        distances, labels = inputs
-        # Similarity: s = exp(-c * d)
-        log_similarities = -keras.activations.relu(self.c) * distances
-        # log_similarities = -tf.abs(self.c) * distances  # (B, N)
-        # similarities = tf.exp(log_similarities)  # (B, N)
-        similarities_norm = tf.nn.softmax(log_similarities)
-
-        # Weighted sum of similarities per class
-        probs = tf.matmul(similarities_norm, tf.cast(labels, tf.float32))
-
-        # Weighted sum of similarities per class
-        # numerators = tf.matmul(similarities, tf.cast(
-        #     self.labels, tf.float32))  # (B, C)
-        # denominators = tf.reduce_sum(
-        #     similarities, axis=1, keepdims=True)      # (B, 1)
-        # epsilon2 = 0
-        # probs = numerators / (denominators + epsilon2)  # (B, C)
-        return probs
-
-    def get_config(self):
-        config = super().get_config()
-        config.update({
-            "similarity_gradient": self.similarity_gradient
-        })
-        return config
-
-
-# @keras.utils.register_keras_serializable()
-@keras.saving.register_keras_serializable()
-class ExemplarMemoryLayer(keras.layers.Layer):
-    def __init__(self, exemplars=None, labels=None, exemplars_shape=None, labels_shape=None, **kwargs):
-        super().__init__(**kwargs)
-
-        if exemplars is not None and labels is not None:
-            self.exemplars_shape = exemplars.shape
-            self.labels_shape = labels.shape
-
-            self.exemplars = self.add_weight(
-                name='exemplars_memory',
-                shape=exemplars.shape,
-                initializer=tf.constant_initializer(exemplars),
-                trainable=False,
-            )
-            self.labels = self.add_weight(
-                name='exemplar_labels',
-                shape=labels.shape,
-                initializer=tf.constant_initializer(labels),
-                trainable=False,
-                dtype=tf.int64
-            )
-        elif exemplars_shape is not None and labels_shape is not None:
-            self.exemplars_shape = exemplars_shape
-            self.labels_shape = labels_shape
-
-            # Dummy zero-initialized placeholders on deserialization
-            self.exemplars = self.add_weight(
-                name='exemplars_memory',
-                shape=exemplars_shape,
-                initializer='zeros',
-                trainable=False
-            )
-            self.labels = self.add_weight(
-                name='exemplar_labels',
-                shape=labels_shape,
-                initializer='zeros',
-                trainable=False,
-                dtype=tf.int64
-            )
-        else:
-            raise ValueError(
-                "Must provide either (exemplars and labels) or (exemplars_shape and labels_shape)")
-
-    def call(self, inputs=None):
-        # Simply output stored exemplars and labels
-        return self.exemplars, self.labels
-
-    def get_config(self):
-        config = super().get_config()
-        config.update({
-            "exemplars_shape": self.exemplars_shape,
-            "labels_shape": self.labels_shape
-        })
-        return config
-
-
-# @keras.utils.register_keras_serializable()
-@keras.saving.register_keras_serializable()
-class GeneralizedContextModel(keras.Model):
-    '''Generalized Context Model implemented in TensorFlow
-    '''
-
-    def __init__(self, exemplars=None, labels=None, similarity_gradient=1.0, exemplars_shape=None, labels_shape=None, **kwargs):
-        super().__init__(**kwargs)
-        if exemplars is not None and labels is not None:
-            self.exemplars_shape = exemplars.shape
-            self.labels_shape = labels.shape
-            self.memory = ExemplarMemoryLayer(exemplars, labels)
-        elif exemplars_shape is not None and labels_shape is not None:
-            self.exemplars_shape = exemplars_shape
-            self.labels_shape = labels_shape
-            self.memory = ExemplarMemoryLayer(
-                exemplars=None,
-                labels=None,
-                exemplars_shape=exemplars_shape,
-                labels_shape=labels_shape
-            )
-        else:
-            raise ValueError(
-                "Need either (exemplars and labels) or (exemplars_shape and labels_shape)")
-
-        self.similarity_gradient = similarity_gradient
-        self.distance = WeightedDistanceLayer(self.exemplars_shape[1])
-        self.similarity = SimilarityLayer(
-            similarity_gradient=similarity_gradient)
-
-    def call(self, x):
-        """
-        x: Tensor of shape (B, D) - input batch
-        Returns: (B, C) - class probabilities
-        """
-        exemplars, labels = self.memory(None)
-
-        # Weighted Euclidean distance (B, 1, D) - (1, N, D)
-        distances = self.distance([x, exemplars])
-
-        # Similarity: s = exp(-c * d)
-        # Weighted sum of similarities per class
-        probs = self.similarity([distances, labels])
-        return probs
-
-    def get_config(self):
-        config = super().get_config()
-        config.update({
-            "exemplars_shape": self.exemplars_shape,
-            "labels_shape": self.labels_shape,
-            "similarity_gradient": self.similarity_gradient
-        })
-        return config
-
-
-# @keras.utils.register_keras_serializable()
-@keras.saving.register_keras_serializable()
-class GeneralizedContextModelDifferentiableMemory(keras.Model):
-    '''Generalized Context Model implemented in tensorflow
-    '''
-
-    def __init__(self, exemplars_dim, labels, similarity_gradient=1.0):
-        super().__init__()
-        # Trainable weights per feature dimension
-        self.exemplars_dim = exemplars_dim
-        self.similarity_gradient = similarity_gradient
-        self.distance = WeightedDistanceLayer(self.exemplars_dim)
-        self.similarity = SimilarityLayer(
-            similarity_gradient=self.similarity_gradient)
-        self.labels = self.add_weight(
-            name='exemplar_labels',
-            shape=labels.shape,
-            initializer=keras.initializers.Constant(labels),
-            trainable=False,
-            dtype=tf.int64
-        )
-
-    def call(self, x, exemplars):
-        """
-        x: Tensor of shape (B, D) - input batch
-        Returns: (B, C) - class probabilities
-        """
-        # Weighted Euclidean distance (B, 1, D) - (1, N, D)
-        distances = self.distance([x, exemplars])
-
-        # Similarity: s = exp(-c * d)
-        # Weighted sum of similarities per class
-        probs = self.similarity([distances, self.labels])
-
-        return probs
-
-    def get_config(self):
-        config = super().get_config()
-        # Convert tensors to numpy arrays to be serializable
-        config.update({
-            "exemplars_dim": self.exemplars_dim,
-            "labels": self.labels.numpy(),
-            "similarity_gradient": self.similarity_gradient,
-        })
-        return config
-
-
-# @keras.utils.register_keras_serializable()
-@keras.saving.register_keras_serializable()
-class GeneralizedContextModelOld(keras.Model):
-    '''Generalized Context Model implemented in tensorflow
-    '''
-
-    def __init__(self, exemplars, labels, similarity_gradient=1.0):
-        super().__init__()
-        self.exemplars_shape = exemplars.shape
-        self.labels_shape = labels.shape
-        self.similarity_gradient = similarity_gradient
-        # Trainable weights per feature dimension
-        self.attention_weight_layer = AttentionWeightLayer(exemplars.shape[1])
-        self.exemplars = self.add_weight(
-            name='exemplars_memory',
-            shape=self.exemplars_shape,
-            initializer=keras.initializers.Constant(exemplars),
-            trainable=False,
-        )
-        self.labels = self.add_weight(
-            name='exemplar_labels',
-            shape=self.labels_shape,
-            initializer=keras.initializers.Constant(labels),
-            trainable=False,
-            dtype=tf.int64
-        )
-        # Learnable scalar
-        self.c = self.add_weight(
-            name="similarity_gradient",
-            shape=(),
-            initializer=keras.initializers.Constant(self.similarity_gradient),
-            trainable=True,
-        )
-
-    def call(self, x):
-        """
-        x: Tensor of shape (B, D) - input batch
-        Returns: (B, C) - class probabilities
-        """
-        epsilon = 1e-12          # For numerical stability
-        # Normalize the weights so they sum to 1 across the feature dimension
-        attention_weights_normalized = self.attention_weight_layer(None)
-
-        # Weighted Euclidean distance (B, 1, D) - (1, N, D)
-        weighted_diff = tf.square(tf.expand_dims(x, 1) - tf.expand_dims(self.exemplars, 0)) * \
-            attention_weights_normalized   # (B, N, D)
-        distances = tf.sqrt(tf.reduce_sum(
-            weighted_diff, axis=-1) + epsilon)  # (B, N)
-
-        # Similarity: s = exp(-c * d)
-        log_similarities = -keras.activations.relu(self.c) * distances
-        # log_similarities = -tf.abs(self.c) * distances  # (B, N)
-        # similarities = tf.exp(log_similarities)  # (B, N)
-        similarities_norm = tf.nn.softmax(log_similarities)
-
-        # Weighted sum of similarities per class
-        probs = tf.matmul(similarities_norm, tf.cast(self.labels, tf.float32))
-
-        # Weighted sum of similarities per class
-        # numerators = tf.matmul(similarities, tf.cast(
-        #     self.labels, tf.float32))  # (B, C)
-        # denominators = tf.reduce_sum(
-        #     similarities, axis=1, keepdims=True)      # (B, 1)
-        # epsilon2 = 0
-        # probs = numerators / (denominators + epsilon2)  # (B, C)
-        return probs
-
-    def get_config(self):
-        config = super().get_config()
-        # For serialization, we pass the shapes and initial values
-        config.update({
-            "exemplars": self.exemplars.numpy(),
-            "labels": self.labels.numpy(),
-            "similarity_gradient": self.c.numpy().item(),
-        })
-        return config
-
-
-def compute_gcm_input_data(data_input_norm, gcm_input, sinfony, transceiver_split, snr, batch_size=32):
-    '''Computes GCM input exemplar data from dataset
-    '''
-    # Flattening for GCM input
-    if gcm_input == 2:
-        exemplars = np.reshape(
-            data_input_norm[0], [data_input_norm[0].shape[0], -1])
-    else:
-        if transceiver_split == 1:
-            sinfony_output_training = sinfony(
-                data_input_norm, snr=snr, batch_size=batch_size)
-        else:
-            sinfony_output_training = sinfony(
-                data_input_norm, batch_size=batch_size)
-        exemplars = np.reshape(sinfony_output_training, [
-                               sinfony_output_training.shape[0], -1])
-    return exemplars
-
-
-def new_optimizer(opt_class=keras.optimizers.SGD, opt_config={"learning_rate": 0.01, "momentum": 0.9}):
-    return opt_class(**opt_config)
-
-
-class MaskingLayer(keras.layers.Layer):
-    """
-    A Keras layer that applies a (fixed or trainable) mask to the last dimension of the input.
-
-    This is useful for masking certain output dimensions, e.g., suppressing or weighting
-    logits or regression outputs in a trainable or static way.
-
-    Args:
-        output_dim (int): Number of output dimensions (e.g., number of classes).
-        mask_initializer (str or tf.initializer): Initializer for the mask.
-            Use "ones" for no initial masking, "zeros" to suppress everything initially, etc.
-        trainable (bool): If True, the mask will be learned during training.
-        **kwargs: Additional keyword arguments passed to the Layer base class.
-    """
-
-    def __init__(self, mask, **kwargs):
-        super().__init__(**kwargs)
-        self.mask_initializer = mask
-        self.mask = self.add_weight(
-            name="mask",
-            shape=mask.shape,
-            initializer=tf.constant_initializer(self.mask_initializer),
-            trainable=False,
-        )
-
-    def call(self, inputs):
-        return inputs * self.mask  # Broadcasted over batch
-
-    def get_config(self):
-        return {"mask": self.mask_initializer, **super().get_config()}
-
-
-class OutputSelector(keras.layers.Layer):
-    def __init__(self, indices, **kwargs):
-        super().__init__(**kwargs)
-        self.indices = indices
-
-    def call(self, inputs):
-        return tf.gather(inputs, self.indices, axis=-1)
-
-    def get_config(self):
-        return {"indices": self.indices, **super().get_config()}
-
-
-def wrap_with_output_masking(base_model, mask):
-    """
-    Wraps an existing model by applying a masking vector to its output.
-
-    Args:
-        base_model (keras.Model): the model whose output will be wrapped
-        mask: masks the output tensor
-
-    Returns:
-        keras.Model: a new model with same input as base_model, but masked output
-    """
-    input_tensor = sw.clone_model_inputs(base_model)
-    # input_tensor = base_model.input
-    output_tensor = base_model(input_tensor)
-
-    # Apply masking or transformation
-    masked_output = OutputSelector(mask)(output_tensor)
-    # masked_output = MaskingLayer(mask)(output_tensor)
-
-    return keras.Model(inputs=input_tensor, outputs=masked_output, name=base_model.name + "_masked")
-
-
-def epoch2iterationboundaries(epoch_bound, dataset_size, batch_size):
-    ''' Calculates SGD iteration boundaries from epoch boundaries, dataset size and batch size
-    '''
-    iterations_per_epoch = dataset_size / batch_size
-    boundaries = list(np.round(np.array(epoch_bound)
-                               * iterations_per_epoch).astype('int'))
-    return boundaries
+import gcm as gcm_model
 
 
 def extract_parameters_from_filename(filename, template_files):
@@ -599,6 +141,79 @@ def swap_adjacent_pairs(lst):
     return result
 
 
+def convert_model_weights(sinfony_gcm, tfsm_model, reverse_remaining_weights=True):
+    """
+    Compares two models and creates a weight mapping for synchronization.
+
+    This function compares the weights of two models (SINFONY-GCM and tfsm_model) 
+    and creates a mapping between their weights based on name matching. Remaining 
+    unmatched weights are reordered and swapped to facilitate proper weight transfer.
+
+    Args:
+        sinfony_gcm: The SINFONY-GCM model
+        tfsm_model: The TensorFlow model to compare against
+        reverse_remaining_weights: If True, reverses and swaps adjacent pairs 
+                                   of remaining weights for proper ordering
+
+    Returns:
+        list: A list of weights in the correct order for synchronization
+    """
+
+    # Retrieve all weights along with their names and indices
+    sinfony_gcm_weight_names = [w.path.replace(
+        '/', '_') for w in sinfony_gcm.weights]
+    sinfony_gcm_weight_names_short = [
+        w.name for w in sinfony_gcm.weights]
+    tfsm_weight_names = [w.name[:-2]
+                         for w in tfsm_model.weights]
+
+    # Create a mapping based on the names
+    weight_mapping = {}
+    weight_not_mapping = {}
+    mapped_indices = set()  # Save which tfsm_model weights were already matched
+
+    for i, sinfony_name in enumerate(sinfony_gcm_weight_names):
+        # Search for matching weight in tfsm_model
+        matched = False
+        for j, tfsm_name in enumerate(tfsm_weight_names):
+            if sinfony_name == tfsm_name:
+                weight_mapping[i] = tfsm_model.weights[j]
+                mapped_indices.add(j)
+                matched = True
+                break
+            elif sinfony_gcm_weight_names_short[i] == tfsm_name or tfsm_name in sinfony_name:
+                weight_mapping[i] = tfsm_model.weights[j]
+                mapped_indices.add(j)
+                matched = True
+                break
+
+        if not matched:
+            # Track weights not matched
+            if i < len(tfsm_model.weights):
+                weight_not_mapping[i] = sinfony_gcm_weight_names[i]
+
+    # Create a list of all tfsm_model weights that have not been assigned
+    unmapped_tfsm_weights = []
+    for j, tfsm_weight in enumerate(tfsm_model.weights):
+        if j not in mapped_indices:
+            unmapped_tfsm_weights.append(tfsm_weight)
+
+    # Reverse the list and swap adjacent pairs
+    if reverse_remaining_weights:
+        unmapped_tfsm_weights = swap_adjacent_pairs(
+            unmapped_tfsm_weights[::-1])
+
+    index_unmapped = 0
+    for _, i in enumerate(weight_not_mapping):
+        weight_mapping[i] = unmapped_tfsm_weights[index_unmapped]
+        index_unmapped = index_unmapped + 1
+
+    sorted_weights = [weight_mapping[key]
+                      for key in sorted(weight_mapping.keys())]
+
+    return sorted_weights
+
+
 def set_deterministic(seed=42):
     """
     Forces deterministic behavior across different machines.
@@ -641,7 +256,7 @@ if __name__ == '__main__':
 
     # Choose project/dataset
     # Possible data sets: mnist, cifar10, fraeser, hise, speechcommands, urbansound8k
-    wrapper = 'cifar10'
+    wrapper = 'speechcommands'
     simulation = 'snr'          # snr, memory, working_memory
 
     # Load sinfony wrapper
@@ -737,6 +352,8 @@ if __name__ == '__main__':
                 last_layer_input = True
             elif gcm_input == 0:
                 last_layer_input = False
+            else:
+                last_layer_input = False
             if gcm_input != 2:
                 template_files, _ = sw.template_models(wrapper)
                 filename_sinfony = sw.select_sinfony(template_files=template_files, image_split=image_split,
@@ -753,7 +370,7 @@ if __name__ == '__main__':
                         np.abs(weights_last_layer), axis=1)
                     top_k_indices = np.argpartition(
                         feature_importance, -number_features)[-number_features:]
-                    sinfony.model = wrap_with_output_masking(
+                    sinfony.model = gcm_model.wrap_with_output_masking(
                         sinfony.model, top_k_indices)
             else:
                 sinfony = []
@@ -761,18 +378,18 @@ if __name__ == '__main__':
 
             # Calculate iteration boundaries for learning rate schedule
             if not learning_rate_schedule:
-                boundaries = epoch2iterationboundaries(
+                boundaries = gcm_model.epoch2iterationboundaries(
                     epoch_bound, train_input_norm[0].shape[0], training_batch_size)
                 learning_rate_schedule = keras.optimizers.schedules.PiecewiseConstantDecay(
                     boundaries, values)
             if not learning_rate_schedule2:
-                boundaries2 = epoch2iterationboundaries(
+                boundaries2 = gcm_model.epoch2iterationboundaries(
                     epoch_bound2, train_input_norm[0].shape[0], training_batch_size)
                 learning_rate_schedule2 = keras.optimizers.schedules.PiecewiseConstantDecay(
                     boundaries2, values2)
             opt_config = {
                 "learning_rate": learning_rate_schedule, "momentum": 0.9}
-            optimizer = new_optimizer(
+            optimizer = gcm_model.new_optimizer(
                 opt_class=opt_class, opt_config=opt_config)
             optimizer2 = opt_class2(
                 learning_rate=learning_rate_schedule2, momentum=0.9)
@@ -832,26 +449,20 @@ if __name__ == '__main__':
                     print('Working Memory Capacity Simulation')
 
                 # GCM input computation
-                exemplars = compute_gcm_input_data(
+                exemplars = gcm_model.compute_gcm_input_data(
                     train_input_norm, gcm_input, sinfony, transceiver_split, snr_training, batch_size=validation_batch_size)
                 exemplar_labels = train_labels
                 if load is False or gcm_input == 2:
-                    test_exemplars = compute_gcm_input_data(
+                    test_exemplars = gcm_model.compute_gcm_input_data(
                         test_input_norm, gcm_input, sinfony, transceiver_split, snr_training, batch_size=validation_batch_size)
                     test_exemplars_labels = test_labels
                 else:
                     test_exemplars = 0
                     test_exemplars_labels = 0
-                # Easily OOM if not enough RAM! Lines are for debugging
-                # number_exemplars = 10000  # 60000
-                # exemplars = exemplars[0:number_exemplars, ...]
-                # exemplar_labels = exemplar_labels[0:number_exemplars, ...]
 
                 # GCM model and training - Only GCM training first
-                gcm = GeneralizedContextModel(
+                gcm = gcm_model.GeneralizedContextModel(
                     exemplars, exemplar_labels, similarity_gradient=1.0)
-                # tf.debugging.check_numerics(
-                #     gcm.attention_weights, message="input contains NaNs or infs")
                 gcm.compile(optimizer=optimizer,
                             loss='categorical_crossentropy', metrics=['accuracy'])
 
@@ -865,9 +476,13 @@ if __name__ == '__main__':
                     if load is True:
                         if from_tfsm_model:
                             tfsm_model = sinfony_io.try_load_model(pathfile)
-                            gcm.set_weights(tfsm_model.get_weights())
-                            # gcm.set_weights(tfsm_model.get_weights(
-                            # )[-2:] + tfsm_model.get_weights()[:-2])
+                            try:
+                                gcm.set_weights(tfsm_model.get_weights())
+                            except Exception as e:
+                                print(
+                                    f"Fallback after: {e}")
+                                gcm.set_weights(tfsm_model.get_weights(
+                                )[-2:] + tfsm_model.get_weights()[:-2])
                         else:
                             # Load existing GCM model:
                             print('Loading model...')
@@ -891,7 +506,7 @@ if __name__ == '__main__':
                         # GCM version with differentiable memory -> trained end-to-end
                         # NOTE: Too complex for gradient computation with weight sharing
                         sinfony.model.trainable = True
-                        gcm_diff = GeneralizedContextModelDifferentiableMemory(
+                        gcm_diff = gcm_model.GeneralizedContextModelDifferentiableMemory(
                             exemplars.shape[1], exemplar_labels, similarity_gradient=1.0)
                         gcm_diff.set_weights(
                             gcm.get_weights()[1:][:-2] + gcm.get_weights()[1:][-2:])
@@ -930,16 +545,18 @@ if __name__ == '__main__':
                         print('Model loaded.')
                     except Exception as e:
                         print(
-                            f"Failed to load model, jump to next file: {e}")
+                            f"Failed to load model; jump to next file: {e}")
                         raise
 
                 sinfony_gcm.compile(optimizer=optimizer2,
                                     loss='categorical_crossentropy', metrics=['accuracy'])
 
                 if from_tfsm_model is True and joint_training is True:
-                    test_size = 100
 
                     tfsm_model = sinfony_io.try_load_model(pathfile)
+
+                    # Calculate test result
+                    test_size = 100
                     if dataset_name != 'fraeser':
                         for var in tfsm_model.weights:
                             if 'stddev' in var.name:
@@ -959,69 +576,31 @@ if __name__ == '__main__':
                                 new_stddev = tf.constant(
                                     [1/100000, 1/100000], dtype=tf.float32)
                                 var.assign(tf.cast(new_stddev, var.dtype))
-                        if number_features == -1:
-                            test_result = infer(
-                                input_4=test_input_norm[0][:test_size, ...],
-                                input_5=test_input_norm[1][:test_size, ...])
+                        if gcm_input == 1:
+                            if number_features == -1:
+                                test_result = infer(
+                                    input_4=test_input_norm[0][:test_size, ...],
+                                    input_5=test_input_norm[1][:test_size, ...]
+                                )
+                            else:
+                                test_result = infer(
+                                    input_6=test_input_norm[0][:test_size, ...],
+                                    input_7=test_input_norm[1][:test_size, ...]
+                                )
                         else:
                             test_result = infer(
-                                input_6=test_input_norm[0][:test_size, ...],
-                                input_7=test_input_norm[1][:test_size, ...]
+                                input_1=test_input_norm[0][:test_size, ...],
+                                input_2=test_input_norm[1][:test_size, ...]
                             )
+
                     test_result = list(test_result.values())[0]
-                    # test_result = test_result['generalized_context_model']
 
-                    # Retrieve all weights along with their names and indices
-                    sinfony_gcm_weight_names = [w.path.replace(
-                        '/', '_') for w in sinfony_gcm.weights]
-                    sinfony_gcm_weight_names_short = [
-                        w.name for w in sinfony_gcm.weights]
-                    tfsm_weight_names = [w.name[:-2]
-                                         for w in tfsm_model.weights]
-
-                    # Create a mapping based on the names
-                    weight_mapping = {}
-                    weight_not_mapping = {}
-                    mapped_indices = set()  # Save which tfsm_model weights were already matched
-
-                    for i, sinfony_name in enumerate(sinfony_gcm_weight_names):
-                        # Search for matching weight in tfsm_model
-                        matched = False
-                        for j, tfsm_name in enumerate(tfsm_weight_names):
-                            if sinfony_name == tfsm_name:
-                                weight_mapping[i] = tfsm_model.weights[j]
-                                mapped_indices.add(j)
-                                matched = True
-                                break
-                            elif sinfony_gcm_weight_names_short[i] == tfsm_name or tfsm_name in sinfony_name:
-                                weight_mapping[i] = tfsm_model.weights[j]
-                                mapped_indices.add(j)
-                                matched = True
-                                break
-
-                        if not matched:
-                            # Track weights not matched
-                            if i < len(tfsm_model.weights):
-                                weight_not_mapping[i] = sinfony_gcm_weight_names[i]
-
-                    # Create a list of all tfsm_model weights that have not been assigned
-                    unmapped_tfsm_weights = []
-                    for j, tfsm_weight in enumerate(tfsm_model.weights):
-                        if j not in mapped_indices:
-                            unmapped_tfsm_weights.append(tfsm_weight)
-
-                    # Reverse the list and swap adjacent pairs
                     if dataset_name != 'fraeser':
-                        unmapped_tfsm_weights = swap_adjacent_pairs(
-                            unmapped_tfsm_weights[::-1])
-
-                    index_unmapped = 0
-                    for _, i in enumerate(weight_not_mapping):
-                        weight_mapping[i] = unmapped_tfsm_weights[index_unmapped]
-                        index_unmapped = index_unmapped + 1
-
-                    sorted_weights = [weight_mapping[key]
-                                      for key in sorted(weight_mapping.keys())]
+                        reverse_remaining_weights = True
+                    else:
+                        reverse_remaining_weights = False
+                    sorted_weights = convert_model_weights(
+                        sinfony_gcm, tfsm_model, reverse_remaining_weights=reverse_remaining_weights)
 
                     sinfony_gcm.set_weights(sorted_weights)
 
@@ -1051,54 +630,8 @@ if __name__ == '__main__':
                     if load and joint_training is False and from_tfsm_model:
                         sinfony_io.try_save(gcm, pathfile)
 
-            #         if load is False and joint_training is True:
-            #             if differentiable_memory is True:
-            #                 print('Joint training with differentiable memory starts...')
-            #                 history_sinfony = sinfony_gcm.fit(train_input_norm, exemplar_labels, validation_data=(
-            #                     test_input_norm, test_exemplars_labels), batch_size=training_batch_size, epochs=alternating_training_iterations)
-            #             else:
-            #                 print('Joint alternating training starts...')
-            #                 start_time = time.time()
-            #                 for idx_alternate in range(0, alternating_training_iterations):
-            #                     # SINFONY + GCM Training
-            #                     # Note: Keeps optimizer state between iterations
-            #                     # Trainable sinfony model weights
-            #                     sinfony.model.trainable = True
-            #                     # Freeze GCM since memory is fixed
-            #                     if alternating is True:
-            #                         gcm.trainable = False
-            #                     sinfony_gcm.compile(optimizer=optimizer2,
-            #                                         loss='categorical_crossentropy', metrics=['accuracy'])
-            #                     history_sinfony = sinfony_gcm.fit(train_input_norm, exemplar_labels, validation_data=(
-            #                         test_input_norm, test_exemplars_labels), batch_size=training_batch_size, epochs=joint_gcm_training_epochs)
-            #                     # Calculate new GCM exemplars for memory
-            #                     exemplars = compute_gcm_input_data(
-            #                         train_input_norm, gcm_input, sinfony, transceiver_split, snr_training, batch_size=validation_batch_size)
-            #                     test_exemplars = compute_gcm_input_data(
-            #                         test_input_norm, gcm_input, sinfony, transceiver_split, snr_training, batch_size=validation_batch_size)
-            #                     exemplar_var = [
-            #                         v for v in gcm.weights if "exemplars_memory" in v.name][0]
-            #                     exemplar_var.assign(exemplars)
-            #                     # gcm.get_layer('exemplars_labels').set_weights(
-            #                     #     [exemplar_labels])
-            #                     # Freeze the sinfony model weights
-            #                     sinfony.model.trainable = False
-            #                     # Train GCM based on new exemplars
-            #                     if alternating is True:
-            #                         gcm.trainable = True
-            #                     gcm.compile(optimizer=optimizer,
-            #                                 loss='categorical_crossentropy', metrics=['accuracy'])
-            #                     history_gcm = gcm.fit(exemplars, exemplar_labels, validation_data=(
-            #                         test_exemplars, test_exemplars_labels), batch_size=training_batch_size, epochs=joint_sinfony_training_epochs)
-            #                     # Free RAM, otherwise it accumulates
-            #                     gc.collect()
-            #                     print(
-            #                         f"Iteration: {idx_alternate + 1}/{alternating_training_iterations}, CE: {history_gcm.history['val_loss'][-1]:.4f}, Acc: {history_gcm.history['val_accuracy'][-1]:.2f}, Time: {print_time(time.time() - start_time)}, RAM: {get_ram():.2f} GB")
-
-            #             # Save the model
-            #             print('Saving model...')
-            #             sinfony_io.try_save(sinfony_gcm, pathfile, to_weights=use_weights)
-            #             print('Model saved.')
+            #       if load is False and joint_training is True:
+            #           [Saving after joint training]
 
                 if simulation == 'working_memory':
 
@@ -1151,32 +684,6 @@ if __name__ == '__main__':
                 loss = 0
                 accuracy = 0
 
-            # # Show performance curve
-            # if simulation == 'memory':
-            #     x_axis = memory_sizes
-            # elif simulation == 'working_memory':
-            #     x_axis = working_memory_sizes
-            # else:
-            #     x_axis = snrs
-
-            # if simulation == 'memory':
-            #     xlabel = 'Memory Size'
-            # elif simulation == 'working_memory':
-            #     xlabel = 'Working Memory Size'
-            # else:
-            #     xlabel = 'SNR'
-            # plt.figure(1)
-            # plt.semilogy(x_axis, 1 - accuracy)
-            # if gcm_decision_policy is True:
-            #     plt.semilogy(x_axis, 1 - accuracy_opt)
-            # plt.xlabel(xlabel)
-            # plt.ylabel(
-            #     'semantic performance measure: classification error rate')
-            # plt.figure(2)
-            # plt.semilogy(x_axis, loss)
-            # plt.xlabel(xlabel)
-            # plt.ylabel('Crossentropy Loss')
-
             # # Save evaluation
             print('Set up evaluation...')
             results['val_loss'] = loss
@@ -1193,7 +700,13 @@ if __name__ == '__main__':
                 # saveobj.save(pathfile_results_opt, results)
             print('Evaluation set up.')
 
-            results2 = saveobj.load(pathfile_results)
+            try:
+                results2 = saveobj.load(pathfile_results)
+            except Exception as e:
+                print(
+                    f"Simulation results file not found, jump to next file: {e}")
+                raise
+
             accuracy_load = results2['val_acc'][results2['snr'] == snrs]
 
             accuracy_deviation = np.mean(

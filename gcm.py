@@ -577,6 +577,8 @@ if __name__ == '__main__':
         last_layer_input = True
     elif gcm_input == 0:
         last_layer_input = False
+    else:
+        last_layer_input = True
     # Load sinfony wrapper
     path_script = os.path.dirname(os.path.abspath(__file__))
     subpath_results = os.path.join(path_script, 'models', wrapper)
