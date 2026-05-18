@@ -17,7 +17,7 @@ sys.path.append('.')                        # NOQA
 sys.path.append('..')                       # NOQA
 
 import os
-import gc
+import shutil
 import tensorflow as tf
 # import tensorflow.keras as keras
 import keras
@@ -290,7 +290,7 @@ class GeneralizedContextModelDifferentiableMemory(keras.Model):
             shape=labels.shape,
             initializer=keras.initializers.Constant(labels),
             trainable=False,
-            dtype=tf.int32
+            dtype=tf.int64
         )
 
     def call(self, x, exemplars):
@@ -342,7 +342,7 @@ class GeneralizedContextModelOld(keras.Model):
             shape=self.labels_shape,
             initializer=keras.initializers.Constant(labels),
             trainable=False,
-            dtype=tf.int32
+            dtype=tf.int64
         )
         # Learnable scalar
         self.c = self.add_weight(
@@ -494,6 +494,90 @@ def epoch2iterationboundaries(epoch_bound, dataset_size, batch_size):
     return boundaries
 
 
+def extract_parameters_from_filename(filename, template_files):
+    """
+    Extracts parameters from filename to reconstruct the original parameters.
+
+    Args:
+        filename: The filename to parse
+        template_files: List of two lists containing template names
+
+    Returns:
+        tuple: (number_features, sinfony_version, gcm_input, joint_training, differentiable_memory, basename, transceiver_split) 
+    """
+    # Initialize defaults
+    number_features = 20  # default value
+    sinfony_version = 0   # default value
+    gcm_input = 1         # default value
+    joint_training = True  # default value
+    differentiable_memory = False  # default value
+    transceiver_split = 0  # default value
+
+    # Extract basename (everything up to _Nfeatures or +)
+    basename = filename
+    if '_Nfeatures' in filename:
+        # Find the position of _Nfeatures and extract everything before it
+        nfeatures_pos = filename.find('_Nfeatures')
+        basename = filename[:nfeatures_pos]
+        # Extract number_features
+        nfeatures_start = filename.find('_Nfeatures') + len('_Nfeatures')
+        nfeatures_end = filename.find('+', nfeatures_start)
+        if nfeatures_end == -1:  # If no + found, it might be the end
+            nfeatures_end = len(filename)
+        try:
+            number_features = int(filename[nfeatures_start:nfeatures_end])
+        except ValueError:
+            print(ValueError)  # Keep default if parsing fails
+        # If _Nfeatures is present, gcm_input should be 1 (last layer input)
+        gcm_input = 1
+    elif '+' in filename:
+        # If there's a + but no _Nfeatures, gcm_input should be 0 (sinfony output)
+        gcm_input = 0
+        # Extract basename up to the first +
+        plus_pos = filename.find('+')
+        basename = filename[:plus_pos]
+    else:
+        # If neither _Nfeatures nor + is present, gcm_input should be 2 (image input)
+        gcm_input = 2
+        # Full filename is the basename
+        basename = filename
+
+    # Check for joint_training (indicated by '+joint_training')
+    if '+joint_training' in filename:
+        joint_training = True
+    elif '+joint_training' not in filename:
+        joint_training = False
+
+    # Check for differentiable_memory (indicated by '_differentiable_' in filename)
+    if '_differentiable' in filename:
+        differentiable_memory = True
+
+    # Analyze template_files to determine sinfony_version and transceiver_split
+    # template_files is a list of two lists
+    if template_files and len(template_files) >= 2:
+        # Find the position of the filename in template_files
+        # We need to look at the part of the filename after the first + and potentially before +joint_training
+        name_part = filename
+        if '+' in filename:
+            # Extract everything after the first +
+            first_plus_pos = filename.find('+')
+            name_part = filename[first_plus_pos + 1:]
+            # Remove +joint_training if present
+            if '+joint_training' in name_part:
+                name_part = name_part.split('+joint_training')[0]
+
+        # Check if name_part exists in either of the template lists
+        for i, template_list in enumerate(template_files):
+            if name_part in template_list:
+                # Found in list i
+                # sinfony_version corresponds to the position of name_part in the template_list
+                sinfony_version = template_list.index(name_part)
+                transceiver_split = 1 if i == 0 else 0  # 1 for first list, 0 for second
+                break
+
+    return number_features, sinfony_version, gcm_input, joint_training, differentiable_memory, basename, transceiver_split
+
+
 def swap_adjacent_pairs(lst):
     """
     Swaps adjacent pairs in a list.
@@ -553,20 +637,29 @@ if __name__ == '__main__':
     # set_deterministic(seed=42)
 
     mt.gpu_select(number=-2, memory_growth=True, cpus=64)
-    keras_version = 3           # If keras 3 model saves available: 3, otherwise: 2
+    use_weights = True
 
     # Choose project/dataset
     # Possible data sets: mnist, cifar10, fraeser, hise, speechcommands, urbansound8k
-    wrapper = 'urbansound8k'
+    wrapper = 'cifar10'
     simulation = 'snr'          # snr, memory, working_memory
 
-    from_tfsm_model = True
+    # Load sinfony wrapper
+    path_script = os.path.dirname(os.path.abspath(__file__))
+    subpath_results = os.path.join(path_script, 'models', wrapper)
+    entries = os.listdir(subpath_results)
+    folders = [entry for entry in entries if os.path.isdir(
+        os.path.join(subpath_results, entry))]
+    template_files, _ = sw.template_models(wrapper)
+
+    from_tfsm_model = False
+    move_old_model = True
 
     load = True
     filename_gcm = 'GCM_Ne1_Na20'
     gcm_input = 1               # 0: sinfony output, 1: last layer input, 2: image input
     # Number of last layer input features used by GCM [only active for gcm_input==1]
-    number_features = 5        # -1: all features are used
+    number_features = 20        # -1: all features are used
     # Probabilistic GCM decisions + Optimal policy: True, Optimal policy: False
     gcm_decision_policy = True
 
@@ -604,7 +697,7 @@ if __name__ == '__main__':
     validation_rounds = 10      # Default: 10 (100 for fraeser)
     validation_batch_size = 64  # Default: 64
     # SNR Simulation
-    snr_range = [19, 20]       # Default: [-30,20]
+    snr_range = [20, 20]        # Default: [-30,20]
     snr_step_size = 1           # 1
     # Memory simulation
     # SNR for memory_size simulation, evaluate for training SNR?
@@ -629,421 +722,503 @@ if __name__ == '__main__':
     number_classes, image_shapes = datasets.get_data_properties(
         test_labels, test_input_norm)
 
-    # --------------- TRAINING + EVALUATION -------------------
-
-    if gcm_input == 1:
-        last_layer_input = True
-    elif gcm_input == 0:
-        last_layer_input = False
-    # Load sinfony wrapper
-    path_script = os.path.dirname(os.path.abspath(__file__))
-    subpath_results = os.path.join(path_script, 'models', wrapper)
-    if gcm_input != 2:
-        template_files, _ = sw.template_models(wrapper)
-        filename_sinfony = sw.select_sinfony(template_files=template_files, image_split=image_split,
-                                             transceiver_split=transceiver_split, sinfony_version=sinfony_version)
-        pathfile = os.path.join(subpath_results, filename_sinfony)
-        sinfony = sw.select_wrapper(transceiver_split, number_classes,
-                                    image_shapes, path=pathfile, last_layer_input=last_layer_input)
-        sinfony.set_snr(snr_training)
-        if gcm_input == 1 and number_features != -1:
-            # Select k most important features and set rest to zero
-            weights_last_layer = sinfony.model_full.get_weights()[-2]
-            feature_importance = np.sum(np.abs(weights_last_layer), axis=1)
-            top_k_indices = np.argpartition(
-                feature_importance, -number_features)[-number_features:]
-            sinfony.model = wrap_with_output_masking(
-                sinfony.model, top_k_indices)
-    else:
-        sinfony = []
-        filename_sinfony = ''
-
-    # Calculate iteration boundaries for learning rate schedule
-    if not learning_rate_schedule:
-        boundaries = epoch2iterationboundaries(
-            epoch_bound, train_input_norm[0].shape[0], training_batch_size)
-        learning_rate_schedule = keras.optimizers.schedules.PiecewiseConstantDecay(
-            boundaries, values)
-    if not learning_rate_schedule2:
-        boundaries2 = epoch2iterationboundaries(
-            epoch_bound2, train_input_norm[0].shape[0], training_batch_size)
-        learning_rate_schedule2 = keras.optimizers.schedules.PiecewiseConstantDecay(
-            boundaries2, values2)
-    opt_config = {"learning_rate": learning_rate_schedule, "momentum": 0.9}
-    optimizer = new_optimizer(opt_class=opt_class, opt_config=opt_config)
-    optimizer2 = opt_class2(
-        learning_rate=learning_rate_schedule2, momentum=0.9)
-
-    # Create filenames
-    if gcm_input == 0:
-        filename = filename_gcm + '+' + filename_sinfony
-    elif gcm_input == 1:
-        filename = filename_gcm + '_Nfeatures' + \
-            str(number_features) + '+' + filename_sinfony
-    else:
-        filename = filename_gcm + '_' + dataset_name
-    if joint_training is True and gcm_input != 2:
-        filename = filename + '+joint_training'
-    pathfile = os.path.join(path_script, subpath_results, filename)
-
-    results = {}
-    saveobj = savemodule(form='npz')
-    if simulation == 'memory':
-        fn_simulation = '_memory'
-    elif simulation == 'working_memory':
-        fn_simulation = '_working_memory'
-    else:
-        fn_simulation = ''
-    filename_prefix = ''
-    filename_suffix = '_results'
-    pathfile2 = os.path.join(path_script, subpath_results,
-                             filename_prefix + fn_simulation + filename)
-    pathfile3 = os.path.join(path_script, subpath_results,
-                             filename_prefix + filename + filename_suffix + fn_simulation + '_opt')
-
-    # Main simulation
-    accuracy_opt = 0
-    if simulation == 'memory':
-        print('Memory Size Simulation')
-
-        accuracy, loss, memory_sizes = model_evaluation.evaluate_gcm_memory(gcm_input, sinfony, transceiver_split, train_input_norm, train_labels, snr_training, test_input_norm, test_labels, snr_evaluation, training_epochs=training_epochs, batch_size=training_batch_size,
-                                                                            validation_batch_size=validation_batch_size, opt_class=opt_class, opt_config=opt_config, validation_rounds=validation_rounds, gcm_decision_policy=gcm_decision_policy, fixed_dataset_per_memory_size=fixed_dataset_per_memory_size, memory_sizes=memory_sizes)
-        if gcm_decision_policy is True:
-            accuracy_opt = accuracy[1]
-            accuracy = accuracy[0]
-
-    elif simulation == 'snr' or simulation == 'working_memory':
-        if simulation == 'snr':
-            print('SNR Simulation')
-        else:
-            print('Working Memory Capacity Simulation')
-
-        # GCM input computation
-        exemplars = compute_gcm_input_data(
-            train_input_norm, gcm_input, sinfony, transceiver_split, snr_training, batch_size=validation_batch_size)
-        exemplar_labels = train_labels
-        if load is False or gcm_input == 2:
-            test_exemplars = compute_gcm_input_data(
-                test_input_norm, gcm_input, sinfony, transceiver_split, snr_training, batch_size=validation_batch_size)
-            test_exemplars_labels = test_labels
-        else:
-            test_exemplars = 0
-            test_exemplars_labels = 0
-        # Easily OOM if not enough RAM! Lines are for debugging
-        # number_exemplars = 10000  # 60000
-        # exemplars = exemplars[0:number_exemplars, ...]
-        # exemplar_labels = exemplar_labels[0:number_exemplars, ...]
-
-        # GCM model and training - Only GCM training first
-        gcm = GeneralizedContextModel(
-            exemplars, exemplar_labels, similarity_gradient=1.0)
-        # tf.debugging.check_numerics(
-        #     gcm.attention_weights, message="input contains NaNs or infs")
-        gcm.compile(optimizer=optimizer,
-                    loss='categorical_crossentropy', metrics=['accuracy'])
-
-        if load is False:
-            # GCM training
-            print('GCM training starts...')
-            gcm.fit(exemplars, exemplar_labels, validation_data=(
-                test_exemplars, test_exemplars_labels), batch_size=training_batch_size, epochs=training_epochs)
-            print('GCM training complete!')
-        if joint_training is False:
-            if load is True:
-                # Load existing GCM model:
-                print('Loading model...')
-                gcm = sinfony_io.try_load(gcm, pathfile)
-                print('Model loaded.')
-            else:
-                # Save the GCM model
-                print('Saving model...')
-                gcm.save(pathfile + '.keras')
-                print('Model saved.')
-
-        if gcm_input != 2:
-            # Combine SINFONY + GCM for evaluation or joint training
-            # Compose them into one model
-            if differentiable_memory is True and joint_training is True:
-                # GCM version with differentiable memory -> trained end-to-end
-                # NOTE: Too complex for gradient computation with weight sharing
-                sinfony.model.trainable = True
-                gcm_diff = GeneralizedContextModelDifferentiableMemory(
-                    exemplars.shape[1], exemplar_labels, similarity_gradient=1.0)
-                gcm_diff.set_weights(
-                    gcm.get_weights()[1:][:-2] + gcm.get_weights()[1:][-2:])
-                input_image = sw.clone_model_inputs(sinfony.model)
-                features = sinfony.model(input_image)
-
-                image_memory = []
-                for train_input_norm_item in train_input_norm:
-                    image_memory.append(tf.constant(train_input_norm_item))
-                features_memory = sinfony.model(image_memory)
-                gcm_output = gcm_diff(features, features_memory)
-                # Final model
-                sinfony_gcm = keras.Model(
-                    inputs=input_image, outputs=gcm_output)
-            else:
-                input_image = sw.clone_model_inputs(sinfony.model)
-                # input_image = sinfony.model.input
-                features = sinfony.model(input_image)
-                # Input reshaper
-                # features_flat = keras.layers.Flatten()(features)
-                gcm_output = gcm(features)
-                # Final model
-                sinfony_gcm = keras.Model(
-                    inputs=input_image, outputs=gcm_output)
-        else:
-            sinfony_gcm = gcm
-
-        if load is True and from_tfsm_model is False:
-            # Load existing model:
-            print('Loading model...')
-            # sinfony_gcm = keras.models.load_model(pathfile)
-            sinfony_gcm = sinfony_io.try_load(sinfony_gcm, pathfile)
-            print('Model loaded.')
-
-        sinfony_gcm.compile(optimizer=optimizer2,
-                            loss='categorical_crossentropy', metrics=['accuracy'])
-
+    for folder in folders:
         if from_tfsm_model is True:
-            test_size = 100
-
-            tfsm_model = sinfony_io.try_load_model(pathfile)
-            if dataset_name != 'fraeser':
-                for var in tfsm_model.weights:
-                    if 'stddev' in var.name:
-                        print(f"Found: {var.name} = {var.numpy()}")
-                        new_stddev = tf.constant(
-                            [1/100000, 1/100000], dtype=tf.float32)
-                        var.assign(tf.cast(new_stddev, var.dtype))
-                test_result = tfsm_model(test_input_norm[0][:test_size, ...])[
-                    'generalized_context_model']
-            else:
-                tfsm_model2 = tf.saved_model.load(
-                    pathfile)
-                infer = tfsm_model2.signatures['serving_default']
-                # Variable finden und neu setzen
-                for var in tfsm_model2.variables:
-                    if 'stddev' in var.name:
-                        print(f"Found: {var.name} = {var.numpy()}")
-                        new_stddev = tf.constant(
-                            [1/100000, 1/100000], dtype=tf.float32)
-                        var.assign(tf.cast(new_stddev, var.dtype))
-                if number_features == -1:
-                    test_result = infer(
-                        input_4=test_input_norm[0][:test_size, ...],
-                        input_5=test_input_norm[1][:test_size, ...]
-                    )['generalized_context_model']
-                else:
-                    test_result = infer(
-                        input_6=test_input_norm[0][:test_size, ...],
-                        input_7=test_input_norm[1][:test_size, ...]
-                    )['generalized_context_model']
-
-            # Retrieve all weights along with their names and indices
-            sinfony_gcm_weight_names = [w.path.replace(
-                '/', '_') for w in sinfony_gcm.weights]
-            sinfony_gcm_weight_names_short = [
-                w.name for w in sinfony_gcm.weights]
-            tfsm_weight_names = [w.name[:-2] for w in tfsm_model.weights]
-
-            # Create a mapping based on the names
-            weight_mapping = {}
-            weight_not_mapping = {}
-            mapped_indices = set()  # Save which tfsm_model weights were already matched
-
-            for i, sinfony_name in enumerate(sinfony_gcm_weight_names):
-                # Search for matching weight in tfsm_model
-                matched = False
-                for j, tfsm_name in enumerate(tfsm_weight_names):
-                    if sinfony_name == tfsm_name:
-                        weight_mapping[i] = tfsm_model.weights[j]
-                        mapped_indices.add(j)
-                        matched = True
-                        break
-                    elif sinfony_gcm_weight_names_short[i] == tfsm_name or tfsm_name in sinfony_name:
-                        weight_mapping[i] = tfsm_model.weights[j]
-                        mapped_indices.add(j)
-                        matched = True
-                        break
-
-                if not matched:
-                    # Track weights not matched
-                    if i < len(tfsm_model.weights):
-                        weight_not_mapping[i] = sinfony_gcm_weight_names[i]
-
-            # Create a list of all tfsm_model weights that have not been assigned
-            unmapped_tfsm_weights = []
-            for j, tfsm_weight in enumerate(tfsm_model.weights):
-                if j not in mapped_indices:
-                    unmapped_tfsm_weights.append(tfsm_weight)
-
-            # Reverse the list and swap adjacent pairs
-            if dataset_name != 'fraeser':
-                unmapped_tfsm_weights = swap_adjacent_pairs(
-                    unmapped_tfsm_weights[::-1])
-
-            index_unmapped = 0
-            for _, i in enumerate(weight_not_mapping):
-                weight_mapping[i] = unmapped_tfsm_weights[index_unmapped]
-                index_unmapped = index_unmapped + 1
-
-            sorted_weights = [weight_mapping[key]
-                              for key in sorted(weight_mapping.keys())]
-
-            sinfony_gcm.set_weights(sorted_weights)
-
-            if dataset_name != 'fraeser':
-                test_result2 = sinfony_gcm(test_input_norm[0][:test_size, ...])
-            else:
-                test_result2 = sinfony_gcm(
-                    [test_input_norm[0][:test_size, ...], test_input_norm[1][:test_size, ...]])
-            if np.mean(np.abs(test_result - test_result2)) <= 1e-5:
-                print('Models have same output!')
-            else:
-                print('Models differ!')
-
-            sinfony_io.try_save(sinfony_gcm, pathfile)
-
-    #         if load is False and joint_training is True:
-    #             if differentiable_memory is True:
-    #                 print('Joint training with differentiable memory starts...')
-    #                 history_sinfony = sinfony_gcm.fit(train_input_norm, exemplar_labels, validation_data=(
-    #                     test_input_norm, test_exemplars_labels), batch_size=training_batch_size, epochs=alternating_training_iterations)
-    #             else:
-    #                 print('Joint alternating training starts...')
-    #                 start_time = time.time()
-    #                 for idx_alternate in range(0, alternating_training_iterations):
-    #                     # SINFONY + GCM Training
-    #                     # Note: Keeps optimizer state between iterations
-    #                     # Trainable sinfony model weights
-    #                     sinfony.model.trainable = True
-    #                     # Freeze GCM since memory is fixed
-    #                     if alternating is True:
-    #                         gcm.trainable = False
-    #                     sinfony_gcm.compile(optimizer=optimizer2,
-    #                                         loss='categorical_crossentropy', metrics=['accuracy'])
-    #                     history_sinfony = sinfony_gcm.fit(train_input_norm, exemplar_labels, validation_data=(
-    #                         test_input_norm, test_exemplars_labels), batch_size=training_batch_size, epochs=joint_gcm_training_epochs)
-    #                     # Calculate new GCM exemplars for memory
-    #                     exemplars = compute_gcm_input_data(
-    #                         train_input_norm, gcm_input, sinfony, transceiver_split, snr_training, batch_size=validation_batch_size)
-    #                     test_exemplars = compute_gcm_input_data(
-    #                         test_input_norm, gcm_input, sinfony, transceiver_split, snr_training, batch_size=validation_batch_size)
-    #                     exemplar_var = [
-    #                         v for v in gcm.weights if "exemplars_memory" in v.name][0]
-    #                     exemplar_var.assign(exemplars)
-    #                     # gcm.get_layer('exemplars_labels').set_weights(
-    #                     #     [exemplar_labels])
-    #                     # Freeze the sinfony model weights
-    #                     sinfony.model.trainable = False
-    #                     # Train GCM based on new exemplars
-    #                     if alternating is True:
-    #                         gcm.trainable = True
-    #                     gcm.compile(optimizer=optimizer,
-    #                                 loss='categorical_crossentropy', metrics=['accuracy'])
-    #                     history_gcm = gcm.fit(exemplars, exemplar_labels, validation_data=(
-    #                         test_exemplars, test_exemplars_labels), batch_size=training_batch_size, epochs=joint_sinfony_training_epochs)
-    #                     # Free RAM, otherwise it accumulates
-    #                     gc.collect()
-    #                     print(
-    #                         f"Iteration: {idx_alternate + 1}/{alternating_training_iterations}, CE: {history_gcm.history['val_loss'][-1]:.4f}, Acc: {history_gcm.history['val_accuracy'][-1]:.2f}, Time: {print_time(time.time() - start_time)}, RAM: {get_ram():.2f} GB")
-
-    #             # Save the model
-    #             print('Saving model...')
-    #             if keras_version == 3:
-    #                 sinfony_gcm.save(pathfile + '.keras')
-    #             else:
-    #                 sinfony_gcm.save(pathfile)
-    #             print('Model saved.')
-
-        if simulation == 'working_memory':
-
-            if gcm_input == 2:
-                accuracy, loss, working_memory_sizes = model_evaluation.evaluate_gcm_working_memory(gcm, test_exemplars, test_exemplars_labels, validation_rounds=validation_rounds,
-                                                                                                    batch_size=validation_batch_size, gcm_decision_policy=gcm_decision_policy, working_memory_sizes=working_memory_sizes)
-            else:
-                sinfony.set_snr(snr_evaluation)
-                accuracy, loss, working_memory_sizes = model_evaluation.evaluate_gcm_working_memory(sinfony_gcm, test_input_norm, test_labels, validation_rounds=validation_rounds,
-                                                                                                    batch_size=validation_batch_size, gcm_decision_policy=gcm_decision_policy, working_memory_sizes=working_memory_sizes)
-            if gcm_decision_policy is True:
-                accuracy_opt = accuracy[1]
-                accuracy = accuracy[0]
-
+            print('Trying conversion of: ' + folder)
         else:
-            # Evaluation of model
-            snrs = mop.snr_range2snrlist(snr_range, snr_step_size)
-            print('Evaluate model...')
-            print(filename)
-            # Evaluate model for different SNRs
-            if transceiver_split == 1:
-                # SINFONY/RL-SINFONY
-                accuracy, loss = model_evaluation.evaluate_sinfony(sinfony_gcm, test_input_norm, test_labels,
-                                                                   snrs=snrs, validation_rounds=validation_rounds, gcm_decision_policy=gcm_decision_policy)
+            print('Testing: ' + folder)
+        try:
+            number_features, sinfony_version, gcm_input, joint_training, differentiable_memory, filename_gcm, transceiver_split = extract_parameters_from_filename(
+                folder, template_files)
+
+            # --------------- TRAINING + EVALUATION -------------------
+
+            if gcm_input == 1:
+                last_layer_input = True
+            elif gcm_input == 0:
+                last_layer_input = False
+            if gcm_input != 2:
+                template_files, _ = sw.template_models(wrapper)
+                filename_sinfony = sw.select_sinfony(template_files=template_files, image_split=image_split,
+                                                     transceiver_split=transceiver_split, sinfony_version=sinfony_version)
+                pathfile_sinfony = os.path.join(
+                    subpath_results, filename_sinfony)
+                sinfony = sw.select_wrapper(transceiver_split, number_classes,
+                                            image_shapes, path=pathfile_sinfony, last_layer_input=last_layer_input)
+                sinfony.set_snr(snr_training)
+                if gcm_input == 1 and number_features != -1:
+                    # Select k most important features and set rest to zero
+                    weights_last_layer = sinfony.model_full.get_weights()[-2]
+                    feature_importance = np.sum(
+                        np.abs(weights_last_layer), axis=1)
+                    top_k_indices = np.argpartition(
+                        feature_importance, -number_features)[-number_features:]
+                    sinfony.model = wrap_with_output_masking(
+                        sinfony.model, top_k_indices)
+            else:
+                sinfony = []
+                filename_sinfony = ''
+
+            # Calculate iteration boundaries for learning rate schedule
+            if not learning_rate_schedule:
+                boundaries = epoch2iterationboundaries(
+                    epoch_bound, train_input_norm[0].shape[0], training_batch_size)
+                learning_rate_schedule = keras.optimizers.schedules.PiecewiseConstantDecay(
+                    boundaries, values)
+            if not learning_rate_schedule2:
+                boundaries2 = epoch2iterationboundaries(
+                    epoch_bound2, train_input_norm[0].shape[0], training_batch_size)
+                learning_rate_schedule2 = keras.optimizers.schedules.PiecewiseConstantDecay(
+                    boundaries2, values2)
+            opt_config = {
+                "learning_rate": learning_rate_schedule, "momentum": 0.9}
+            optimizer = new_optimizer(
+                opt_class=opt_class, opt_config=opt_config)
+            optimizer2 = opt_class2(
+                learning_rate=learning_rate_schedule2, momentum=0.9)
+
+            # Create filenames
+            if gcm_input == 0:
+                filename = filename_gcm + '+' + filename_sinfony
+            elif gcm_input == 1:
+                filename = filename_gcm + '_Nfeatures' + \
+                    str(number_features) + '+' + filename_sinfony
+            else:
+                filename = filename_gcm + '_' + dataset_name
+            if joint_training is True and gcm_input != 2:
+                filename = filename + '+joint_training'
+            pathfile = os.path.join(path_script, subpath_results, filename)
+
+            if differentiable_memory is False:
+                try:
+                    print('Checking whether GCM with differentiable memory was used...')
+                    tfsm_model2 = tf.saved_model.load(pathfile)
+                    sig = tfsm_model2.signatures['serving_default']
+                    differentiable_memory = any('differentiable_memory' in name for name in sig.structured_outputs.keys()
+                                                )
+                    print(differentiable_memory)
+                except Exception as e:
+                    print(f"Error: {e}")
+
+            results = {}
+            saveobj = savemodule(form='npz')
+            if simulation == 'memory':
+                fn_simulation = '_memory'
+            elif simulation == 'working_memory':
+                fn_simulation = '_working_memory'
+            else:
+                fn_simulation = ''
+            filename_prefix = ''
+            filename_suffix = '_results'
+            pathfile_results = os.path.join(path_script, subpath_results,
+                                            filename_prefix + filename + filename_suffix + fn_simulation)
+            pathfile_results_opt = pathfile_results + '_opt'
+
+            # Main simulation
+            accuracy_opt = 0
+            if simulation == 'memory':
+                print('Memory Size Simulation')
+
+                accuracy, loss, memory_sizes = model_evaluation.evaluate_gcm_memory(gcm_input, sinfony, transceiver_split, train_input_norm, train_labels, snr_training, test_input_norm, test_labels, snr_evaluation, training_epochs=training_epochs, batch_size=training_batch_size,
+                                                                                    validation_batch_size=validation_batch_size, opt_class=opt_class, opt_config=opt_config, validation_rounds=validation_rounds, gcm_decision_policy=gcm_decision_policy, fixed_dataset_per_memory_size=fixed_dataset_per_memory_size, memory_sizes=memory_sizes)
                 if gcm_decision_policy is True:
                     accuracy_opt = accuracy[1]
                     accuracy = accuracy[0]
+
+            elif simulation == 'snr' or simulation == 'working_memory':
+                if simulation == 'snr':
+                    print('SNR Simulation')
+                else:
+                    print('Working Memory Capacity Simulation')
+
+                # GCM input computation
+                exemplars = compute_gcm_input_data(
+                    train_input_norm, gcm_input, sinfony, transceiver_split, snr_training, batch_size=validation_batch_size)
+                exemplar_labels = train_labels
+                if load is False or gcm_input == 2:
+                    test_exemplars = compute_gcm_input_data(
+                        test_input_norm, gcm_input, sinfony, transceiver_split, snr_training, batch_size=validation_batch_size)
+                    test_exemplars_labels = test_labels
+                else:
+                    test_exemplars = 0
+                    test_exemplars_labels = 0
+                # Easily OOM if not enough RAM! Lines are for debugging
+                # number_exemplars = 10000  # 60000
+                # exemplars = exemplars[0:number_exemplars, ...]
+                # exemplar_labels = exemplar_labels[0:number_exemplars, ...]
+
+                # GCM model and training - Only GCM training first
+                gcm = GeneralizedContextModel(
+                    exemplars, exemplar_labels, similarity_gradient=1.0)
+                # tf.debugging.check_numerics(
+                #     gcm.attention_weights, message="input contains NaNs or infs")
+                gcm.compile(optimizer=optimizer,
+                            loss='categorical_crossentropy', metrics=['accuracy'])
+
+                if load is False:
+                    # GCM training
+                    print('GCM training starts...')
+                    gcm.fit(exemplars, exemplar_labels, validation_data=(
+                        test_exemplars, test_exemplars_labels), batch_size=training_batch_size, epochs=training_epochs)
+                    print('GCM training complete!')
+                if joint_training is False:
+                    if load is True:
+                        if from_tfsm_model:
+                            tfsm_model = sinfony_io.try_load_model(pathfile)
+                            gcm.set_weights(tfsm_model.get_weights())
+                            # gcm.set_weights(tfsm_model.get_weights(
+                            # )[-2:] + tfsm_model.get_weights()[:-2])
+                        else:
+                            # Load existing GCM model:
+                            print('Loading model...')
+                            try:
+                                gcm = sinfony_io.try_load(gcm, pathfile)
+                                print('Model loaded.')
+                            except Exception as e:
+                                print(
+                                    f"Failed to load model, jump to next file: {e}")
+                                raise
+                    # else:
+                    #     # Save the GCM model
+                    #     print('Saving model...')
+                    #     sinfony_io.try_save(gcm, pathfile, to_weights=use_weights)
+                    #     print('Model saved.')
+
+                if gcm_input != 2:
+                    # Combine SINFONY + GCM for evaluation or joint training
+                    # Compose them into one model
+                    if differentiable_memory is True and joint_training is True:
+                        # GCM version with differentiable memory -> trained end-to-end
+                        # NOTE: Too complex for gradient computation with weight sharing
+                        sinfony.model.trainable = True
+                        gcm_diff = GeneralizedContextModelDifferentiableMemory(
+                            exemplars.shape[1], exemplar_labels, similarity_gradient=1.0)
+                        gcm_diff.set_weights(
+                            gcm.get_weights()[1:][:-2] + gcm.get_weights()[1:][-2:])
+                        input_image = sw.clone_model_inputs(sinfony.model)
+                        features = sinfony.model(input_image)
+
+                        image_memory = []
+                        for train_input_norm_item in train_input_norm:
+                            image_memory.append(
+                                tf.constant(train_input_norm_item))
+                        features_memory = sinfony.model(image_memory)
+                        gcm_output = gcm_diff(features, features_memory)
+                        # Final model
+                        sinfony_gcm = keras.Model(
+                            inputs=input_image, outputs=gcm_output)
+                    else:
+                        input_image = sw.clone_model_inputs(sinfony.model)
+                        # input_image = sinfony.model.input
+                        features = sinfony.model(input_image)
+                        # Input reshaper
+                        # features_flat = keras.layers.Flatten()(features)
+                        gcm_output = gcm(features)
+                        # Final model
+                        sinfony_gcm = keras.Model(
+                            inputs=input_image, outputs=gcm_output)
+                else:
+                    sinfony_gcm = gcm
+
+                if load is True and joint_training is True and from_tfsm_model is False:
+                    # Load existing model:
+                    print('Loading model...')
+                    try:
+                        # sinfony_gcm = keras.models.load_model(pathfile)
+                        sinfony_gcm = sinfony_io.try_load(
+                            sinfony_gcm, pathfile)
+                        print('Model loaded.')
+                    except Exception as e:
+                        print(
+                            f"Failed to load model, jump to next file: {e}")
+                        raise
+
+                sinfony_gcm.compile(optimizer=optimizer2,
+                                    loss='categorical_crossentropy', metrics=['accuracy'])
+
+                if from_tfsm_model is True and joint_training is True:
+                    test_size = 100
+
+                    tfsm_model = sinfony_io.try_load_model(pathfile)
+                    if dataset_name != 'fraeser':
+                        for var in tfsm_model.weights:
+                            if 'stddev' in var.name:
+                                print(f"Found: {var.name} = {var.numpy()}")
+                                new_stddev = tf.constant(
+                                    [1/100000, 1/100000], dtype=tf.float32)
+                                var.assign(tf.cast(new_stddev, var.dtype))
+                        test_result = tfsm_model(
+                            test_input_norm[0][:test_size, ...])
+                    else:
+                        tfsm_model2 = tf.saved_model.load(pathfile)
+                        infer = tfsm_model2.signatures['serving_default']
+                        # Variable finden und neu setzen
+                        for var in tfsm_model2.variables:
+                            if 'stddev' in var.name:
+                                print(f"Found: {var.name} = {var.numpy()}")
+                                new_stddev = tf.constant(
+                                    [1/100000, 1/100000], dtype=tf.float32)
+                                var.assign(tf.cast(new_stddev, var.dtype))
+                        if number_features == -1:
+                            test_result = infer(
+                                input_4=test_input_norm[0][:test_size, ...],
+                                input_5=test_input_norm[1][:test_size, ...])
+                        else:
+                            test_result = infer(
+                                input_6=test_input_norm[0][:test_size, ...],
+                                input_7=test_input_norm[1][:test_size, ...]
+                            )
+                    test_result = list(test_result.values())[0]
+                    # test_result = test_result['generalized_context_model']
+
+                    # Retrieve all weights along with their names and indices
+                    sinfony_gcm_weight_names = [w.path.replace(
+                        '/', '_') for w in sinfony_gcm.weights]
+                    sinfony_gcm_weight_names_short = [
+                        w.name for w in sinfony_gcm.weights]
+                    tfsm_weight_names = [w.name[:-2]
+                                         for w in tfsm_model.weights]
+
+                    # Create a mapping based on the names
+                    weight_mapping = {}
+                    weight_not_mapping = {}
+                    mapped_indices = set()  # Save which tfsm_model weights were already matched
+
+                    for i, sinfony_name in enumerate(sinfony_gcm_weight_names):
+                        # Search for matching weight in tfsm_model
+                        matched = False
+                        for j, tfsm_name in enumerate(tfsm_weight_names):
+                            if sinfony_name == tfsm_name:
+                                weight_mapping[i] = tfsm_model.weights[j]
+                                mapped_indices.add(j)
+                                matched = True
+                                break
+                            elif sinfony_gcm_weight_names_short[i] == tfsm_name or tfsm_name in sinfony_name:
+                                weight_mapping[i] = tfsm_model.weights[j]
+                                mapped_indices.add(j)
+                                matched = True
+                                break
+
+                        if not matched:
+                            # Track weights not matched
+                            if i < len(tfsm_model.weights):
+                                weight_not_mapping[i] = sinfony_gcm_weight_names[i]
+
+                    # Create a list of all tfsm_model weights that have not been assigned
+                    unmapped_tfsm_weights = []
+                    for j, tfsm_weight in enumerate(tfsm_model.weights):
+                        if j not in mapped_indices:
+                            unmapped_tfsm_weights.append(tfsm_weight)
+
+                    # Reverse the list and swap adjacent pairs
+                    if dataset_name != 'fraeser':
+                        unmapped_tfsm_weights = swap_adjacent_pairs(
+                            unmapped_tfsm_weights[::-1])
+
+                    index_unmapped = 0
+                    for _, i in enumerate(weight_not_mapping):
+                        weight_mapping[i] = unmapped_tfsm_weights[index_unmapped]
+                        index_unmapped = index_unmapped + 1
+
+                    sorted_weights = [weight_mapping[key]
+                                      for key in sorted(weight_mapping.keys())]
+
+                    sinfony_gcm.set_weights(sorted_weights)
+
+                    if dataset_name != 'fraeser':
+                        test_result2 = sinfony_gcm(
+                            test_input_norm[0][:test_size, ...])
+                    else:
+                        test_result2 = sinfony_gcm(
+                            [test_input_norm[0][:test_size, ...], test_input_norm[1][:test_size, ...]])
+                    # model_deviation = np.sqrt(np.mean(
+                    #     np.abs(test_result - test_result2) ** 2))
+                    model_deviation = np.mean(
+                        np.abs(test_result - test_result2))
+                    model_deviation_equal = model_deviation <= 1e-3
+                    if model_deviation_equal:
+                        print(
+                            f'✅ Models have same output! (model_deviation = {model_deviation:.2e})')
+                    else:
+                        print(
+                            f'❌ Models differ! (model_deviation = {model_deviation:.2e})')
+
+                    sinfony_io.try_save(sinfony_gcm, pathfile)
+                else:
+                    print(
+                        'No joint training: Already converted models are tested based on the weights files.')
+                    model_deviation_equal = False
+                    if load and joint_training is False and from_tfsm_model:
+                        sinfony_io.try_save(gcm, pathfile)
+
+            #         if load is False and joint_training is True:
+            #             if differentiable_memory is True:
+            #                 print('Joint training with differentiable memory starts...')
+            #                 history_sinfony = sinfony_gcm.fit(train_input_norm, exemplar_labels, validation_data=(
+            #                     test_input_norm, test_exemplars_labels), batch_size=training_batch_size, epochs=alternating_training_iterations)
+            #             else:
+            #                 print('Joint alternating training starts...')
+            #                 start_time = time.time()
+            #                 for idx_alternate in range(0, alternating_training_iterations):
+            #                     # SINFONY + GCM Training
+            #                     # Note: Keeps optimizer state between iterations
+            #                     # Trainable sinfony model weights
+            #                     sinfony.model.trainable = True
+            #                     # Freeze GCM since memory is fixed
+            #                     if alternating is True:
+            #                         gcm.trainable = False
+            #                     sinfony_gcm.compile(optimizer=optimizer2,
+            #                                         loss='categorical_crossentropy', metrics=['accuracy'])
+            #                     history_sinfony = sinfony_gcm.fit(train_input_norm, exemplar_labels, validation_data=(
+            #                         test_input_norm, test_exemplars_labels), batch_size=training_batch_size, epochs=joint_gcm_training_epochs)
+            #                     # Calculate new GCM exemplars for memory
+            #                     exemplars = compute_gcm_input_data(
+            #                         train_input_norm, gcm_input, sinfony, transceiver_split, snr_training, batch_size=validation_batch_size)
+            #                     test_exemplars = compute_gcm_input_data(
+            #                         test_input_norm, gcm_input, sinfony, transceiver_split, snr_training, batch_size=validation_batch_size)
+            #                     exemplar_var = [
+            #                         v for v in gcm.weights if "exemplars_memory" in v.name][0]
+            #                     exemplar_var.assign(exemplars)
+            #                     # gcm.get_layer('exemplars_labels').set_weights(
+            #                     #     [exemplar_labels])
+            #                     # Freeze the sinfony model weights
+            #                     sinfony.model.trainable = False
+            #                     # Train GCM based on new exemplars
+            #                     if alternating is True:
+            #                         gcm.trainable = True
+            #                     gcm.compile(optimizer=optimizer,
+            #                                 loss='categorical_crossentropy', metrics=['accuracy'])
+            #                     history_gcm = gcm.fit(exemplars, exemplar_labels, validation_data=(
+            #                         test_exemplars, test_exemplars_labels), batch_size=training_batch_size, epochs=joint_sinfony_training_epochs)
+            #                     # Free RAM, otherwise it accumulates
+            #                     gc.collect()
+            #                     print(
+            #                         f"Iteration: {idx_alternate + 1}/{alternating_training_iterations}, CE: {history_gcm.history['val_loss'][-1]:.4f}, Acc: {history_gcm.history['val_accuracy'][-1]:.2f}, Time: {print_time(time.time() - start_time)}, RAM: {get_ram():.2f} GB")
+
+            #             # Save the model
+            #             print('Saving model...')
+            #             sinfony_io.try_save(sinfony_gcm, pathfile, to_weights=use_weights)
+            #             print('Model saved.')
+
+                if simulation == 'working_memory':
+
+                    if gcm_input == 2:
+                        accuracy, loss, working_memory_sizes = model_evaluation.evaluate_gcm_working_memory(gcm, test_exemplars, test_exemplars_labels, validation_rounds=validation_rounds,
+                                                                                                            batch_size=validation_batch_size, gcm_decision_policy=gcm_decision_policy, working_memory_sizes=working_memory_sizes)
+                    else:
+                        sinfony.set_snr(snr_evaluation)
+                        accuracy, loss, working_memory_sizes = model_evaluation.evaluate_gcm_working_memory(sinfony_gcm, test_input_norm, test_labels, validation_rounds=validation_rounds,
+                                                                                                            batch_size=validation_batch_size, gcm_decision_policy=gcm_decision_policy, working_memory_sizes=working_memory_sizes)
+                    if gcm_decision_policy is True:
+                        accuracy_opt = accuracy[1]
+                        accuracy = accuracy[0]
+
+                else:
+                    # Evaluation of model
+                    snrs = mop.snr_range2snrlist(snr_range, snr_step_size)
+                    print('Evaluate model...')
+                    print(filename)
+                    # Evaluate model for different SNRs
+                    if transceiver_split == 1:
+                        # SINFONY/RL-SINFONY
+                        accuracy, loss = model_evaluation.evaluate_sinfony(sinfony_gcm, test_input_norm, test_labels,
+                                                                           snrs=snrs, validation_rounds=validation_rounds, gcm_decision_policy=gcm_decision_policy)
+                        if gcm_decision_policy is True:
+                            accuracy_opt = accuracy[1]
+                            accuracy = accuracy[0]
+                    else:
+                        if gcm_input == 2:
+                            # GCM image recognition
+                            accuracy_i, loss_i = model_evaluation.evaluate_image_classifier(
+                                gcm, test_exemplars, test_exemplars_labels, with_gcm=gcm_decision_policy)
+                        else:
+                            # Standard image recognition: Evaluate model accuracy once for test data
+                            accuracy_i, loss_i = model_evaluation.evaluate_image_classifier(
+                                sinfony_gcm, test_input_norm, test_labels, with_gcm=gcm_decision_policy)
+                        # Independent from SNR / constant, but plotted over SNR range
+                        loss = np.array(loss_i) * np.ones(snrs.shape)
+                        if gcm_decision_policy is True:
+                            accuracy = np.array(
+                                accuracy_i[0]) * np.ones(snrs.shape)
+                            accuracy_opt = np.array(
+                                accuracy_i[1]) * np.ones(snrs.shape)
+                        else:
+                            accuracy = np.array(
+                                accuracy_i) * np.ones(snrs.shape)
+                        print(f'> {accuracy_i * 100.0:.3f}')
             else:
-                if gcm_input == 2:
-                    # GCM image recognition
-                    accuracy_i, loss_i = model_evaluation.evaluate_image_classifier(
-                        gcm, test_exemplars, test_exemplars_labels, with_gcm=gcm_decision_policy)
-                else:
-                    # Standard image recognition: Evaluate model accuracy once for test data
-                    accuracy_i, loss_i = model_evaluation.evaluate_image_classifier(
-                        sinfony_gcm, test_input_norm, test_labels, with_gcm=gcm_decision_policy)
-                # Independent from SNR / constant, but plotted over SNR range
-                loss = np.array(loss_i) * np.ones(snrs.shape)
-                if gcm_decision_policy is True:
-                    accuracy = np.array(accuracy_i[0]) * np.ones(snrs.shape)
-                    accuracy_opt = np.array(
-                        accuracy_i[1]) * np.ones(snrs.shape)
-                else:
-                    accuracy = np.array(accuracy_i) * np.ones(snrs.shape)
-                print(f'> {accuracy_i * 100.0:.3f}')
-    else:
-        print('Simulation not implemented')
-        loss = 0
-        accuracy = 0
+                print('Simulation not implemented')
+                loss = 0
+                accuracy = 0
 
-    # Show performance curve
-    if simulation == 'memory':
-        x_axis = memory_sizes
-    elif simulation == 'working_memory':
-        x_axis = working_memory_sizes
-    else:
-        x_axis = snrs
+            # # Show performance curve
+            # if simulation == 'memory':
+            #     x_axis = memory_sizes
+            # elif simulation == 'working_memory':
+            #     x_axis = working_memory_sizes
+            # else:
+            #     x_axis = snrs
 
-    if simulation == 'memory':
-        xlabel = 'Memory Size'
-    elif simulation == 'working_memory':
-        xlabel = 'Working Memory Size'
-    else:
-        xlabel = 'SNR'
-    plt.figure(1)
-    plt.semilogy(x_axis, 1 - accuracy)
-    if gcm_decision_policy is True:
-        plt.semilogy(x_axis, 1 - accuracy_opt)
-    plt.xlabel(xlabel)
-    plt.ylabel(
-        'semantic performance measure: classification error rate')
-    plt.figure(2)
-    plt.semilogy(x_axis, loss)
-    plt.xlabel(xlabel)
-    plt.ylabel('Crossentropy Loss')
+            # if simulation == 'memory':
+            #     xlabel = 'Memory Size'
+            # elif simulation == 'working_memory':
+            #     xlabel = 'Working Memory Size'
+            # else:
+            #     xlabel = 'SNR'
+            # plt.figure(1)
+            # plt.semilogy(x_axis, 1 - accuracy)
+            # if gcm_decision_policy is True:
+            #     plt.semilogy(x_axis, 1 - accuracy_opt)
+            # plt.xlabel(xlabel)
+            # plt.ylabel(
+            #     'semantic performance measure: classification error rate')
+            # plt.figure(2)
+            # plt.semilogy(x_axis, loss)
+            # plt.xlabel(xlabel)
+            # plt.ylabel('Crossentropy Loss')
 
-    # # Save evaluation
-    # print('Save evaluation...')
-    # results['val_loss'] = loss
-    # results['val_acc'] = accuracy
-    # if simulation == 'memory':
-    #     results['memory_size'] = memory_sizes
-    # elif simulation == 'working_memory':
-    #     results['working_memory_size'] = working_memory_sizes
-    # else:
-    #     results['snr'] = snrs
-    # saveobj.save(pathfile2, results)
-    # if gcm_decision_policy is True:
-    #     results['val_acc'] = accuracy_opt
-    #     saveobj.save(pathfile3, results)
-    # print('Evaluation saved.')
+            # # Save evaluation
+            print('Set up evaluation...')
+            results['val_loss'] = loss
+            results['val_acc'] = accuracy
+            if simulation == 'memory':
+                results['memory_size'] = memory_sizes
+            elif simulation == 'working_memory':
+                results['working_memory_size'] = working_memory_sizes
+            else:
+                results['snr'] = snrs
+            # saveobj.save(pathfile_results, results)
+            if gcm_decision_policy is True:
+                results['val_acc'] = accuracy_opt
+                # saveobj.save(pathfile_results_opt, results)
+            print('Evaluation set up.')
+
+            results2 = saveobj.load(pathfile_results)
+            accuracy_load = results2['val_acc'][results2['snr'] == snrs]
+
+            accuracy_deviation = np.mean(
+                np.abs(accuracy - accuracy_load))
+            accuracy_equal = accuracy_deviation <= 2e-2
+            if accuracy_equal:
+                print(
+                    f'✅ Models have same accuracies! (accuracy_deviation = {accuracy_deviation*100:.2f} %)')
+            else:
+                print(
+                    f'❌ Models differ in accuracies! (accuracy_deviation = {accuracy_deviation*100:.2f} %)')
+
+            # Backup the folder
+            if (accuracy_equal or model_deviation_equal) and move_old_model:
+                try:
+                    backup_path = os.path.join(
+                        os.path.dirname(pathfile), 'backup')
+                    os.makedirs(backup_path, exist_ok=True)
+                    shutil.move(pathfile, backup_path)
+                    print(f"Successfully moved {pathfile} to {backup_path}")
+                except Exception as move_error:
+                    print(f"Failed to move {pathfile} to backup: {move_error}")
+        except Exception as e:
+            print(f"Error: {e}")
+            # raise
+            # pass  # Keep default if parsing fails
+        finally:
+            keras.backend.clear_session()

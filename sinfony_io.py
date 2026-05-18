@@ -121,7 +121,9 @@ def try_load(model, pathfile, from_weights=True, custom_objects=None, use_tfsm_l
         try:
             model = try_load_weights(model, pathfile)
         except FileNotFoundError:
-            pass
+            print(
+                f"⚠️  No weights found at '{pathfile}', continuing without loading weights.")
+            raise
     else:
         # 2nd: Try loading full model, ignoring the provided model
         model = try_load_model(

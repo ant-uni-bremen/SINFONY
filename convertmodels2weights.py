@@ -130,7 +130,7 @@ if __name__ == '__main__':
     # def my_func_main():
     # Get the directory where the script is located
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    model_dir = os.path.join(script_dir, 'models', 'mnist')
+    model_dir = os.path.join(script_dir, 'models', 'cifar10')
 
     # Choose the format you want to test
     model_ext = ''  # '.keras' or '.hdf5'
@@ -167,7 +167,7 @@ if __name__ == '__main__':
                                                           "GaussianNoise2": mf.GaussianNoise2,
                                                       },
                                                       )
-                    # print_layers(model)
+                    # Fix model
                     model2 = model_fix(model)
                     # shift_layer_index_to_zero(model2, prefix="tx_layer")
                     # shift_layer_index_to_zero(model2, prefix="rx_layer")
@@ -176,6 +176,8 @@ if __name__ == '__main__':
 
                     # Optionally summarize or inspect the model
                     # model.summary()
+                    # print_layers(model)
+                    # model_weight_names = [w.name for w in model.weights]
                     if save_weights is True:
                         model2.save_weights(weight_path)
                         print("✅ Save successful.\n")

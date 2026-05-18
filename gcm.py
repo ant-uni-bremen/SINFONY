@@ -290,7 +290,7 @@ class GeneralizedContextModelDifferentiableMemory(keras.Model):
             shape=labels.shape,
             initializer=keras.initializers.Constant(labels),
             trainable=False,
-            dtype=tf.int32
+            dtype=tf.int64
         )
 
     def call(self, x, exemplars):
@@ -342,7 +342,7 @@ class GeneralizedContextModelOld(keras.Model):
             shape=self.labels_shape,
             initializer=keras.initializers.Constant(labels),
             trainable=False,
-            dtype=tf.int32
+            dtype=tf.int64
         )
         # Learnable scalar
         self.c = self.add_weight(
@@ -497,16 +497,16 @@ def epoch2iterationboundaries(epoch_bound, dataset_size, batch_size):
 if __name__ == '__main__':
 
     mt.gpu_select(number=-2, memory_growth=True, cpus=64)
-    keras_version = 3           # If keras 3 model saves available: 3, otherwise: 2
+    use_weights = True
 
     # Choose project/dataset
     # Possible data sets: mnist, cifar10, fraeser, hise, speechcommands, urbansound8k
-    wrapper = 'cifar10'
+    wrapper = 'mnist'
     simulation = 'snr'          # snr, memory, working_memory
 
     load = True
     filename_gcm = 'GCM_Ne1_Na20'
-    gcm_input = 1               # 0: sinfony output, 1: last layer input, 2: image input
+    gcm_input = 0               # 0: sinfony output, 1: last layer input, 2: image input
     # Number of last layer input features used by GCM [only active for gcm_input==1]
     number_features = -1        # -1: all features are used
     # Probabilistic GCM decisions + Optimal policy: True, Optimal policy: False
@@ -529,7 +529,7 @@ if __name__ == '__main__':
     opt_class = SGD             # SGD, Adam
 
     # Joint training
-    joint_training = True
+    joint_training = False
     # Parameters updated in alternation or jointly, default: True
     alternating = True
     differentiable_memory = False
@@ -584,9 +584,9 @@ if __name__ == '__main__':
         template_files, _ = sw.template_models(wrapper)
         filename_sinfony = sw.select_sinfony(template_files=template_files, image_split=image_split,
                                              transceiver_split=transceiver_split, sinfony_version=sinfony_version)
-        pathfile = os.path.join(subpath_results, filename_sinfony)
+        pathfile_sinfony = os.path.join(subpath_results, filename_sinfony)
         sinfony = sw.select_wrapper(transceiver_split, number_classes,
-                                    image_shapes, path=pathfile, last_layer_input=last_layer_input)
+                                    image_shapes, path=pathfile_sinfony, last_layer_input=last_layer_input)
         sinfony.set_snr(snr_training)
         if gcm_input == 1 and number_features != -1:
             # Select k most important features and set rest to zero
@@ -623,6 +623,8 @@ if __name__ == '__main__':
         learning_rate=learning_rate_schedule2, momentum=0.9)
 
     # Create filenames
+    if gcm_input != 2 and differentiable_memory is True:
+        filename_gcm = filename_gcm + '_differentiable'
     if gcm_input == 0:
         filename = filename_gcm + '+' + filename_sinfony
     elif gcm_input == 1:
@@ -644,10 +646,9 @@ if __name__ == '__main__':
         fn_simulation = ''
     filename_prefix = ''
     filename_suffix = '_results'
-    pathfile2 = os.path.join(path_script, subpath_results,
-                             filename_prefix + fn_simulation + filename)
-    pathfile3 = os.path.join(path_script, subpath_results,
-                             filename_prefix + filename + filename_suffix + fn_simulation + '_opt')
+    pathfile_results = os.path.join(path_script, subpath_results,
+                                    filename_prefix + filename + filename_suffix + fn_simulation)
+    pathfile_results_opt = pathfile_results + '_opt'
 
     # Main simulation
     accuracy_opt = 0
@@ -696,17 +697,16 @@ if __name__ == '__main__':
             gcm.fit(exemplars, exemplar_labels, validation_data=(
                 test_exemplars, test_exemplars_labels), batch_size=training_batch_size, epochs=training_epochs)
             print('GCM training complete!')
-        if joint_training is False:
-            if load is True:
-                # Load existing GCM model:
-                print('Loading model...')
-                gcm = sinfony_io.try_load(gcm, pathfile)
-                print('Model loaded.')
-            else:
-                # Save the GCM model
-                print('Saving model...')
-                gcm.save(pathfile + '.keras')
-                print('Model saved.')
+            # Save the GCM model
+            print('Saving model...')
+            sinfony_io.try_save(gcm, pathfile, to_weights=use_weights)
+            print('Model saved.')
+
+        if load is True and joint_training is False:
+            # Load existing GCM model:
+            print('Loading model...')
+            gcm = sinfony_io.try_load(gcm, pathfile, from_weights=use_weights)
+            print('Model loaded.')
 
         if gcm_input != 2:
             # Combine SINFONY + GCM for evaluation or joint training
@@ -743,11 +743,12 @@ if __name__ == '__main__':
         else:
             sinfony_gcm = gcm
 
-        if load is True:
+        if load is True and joint_training is True:
             # Load existing model:
             print('Loading model...')
             # sinfony_gcm = keras.models.load_model(pathfile)
-            sinfony_gcm = sinfony_io.try_load(sinfony_gcm, pathfile)
+            sinfony_gcm = sinfony_io.try_load(
+                sinfony_gcm, pathfile, from_weights=use_weights)
             print('Model loaded.')
 
         sinfony_gcm.compile(optimizer=optimizer2,
@@ -799,10 +800,8 @@ if __name__ == '__main__':
 
             # Save the model
             print('Saving model...')
-            if keras_version == 3:
-                sinfony_gcm.save(pathfile + '.keras')
-            else:
-                sinfony_gcm.save(pathfile)
+            sinfony_io.try_save(sinfony_gcm, pathfile, to_weights=use_weights)
+            sinfony_gcm.save(pathfile)
             print('Model saved.')
 
         if simulation == 'working_memory':
@@ -890,8 +889,8 @@ if __name__ == '__main__':
         results['working_memory_size'] = working_memory_sizes
     else:
         results['snr'] = snrs
-    saveobj.save(pathfile2, results)
+    saveobj.save(pathfile_results, results)
     if gcm_decision_policy is True:
         results['val_acc'] = accuracy_opt
-        saveobj.save(pathfile3, results)
+        saveobj.save(pathfile_results_opt, results)
     print('Evaluation saved.')

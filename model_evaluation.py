@@ -76,7 +76,7 @@ def evaluate_gcm_memory(gcm_input, sinfony, transceiver_split, train_input, trai
     for idx_memory, memory_size in enumerate(memory_sizes):
         loss_i = 0
         accuracy_i = 0
-        accuracy_i_2 = 0
+        accuracy_i_opt = 0
         if fixed_dataset_per_memory_size is True and gcm_input != 2:
             exemplars = gcm.compute_gcm_input_data(
                 train_input, gcm_input, sinfony, transceiver_split, snr_training, batch_size=validation_batch_size)
@@ -100,10 +100,10 @@ def evaluate_gcm_memory(gcm_input, sinfony, transceiver_split, train_input, trai
             if gcm_decision_policy is True:
                 # GCM + SINFONY validation step
                 # GCM suboptimal random decision policy
-                accuracy_ii, accuracy_ii_2, loss_ii = evaluate_gcm(
+                accuracy_ii, accuracy_ii_opt, loss_ii = evaluate_gcm(
                     gcm_model, test_exemplars, test_exemplars_labels, batch_size=validation_batch_size)
-                accuracy_i_2 = (validation_round * accuracy_i_2 +
-                                accuracy_ii_2) / (validation_round + 1)
+                accuracy_i_opt = (validation_round * accuracy_i_opt +
+                                  accuracy_ii_opt) / (validation_round + 1)
             else:
                 # SINFONY validation step
                 # Raw empirical accuracy with optimal decision policy
@@ -122,7 +122,7 @@ def evaluate_gcm_memory(gcm_input, sinfony, transceiver_split, train_input, trai
         # Append list with evaluation for each SNR value
         eval_meas[0].append(loss_i)
         eval_meas[1].append(accuracy_i)
-        eval_meas[2].append(accuracy_i_2)
+        eval_meas[2].append(accuracy_i_opt)
         print(
             f'Iteration: {idx_memory + 1}/{len(memory_sizes)}, Memory Size: {memory_size}, CE: {loss_i:.4f}, Acc: {accuracy_i*100:.2f}, Time: {print_time(time.time() - start_time)}')
         if gcm_decision_policy is True:
@@ -164,16 +164,16 @@ def evaluate_gcm_working_memory(evaluated_model, test_input, test_labels, valida
         # Evaluate GCM with current working memory capacity for multiple rounds
         loss_i = 0
         accuracy_i = 0
-        accuracy_i_2 = 0
+        accuracy_i_opt = 0
         for validation_round in range(0, validation_rounds):
             start_time2 = time.time()
             if gcm_decision_policy is True:
                 # GCM + SINFONY validation step
                 # GCM suboptimal random decision policy
-                accuracy_ii, accuracy_ii_2, loss_ii = evaluate_gcm(
+                accuracy_ii, accuracy_ii_opt, loss_ii = evaluate_gcm(
                     evaluated_model, test_input, test_labels, batch_size=batch_size)
-                accuracy_i_2 = (validation_round * accuracy_i_2 +
-                                accuracy_ii_2) / (validation_round + 1)
+                accuracy_i_opt = (validation_round * accuracy_i_opt +
+                                  accuracy_ii_opt) / (validation_round + 1)
             else:
                 # SINFONY validation step
                 # Raw empirical accuracy with optimal decision policy
@@ -191,7 +191,7 @@ def evaluate_gcm_working_memory(evaluated_model, test_input, test_labels, valida
         # Append list with evaluation for each SNR value
         eval_meas[0].append(loss_i)
         eval_meas[1].append(accuracy_i)
-        eval_meas[2].append(accuracy_i_2)
+        eval_meas[2].append(accuracy_i_opt)
         print(f'Iteration: {idx_memory + 1}/{len(working_memory_sizes)}, Working Memory Size: {working_memory_size}, CE: {loss_i:.4f}, Acc: {accuracy_i*100:.2f}, Time: {print_time(time.time() - start_time)}')
     if gcm_decision_policy is True:
         accuracy = [np.array(eval_meas[1]), np.array(eval_meas[2])]
@@ -220,17 +220,17 @@ def evaluate_sinfony(evaluated_model, test_input, test_labels, snrs=np.linspace(
         # noise_layer.set_weights([sigma_test])
         loss_i = 0
         accuracy_i = 0
-        accuracy_i_2 = 0
+        accuracy_i_opt = 0
         for validation_round in range(0, validation_rounds):
             start_time2 = time.time()
             # Evaluate for validation_rounds with different noise realizations (akin to training epochs)
             if gcm_decision_policy is True:
                 # GCM + SINFONY validation step
                 # GCM suboptimal random decision policy
-                accuracy_ii, accuracy_ii_2, loss_ii = evaluate_gcm(
+                accuracy_ii, accuracy_ii_opt, loss_ii = evaluate_gcm(
                     evaluated_model, test_input, test_labels, batch_size=batch_size)
-                accuracy_i_2 = (validation_round * accuracy_i_2 +
-                                accuracy_ii_2) / (validation_round + 1)
+                accuracy_i_opt = (validation_round * accuracy_i_opt +
+                                  accuracy_ii_opt) / (validation_round + 1)
             else:
                 # SINFONY validation step
                 # Raw empirical accuracy with optimal decision policy
@@ -249,7 +249,7 @@ def evaluate_sinfony(evaluated_model, test_input, test_labels, snrs=np.linspace(
         # Append list with evaluation for each SNR value
         eval_meas[0].append(loss_i)
         eval_meas[1].append(accuracy_i)
-        eval_meas[2].append(accuracy_i_2)
+        eval_meas[2].append(accuracy_i_opt)
         print(
             f'Iteration: {snr_index + 1}/{len(snrs)}, SNR: {snr}, CE: {loss_i:.4f}, Acc: {accuracy_i*100:.2f}, Time: {print_time(time.time() - start_time)}')
     if gcm_decision_policy is True:
@@ -326,9 +326,9 @@ def evaluate_image_classifier(evaluated_model, test_input, test_labels, batch_si
     if with_gcm is True:
         # GCM + SINFONY validation step
         # GCM suboptimal random decision policy
-        accuracy_i, accuracy_i_2, loss_i = evaluate_gcm(
+        accuracy_i, accuracy_i_opt, loss_i = evaluate_gcm(
             evaluated_model, test_input, test_labels, batch_size=batch_size)
-        accuracy = [accuracy_i, accuracy_i_2]
+        accuracy = [accuracy_i, accuracy_i_opt]
     else:
         # Standard image recognition: Evaluate model accuracy once for test data
         loss_i, accuracy = evaluated_model.evaluate(
