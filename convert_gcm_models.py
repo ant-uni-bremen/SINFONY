@@ -23,17 +23,16 @@ import tensorflow as tf
 import keras
 from keras.optimizers import SGD, Adam
 import numpy as np
-from matplotlib import pyplot as plt
-import time
 
 import datasets
-import utilities.my_training as mt
+from utilities.my_training import gpu_select, new_optimizer
 import sinfony_wrapper as sw
 import model_evaluation
 import utilities.my_math_operations as mop
-from utilities.my_functions import savemodule, print_time, get_ram
+from utilities.my_functions import savemodule
 import sinfony_io
 import gcm as gcm_model
+from sinfony_test import compare_model_accuracies
 
 
 def extract_parameters_from_filename(filename, template_files):
@@ -251,7 +250,7 @@ if __name__ == '__main__':
 
     # set_deterministic(seed=42)
 
-    mt.gpu_select(number=-2, memory_growth=True, cpus=64)
+    gpu_select(number=-2, memory_growth=True, cpus=64)
     use_weights = True
 
     # Choose project/dataset
@@ -389,7 +388,7 @@ if __name__ == '__main__':
                     boundaries2, values2)
             opt_config = {
                 "learning_rate": learning_rate_schedule, "momentum": 0.9}
-            optimizer = gcm_model.new_optimizer(
+            optimizer = new_optimizer(
                 opt_class=opt_class, opt_config=opt_config)
             optimizer2 = opt_class2(
                 learning_rate=learning_rate_schedule2, momentum=0.9)
@@ -707,17 +706,10 @@ if __name__ == '__main__':
                     f"Simulation results file not found, jump to next file: {e}")
                 raise
 
-            accuracy_load = results2['val_acc'][results2['snr'] == snrs]
+            accuracy_load = results2['val_acc'][np.isin(results2['snr'], snrs)]
 
-            accuracy_deviation = np.mean(
-                np.abs(accuracy - accuracy_load))
-            accuracy_equal = accuracy_deviation <= 2e-2
-            if accuracy_equal:
-                print(
-                    f'✅ Models have same accuracies! (accuracy_deviation = {accuracy_deviation*100:.2f} %)')
-            else:
-                print(
-                    f'❌ Models differ in accuracies! (accuracy_deviation = {accuracy_deviation*100:.2f} %)')
+            accuracy_equal = compare_model_accuracies(
+                accuracy, accuracy_load, tolerance=2e-2)
 
             # Backup the folder
             if (accuracy_equal or model_deviation_equal) and move_old_model:

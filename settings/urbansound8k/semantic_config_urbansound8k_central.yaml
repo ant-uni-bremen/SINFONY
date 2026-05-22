@@ -1,5 +1,5 @@
 load_settings:
-  load: False                             # start new training: 0 / load saved training: 1
+  load: True                              # start new training: 0 / load saved training: 1
   filename: ResNet18_urbansound8k_imagenet # mnist, cifar10, fashion_mnist, hirise64, hirisecrater, fraeser64, hise
   path: models/urbansound8k               # path of simulation and model files
   save_format: npz                        # save format

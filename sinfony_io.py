@@ -47,7 +47,7 @@ def try_load_weights(model, pathfile):
         The model with loaded weights.
     """
     tried_paths = [pathfile + '.weights.h5', pathfile + '_weights.h5', pathfile +
-                   '.h5', os.path.join(pathfile, os.path.basename(os.path.dirname(pathfile)))]
+                   '.h5', pathfile + '.keras', os.path.join(pathfile, os.path.basename(os.path.dirname(pathfile)))]
 
     for weights_path in tried_paths:
         try:
@@ -58,6 +58,15 @@ def try_load_weights(model, pathfile):
                 return model
         except Exception as e:
             print(f"❌ Failed to load weights from {weights_path}: {e}")
+            # Try fallback with by_name=True and skip_mismatch=False
+            try:
+                print(f"Retrying with by_name=True and skip_mismatch=False...")
+                model.load_weights(weights_path, by_name=True, skip_mismatch=False)
+                print(f"✅ Successfully loaded weights with fallback from: {weights_path}")
+                return model
+            except Exception as e2:
+                print(f"❌ Failed to load weights with fallback from {weights_path}: {e2}")
+                continue
 
     raise FileNotFoundError(
         f"Weights not found at '{pathfile}'")

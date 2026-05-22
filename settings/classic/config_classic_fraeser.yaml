@@ -1,5 +1,5 @@
 load_settings:
-  simulation_filename_suffix: _rc25_n15360_h1_fine # '_rc25_n15360_h100','_rc5_n16000_h1000'
+  filename_suffix: _rc25_n15360_h1_fine   # '_rc25_n15360_h100','_rc5_n16000_h1000'
   path_classic: models/classic            # path of classic simulation files
   path_models: models                     # path of model files
   save_format: npz                        # save format

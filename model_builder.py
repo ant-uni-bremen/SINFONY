@@ -18,6 +18,7 @@ import sinfony_architectures.resnet_sinfony as resnet_sinfony
 import sinfony_architectures.resnet_rl_sinfony as resnet_rl_sinfony
 import utilities.my_math_operations as mop
 from keras.optimizers import SGD, Adam  # , Nadam
+from utilities.my_training import epochiterations2iterationboundaries
 
 
 def create_model_from_config(params, number_classes, image_shapes):
@@ -37,7 +38,7 @@ def create_model_from_config(params, number_classes, image_shapes):
     transceiver_split = model_settings['communication']['transceiver_split']
 
     resnet_config = create_resnet(
-        model_settings, number_classes, image_shapes, dataset='')
+        model_settings, number_classes, image_shapes)
     communication_config, sigma_train = create_communication_module(
         model_settings)
 
@@ -106,7 +107,7 @@ def select_model(image_shapes, resnet_config, communication_config, transceiver_
     return model
 
 
-def create_resnet(model_settings, number_classes, image_shapes, dataset=''):
+def create_resnet(model_settings, number_classes, image_shapes):
     '''Create ResNet configuration object from params dictionary
     '''
 
@@ -126,10 +127,6 @@ def create_resnet(model_settings, number_classes, image_shapes, dataset=''):
     number_residual_units = model_settings['resnet']['number_residual_units']
     # 3 for CIFAR10, MNIST
     number_resnet_blocks = model_settings['resnet']['number_resnet_blocks']
-
-    if dataset.lower() == 'cifar10' and number_residual_units <= 2:
-        print(
-            'Warning: Number of residual units is below minimum number for CIFAR10 dataset!')
 
     # Handle number_filters
     number_filters = model_settings['resnet']['number_filters']
@@ -268,11 +265,8 @@ def create_optimizer(
         # e.g. [2000] - only active during tx_train
         per_epoch_bound = rl_settings['exploration_boundaries']
 
-        exploration_boundaries = list(
-            np.round(
-                np.array(per_epoch_bound) / 2 * iterations_per_epoch
-            ).astype('int')
-        )
+        exploration_boundaries = epochiterations2iterationboundaries(
+            per_epoch_bound, iterations_per_epoch / 2)
 
         exploration_variance = resnet_rl_sinfony.PertubationVarianceSchedule(
             exploration_values, exploration_boundaries
@@ -284,11 +278,8 @@ def create_optimizer(
     if training_settings['learning_rate_schedule']['active']:
         epoch_bound = training_settings['learning_rate_schedule']['epoch_bound']
 
-        boundaries = list(
-            np.round(
-                np.array(epoch_bound) * iterations_per_epoch
-            ).astype('int')
-        )
+        boundaries = epochiterations2iterationboundaries(
+            epoch_bound, iterations_per_epoch)
 
         values = training_settings['learning_rate_schedule']['values']
 

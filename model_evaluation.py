@@ -34,6 +34,7 @@ from utilities.my_functions import print_time, get_ram
 import utilities.my_math_operations as mop
 import gcm as gcm
 import sinfony_io
+from utilities.my_training import new_optimizer
 
 
 def gcm_train(exemplars, exemplar_labels, test_exemplars, test_exemplars_labels, optimizer, training_epochs, batch_size):
@@ -53,13 +54,13 @@ def evaluate_gcm_memory(gcm_input, sinfony, transceiver_split, train_input, trai
     fixed_dataset_per_memory_size: Use the same dataset per memory size for simulation speedup
     '''
     start_time = time.time()
-    eval_meas = [[], [], []]
+    evaluation_measures = [[], [], []]
 
     if not validation_batch_size:
         validation_batch_size = batch_size
 
     if not memory_sizes:
-        memory_sizes = gcm.logarithmic_scale_inclusive(
+        memory_sizes = mop.logarithmic_scale_inclusive(
             train_input[0].shape[0])
 
     exemplar_labels = train_labels
@@ -93,7 +94,7 @@ def evaluate_gcm_memory(gcm_input, sinfony, transceiver_split, train_input, trai
             indices_memory = np.random.choice(
                 exemplars.shape[0], size=memory_size, replace=False)
             # GCM training for subset of memory
-            optimizer = gcm.new_optimizer(
+            optimizer = new_optimizer(
                 opt_class=opt_class, opt_config=opt_config)
             gcm_model = gcm_train(exemplars[indices_memory, ...], exemplar_labels[indices_memory, ...],
                                   test_exemplars, test_exemplars_labels, optimizer, training_epochs, batch_size)
@@ -117,19 +118,20 @@ def evaluate_gcm_memory(gcm_input, sinfony, transceiver_split, train_input, trai
                           accuracy_ii) / (validation_round + 1)
             # Free RAM, otherwise it accumulates
             gc.collect()
-            print(
-                f'Validation Round: {validation_round + 1}/{validation_rounds}, CE: {loss_i:.4f}, Acc: {accuracy_i*100:.2f}, Time: {print_time(time.time() - start_time2)}, RAM: {get_ram():.2f} GB')
+            print_validation_round(
+                validation_round, validation_rounds, loss_i, accuracy_i, start_time2)
         # Append list with evaluation for each SNR value
-        eval_meas[0].append(loss_i)
-        eval_meas[1].append(accuracy_i)
-        eval_meas[2].append(accuracy_i_opt)
-        print(
-            f'Iteration: {idx_memory + 1}/{len(memory_sizes)}, Memory Size: {memory_size}, CE: {loss_i:.4f}, Acc: {accuracy_i*100:.2f}, Time: {print_time(time.time() - start_time)}')
+        evaluation_measures[0].append(loss_i)
+        evaluation_measures[1].append(accuracy_i)
+        evaluation_measures[2].append(accuracy_i_opt)
+        print_iteration(idx_memory + 1, len(memory_sizes),
+                        memory_size, loss_i, accuracy_i, start_time)
         if gcm_decision_policy is True:
-            accuracy = [np.array(eval_meas[1]), np.array(eval_meas[2])]
+            accuracy = [np.array(evaluation_measures[1]),
+                        np.array(evaluation_measures[2])]
         else:
-            accuracy = np.array(eval_meas[1])
-        loss = np.array(eval_meas[0])
+            accuracy = np.array(evaluation_measures[1])
+        loss = np.array(evaluation_measures[0])
     return accuracy, loss, memory_sizes
 
 
@@ -138,7 +140,7 @@ def evaluate_gcm_working_memory(evaluated_model, test_input, test_labels, valida
     evaluated_model: Keras model to be evaluated
     '''
     start_time = time.time()
-    eval_meas = [[], [], []]
+    evaluation_measures = [[], [], []]
     raw_attention_weights = [
         v for v in evaluated_model.weights if "raw_weights" in v.name][0]
     raw_attention_weights0 = raw_attention_weights.numpy()
@@ -186,18 +188,20 @@ def evaluate_gcm_working_memory(evaluated_model, test_input, test_labels, valida
                           accuracy_ii) / (validation_round + 1)
             # Free RAM, otherwise it accumulates
             gc.collect()
-            print(
-                f'Validation Round: {validation_round + 1}/{validation_rounds}, CE: {loss_i:.4f}, Acc: {accuracy_i*100:.2f}, Time: {print_time(time.time() - start_time2)}, RAM: {get_ram():.2f} GB')
+            print_validation_round(
+                validation_round, validation_rounds, loss_i, accuracy_i, start_time2)
         # Append list with evaluation for each SNR value
-        eval_meas[0].append(loss_i)
-        eval_meas[1].append(accuracy_i)
-        eval_meas[2].append(accuracy_i_opt)
-        print(f'Iteration: {idx_memory + 1}/{len(working_memory_sizes)}, Working Memory Size: {working_memory_size}, CE: {loss_i:.4f}, Acc: {accuracy_i*100:.2f}, Time: {print_time(time.time() - start_time)}')
+        evaluation_measures[0].append(loss_i)
+        evaluation_measures[1].append(accuracy_i)
+        evaluation_measures[2].append(accuracy_i_opt)
+        print_iteration(idx_memory + 1, len(working_memory_sizes),
+                        working_memory_size, loss_i, accuracy_i, start_time)
     if gcm_decision_policy is True:
-        accuracy = [np.array(eval_meas[1]), np.array(eval_meas[2])]
+        accuracy = [np.array(evaluation_measures[1]),
+                    np.array(evaluation_measures[2])]
     else:
-        accuracy = np.array(eval_meas[1])
-    loss = np.array(eval_meas[0])
+        accuracy = np.array(evaluation_measures[1])
+    loss = np.array(evaluation_measures[0])
     return accuracy, loss, working_memory_sizes
 
 
@@ -207,7 +211,7 @@ def evaluate_sinfony(evaluated_model, test_input, test_labels, snrs=np.linspace(
     '''
     # SINFONY AE
     start_time = time.time()
-    eval_meas = [[], [], []]
+    evaluation_measures = [[], [], []]
     # noise_layer = find_layer_by_name(evaluated_model, "gaussian_noise2")
     noise_layer = sinfony_io.get_noise_target(
         evaluated_model, layer_name="gaussian_noise2", var_suffix="stddev:0")
@@ -244,33 +248,32 @@ def evaluate_sinfony(evaluated_model, test_input, test_labels, snrs=np.linspace(
                           accuracy_ii) / (validation_round + 1)
             # Free RAM, otherwise it accumulates
             gc.collect()
-            print(
-                f'Validation Round: {validation_round + 1}/{validation_rounds}, CE: {loss_i:.4f}, Acc: {accuracy_i*100:.2f}, Time: {print_time(time.time() - start_time2)}, RAM: {get_ram():.2f} GB')
+            print_validation_round(
+                validation_round, validation_rounds, loss_i, accuracy_i, start_time2)
         # Append list with evaluation for each SNR value
-        eval_meas[0].append(loss_i)
-        eval_meas[1].append(accuracy_i)
-        eval_meas[2].append(accuracy_i_opt)
-        print(
-            f'Iteration: {snr_index + 1}/{len(snrs)}, SNR: {snr}, CE: {loss_i:.4f}, Acc: {accuracy_i*100:.2f}, Time: {print_time(time.time() - start_time)}')
+        evaluation_measures[0].append(loss_i)
+        evaluation_measures[1].append(accuracy_i)
+        evaluation_measures[2].append(accuracy_i_opt)
+        print_iteration(snr_index + 1, len(snrs), snr,
+                        loss_i, accuracy_i, start_time)
     if gcm_decision_policy is True:
-        accuracy = [np.array(eval_meas[1]), np.array(eval_meas[2])]
+        accuracy = [np.array(evaluation_measures[1]),
+                    np.array(evaluation_measures[2])]
     else:
-        accuracy = np.array(eval_meas[1])
-    loss = np.array(eval_meas[0])
+        accuracy = np.array(evaluation_measures[1])
+    loss = np.array(evaluation_measures[0])
     return accuracy, loss
 
 
-def evaluate_gcm(evaluated_model, test_input, test_labels, batch_size=32, cce=keras.losses.CategoricalCrossentropy()):
+def evaluate_gcm(evaluated_model, test_input, test_labels, batch_size=32, loss_function=keras.losses.CategoricalCrossentropy()):
     '''Evaluate GCM suboptimal random decision policy
     '''
     prediction_probs = evaluated_model.predict(
         test_input, batch_size=batch_size)
-    # evaluate also captures regularization losses
-    # which only dependend on weights for SINFONY
-    # and hence constant during testing time
+    # NOTE: evaluate also captures regularization losses which only dependend on weights for SINFONY and hence constant during testing time
     reg_loss = np.sum(
         evaluated_model.losses) if evaluated_model.losses else 0.0
-    loss_ii = cce(test_labels, prediction_probs) + reg_loss
+    loss_ii = loss_function(test_labels, prediction_probs) + reg_loss
     # GCM decision policy
     accuracy_ii = np.mean(
         np.sum(prediction_probs * test_labels, axis=-1))
@@ -286,7 +289,7 @@ def evaluate_rlsinfony(evaluated_model, test_input, test_labels, snrs=np.linspac
     '''
     # RL-SINFONY
     start_time = time.time()
-    eval_meas = [[], []]
+    evaluation_measures = [[], []]
     for snr_index, snr in enumerate(snrs):
         # Evaluate for each SNR in SNR range
         sigma = mop.snr2standard_deviation(snr)
@@ -307,16 +310,16 @@ def evaluate_rlsinfony(evaluated_model, test_input, test_labels, snrs=np.linspac
                           accuracy_ii) / (validation_round + 1)
             # Free RAM, otherwise it accumulates
             gc.collect()
-            print(
-                f'Validation Round: {validation_round + 1}/{validation_rounds}, CE: {loss_i:.4f}, Acc: {accuracy_i*100:.2f}, Time: {print_time(time.time() - start_time2)}, RAM: {get_ram():.2f} GB')
+            print_validation_round(
+                validation_round, validation_rounds, loss_i, accuracy_i, start_time2)
 
         # Append list with evaluation for each SNR value
-        eval_meas[0].append(loss_i)
-        eval_meas[1].append(accuracy_i)
-        print(
-            f'Iteration: {snr_index + 1}/{len(snrs)}, SNR: {snr}, CE: {loss_i:.4f}, Acc: {accuracy_i*100:.2f}, Time: {print_time(time.time() - start_time)}')
-    accuracy = np.array(eval_meas[1])
-    loss = np.array(eval_meas[0])
+        evaluation_measures[0].append(loss_i)
+        evaluation_measures[1].append(accuracy_i)
+        print_iteration(snr_index + 1, len(snrs), snr,
+                        loss_i, accuracy_i, start_time)
+    accuracy = np.array(evaluation_measures[1])
+    loss = np.array(evaluation_measures[0])
     return accuracy, loss
 
 
@@ -335,3 +338,19 @@ def evaluate_image_classifier(evaluated_model, test_input, test_labels, batch_si
             test_input, test_labels, batch_size=batch_size)
         # Independent from SNR / constant, but plotted over SNR range
     return accuracy, loss_i
+
+
+def print_validation_round(validation_round, validation_rounds, loss, accuracy, start_time2):
+    """
+    Helper function to print validation round information
+    """
+    print(
+        f'Validation Round: {validation_round + 1}/{validation_rounds}, CE: {loss:.4f}, Acc: {accuracy*100:.2f}%, Time: {print_time(time.time() - start_time2)}, RAM: {get_ram():.2f} GB')
+
+
+def print_iteration(iteration, total, snr, loss, accuracy, start_time):
+    """
+    Helper function to print iteration information
+    """
+    print(
+        f'Iteration: {iteration}/{total}, SNR: {snr}, CE: {loss:.4f}, Acc: {accuracy*100:.2f}%, Time: {print_time(time.time() - start_time)}')

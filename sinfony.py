@@ -25,8 +25,7 @@ from matplotlib import pyplot as plt
 # Tensorflow 2 packages
 import tensorflow as tf
 # import tensorflow.keras as keras
-# import keras
-
+import keras
 
 # Own packages
 import datasets
@@ -37,8 +36,8 @@ from utilities.my_functions import savemodule
 import utilities.my_training as mt
 import utilities.my_training_tf1 as mt1
 from sinfony_io import try_load, try_save
-from sinfony_visualization import visualize_tsne_embedding
 import model_builder
+from sinfony_visualization import visualize_tsne_embedding
 
 
 if __name__ == '__main__':
@@ -49,14 +48,14 @@ if __name__ == '__main__':
     # Get the script's directory
     path_script = os.path.dirname(os.path.abspath(__file__))
     # Default: 'mnist/semantic_config_mnist_sinfony.yaml'
-    SETTINGS_FILE = 'mnist/semantic_config_mnist_sinfony.yaml'
+    SETTINGS_FILE = 'mnist/ResNet14_MNIST2_Ne20.yaml'
     # Load the provided configuration file or the default one
     # python SINFONY.py semantic_config.yaml
     # Workaround for interactive sessions: Only allow config file names starting 'semantic_config'
     SETTINGS_FILE = sys.argv[1] if len(sys.argv) > 1 and sys.argv[1][0:15].lower(
     ) == 'semantic_config' else SETTINGS_FILE
-    # Change to 'settings_saved' to reload simulations settings
-    SETTINGS_FOLDER = 'settings'
+    # Change from 'settings' to 'models' to reload simulations settings
+    SETTINGS_FOLDER = 'models'
     settings_path = os.path.join(path_script, SETTINGS_FOLDER, SETTINGS_FILE)
     with open(settings_path, 'r', encoding='UTF8') as file:
         params = yaml.safe_load(file)
@@ -69,7 +68,7 @@ if __name__ == '__main__':
 
     # Initialization
     mt.gpu_select(number=load_settings.get('gpu', -2), memory_growth=False)
-    # keras.backend.set_floatx(load_settings['numerical_precision'])
+    keras.backend.set_floatx(load_settings['numerical_precision'])
 
     # Simulation
     # Load model and reevaluate: False (default) # params.get('load', False)
@@ -82,7 +81,7 @@ if __name__ == '__main__':
     pathfile_model = os.path.join(path_script, subpath_results, filename)
     pathfile_results = os.path.join(path_script, subpath_results,
                                     load_settings.get('simulation_filename_prefix', '') + filename + load_settings.get('simulation_filename_suffix', ''))
-    saveobj = savemodule(form=load_settings['save_format'])
+    saveobj = savemodule(form=load_settings.get('save_format', 'npz'))
 
     # Data set
     # mnist, cifar10, fashion_mnist, hirise64, hirisecrater, fraeser64
@@ -144,6 +143,9 @@ if __name__ == '__main__':
     # TRAINING AND EVALUATION SCRIPT
 
     # ResNet20 model
+    if dataset.lower() == 'cifar10' and model_settings['resnet']['number_residual_units'] <= 2:
+        print(
+            'Warning: Number of residual units is below minimum number for CIFAR10 dataset!')
     number_classes, image_shapes = datasets.get_data_properties(
         test_labels, test_input)
     model, sigma_train = model_builder.create_model_from_config(
@@ -212,7 +214,7 @@ if __name__ == '__main__':
     evaluation_settings = params['evaluation']
     snrs = mop.snr_range2snrlist(
         evaluation_settings['snr_range'], evaluation_settings['snr_step_size'])
-    # Evaluation mode: (0) default: Validation for SNR range, (1) Saving probability data for interface to application, (2) t-SNE embedding for visualization
+    # Evaluation mode: (0) default: Validation for SNR range, (2) t-SNE embedding for visualization
     evaluation_mode = evaluation_settings.get('mode', 0)
     if evaluation_mode == 0:
         print('Evaluate model...')

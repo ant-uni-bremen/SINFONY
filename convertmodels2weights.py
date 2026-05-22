@@ -14,7 +14,7 @@ sys.path.append('..')                       # NOQA
 
 import os
 import tensorflow as tf
-# import tf.keras as keras
+# import tensorflow.keras as keras
 # import keras
 import utilities.my_training as mf
 
@@ -31,6 +31,8 @@ import sinfony_architectures.resnet as resnet
 from collections import defaultdict
 import re
 import shutil
+import traceback
+import logging
 
 
 def shift_layer_index_to_zero(root, prefix="tx_layer"):
@@ -128,28 +130,32 @@ def print_layers(layer, indent=0):
 if __name__ == '__main__':
     #     my_func_main()
     # def my_func_main():
+    # Maximum logging
+    # tf.get_logger().setLevel(logging.DEBUG)
     # Get the directory where the script is located
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    model_dir = os.path.join(script_dir, 'models', 'cifar10')
+    model_dir = os.path.join(script_dir, 'models', 'classic')
 
     # Choose the format you want to test
     model_ext = ''  # '.keras' or '.hdf5'
     save_weights = True
-    delete_models = True
+    delete_models = False
+    keras3 = False
 
     # Loop through all files in the directory
     for fname in os.listdir(model_dir):
         if fname.endswith(model_ext):
-            if not fname.endswith('.npz') and not fname.endswith('.h5') and not fname.endswith('.yaml'):
+            if not fname.endswith('.npz') and not fname.endswith('.h5') and not fname.endswith('.yaml') and not fname.startswith('backup'):
                 # fname = 'ResNet14_MNIST4_Ne20_snr-4_6'
                 # fname = 'ResNet14_MNIST4_3layer_snr-4_6'
                 # fname = 'sinfony14_MNIST_ntx14_Ne20_snr-4_6_human_test'
                 model_path = os.path.join(model_dir, fname)
 
-                weight_path = os.path.join(
-                    model_dir, fname + '_weights.h5')  # .weights
-                # weight_path = os.path.join(
-                #     model_dir, fname + '.weights.h5')
+                if keras3:
+                    weight_ending = '.weights.h5'
+                else:
+                    weight_ending = '_weights.h5'
+                weight_path = os.path.join(model_dir, fname + weight_ending)
                 try:
                     print(f"Testing model load: {model_path}")
                     # gcm = GeneralizedContextModel(
@@ -158,11 +164,11 @@ if __name__ == '__main__':
                     #                                             transceiver_split=transceiver_split, sinfony_version=sinfony_version, last_layer_input=last_layer_input)
                     model = sinfony_io.try_load_model(model_path,
                                                       custom_objects={
-                                                          "GeneralizedContextModel": GeneralizedContextModelOld,
+                                                          "GeneralizedContextModel": GeneralizedContextModel,
                                                           "AttentionWeightLayer": AttentionWeightLayer,
                                                           "SGD": SGD,
                                                           "Residual": resnet.Residual,
-                                                          "ResNetBlock": resnet.ResnetBlock,
+                                                          "ResnetBlock": resnet.ResnetBlock,
                                                           "ResidualBottleneck": resnet.ResidualBottleneck,
                                                           "GaussianNoise2": mf.GaussianNoise2,
                                                       },
@@ -199,3 +205,13 @@ if __name__ == '__main__':
 
                 except Exception as e:
                     print(f"❌ Failed to load or save model {fname}: {e}\n")
+                    # # Vollständiger Traceback mit allen Zeilen
+                    # traceback.print_exc()
+
+                    # # Ursache der Exception
+                    # cause = e.__cause__
+                    # while cause is not None:
+                    #     print(f"\nVerursacht durch: {cause}")
+                    #     traceback.print_exception(
+                    #         type(cause), cause, cause.__traceback__)
+                    #     cause = cause.__cause__

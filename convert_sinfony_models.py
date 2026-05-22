@@ -25,14 +25,12 @@ from matplotlib import pyplot as plt
 import tensorflow as tf
 # import tensorflow.keras as keras
 import keras
-from tensorflow.keras.optimizers import SGD, Adam
 
 
 # Own packages
-import datasets_keras2 as datasets
-# import model_evaluation
-import sinfony_architectures.resnet as resnet
-import sinfony_architectures.resnet_sinfony as resnet_sinfony
+# import datasets_keras2 as datasets
+import datasets
+import model_evaluation
 import sinfony_architectures.resnet_rl_sinfony as resnet_rl_sinfony
 import utilities.my_math_operations as mop
 from utilities.my_functions import savemodule
@@ -40,8 +38,8 @@ import utilities.my_training as mt
 import utilities.my_training_tf1 as mt1
 # Note: Important to load models from old files, there a reference to mf including layers is hardcoded
 import utilities.my_training as mf
-import sinfony_io
-import model_evaluation
+from sinfony_io import try_load, try_save, find_layer_by_name
+import model_builder
 
 
 def compare_model_weights(m1, m2, rtol=1e-6, atol=1e-8, verbose=True):
@@ -85,10 +83,7 @@ if __name__ == '__main__':
     # Load parameters from configuration file
     # Get the script's directory
     path_script = os.path.dirname(os.path.abspath(__file__))
-    SETTINGS_FILE = 'mnist/semantic_config_mnist_rlsinfony_load.yaml'
-    # Avoid error messages
-    # import logging
-    # tf.get_logger().setLevel(logging.ERROR)
+    SETTINGS_FILE = 'urbansound8k/semantic_config_urbansound8k_central.yaml'
     # Load the provided configuration file or the default one
     # python SINFONY.py semantic_config.yaml
     # Workaround for interactive sessions: Only allow config file names starting 'semantic_config'
@@ -104,93 +99,55 @@ if __name__ == '__main__':
     training_settings = params['training']
     rl_settings = params['reinforcement_learning']
     model_settings = params['model']
-    evaluation_settings = params['evaluation']
+    transceiver_split = model_settings['communication']['transceiver_split']
 
     # Initialization
-    mt.gpu_select(number=load_settings['gpu'], memory_growth=False)
-    # keras.backend.clear_session()          	                    # Clearing graphs
+    mt.gpu_select(number=load_settings.get('gpu', -2), memory_growth=False)
     # keras.backend.set_floatx(load_settings['numerical_precision'])
-    # # Random seed in every run, predictable random numbers for debugging with np.random.seed(0)
-    # np.random.seed()
 
     # Simulation
     # Load model and reevaluate: False (default) # params.get('load', False)
-    load = load_settings['load']
-    # Evaluation mode: (0) default: Validation for SNR range, (1) Saving probability data for interface to application, (2) t-SNE embedding for visualization
-    evaluation_mode = evaluation_settings['mode']
+    load = load_settings.get('load', False)
+    use_weights = load_settings.get('use_weights', True)
     filename = load_settings['filename']
     # Sub path for saved data
     subpath_results = load_settings['path']
     # Path of script being executed
-    pathfile = os.path.join(path_script, subpath_results, filename)
-    pathfile2 = os.path.join(path_script, subpath_results,
-                             load_settings['simulation_filename_prefix'] + filename)
-    saveobj = savemodule(form=load_settings['save_format'])
+    pathfile_model = os.path.join(path_script, subpath_results, filename)
+    pathfile_results = os.path.join(path_script, subpath_results,
+                                    load_settings.get('simulation_filename_prefix', '') + filename + load_settings.get('simulation_filename_suffix', ''))
+    saveobj = savemodule(form=load_settings.get('save_format', 'npz'))
 
     # Data set
     # mnist, cifar10, fashion_mnist, hirise64, hirisecrater, fraeser64
     dataset = dataset_settings['dataset']
-    # Show first dataset examples, just for demonstration
-    show_dataset = dataset_settings['show_dataset']
     train_input, train_labels, test_input, test_labels = datasets.load_dataset(
-        dataset, validation_split=dataset_settings['validation_split'], image_split=dataset_settings['image_split'])
+        dataset, validation_split=dataset_settings['validation_split'], image_split=dataset_settings['image_split'], preprocess=True)
+    # Summarize loaded dataset
+    if dataset_settings['show_dataset'] is True:
+        datasets.summarize_dataset(
+            train_input, train_labels, test_input, test_labels)
 
     # Training
     # Batch size, SGD: 128/64, Adam: 500
     batch_size = training_settings['batch_size']
-    # sgd, adam, (sgdlrs) SGD with learning rate schedule
-    optimizer = training_settings['optimizer']
-    # Learning rate, SGD/Adam: 1e-3, RL: 1e-4
-    learning_rate = training_settings['learning_rate']
-    dataset_size = train_input[0].shape[0]
-    iterations_per_epoch = dataset_size / batch_size
     # Number of epochs, 200 in CIFAR original implementation, 20 for MNIST
     number_epochs = training_settings['number_epochs']
+
+    dataset_size = train_input[0].shape[0]
+    iterations_per_epoch = dataset_size / batch_size
+    total_number_iterations = number_epochs * iterations_per_epoch
     # Choose validation data set size: None/0, 100, 1000, test_input[0].shape[0]
     validation_dataset_size = training_settings['validation_dataset_size']
     if validation_dataset_size == 'full':
         validation_dataset_size = test_input[0].shape[0]
+    # If computational heavy (RL approach), use subset of validation set
+    valY = test_labels[:validation_dataset_size, ...]
+    valX = mt1.create_batch(test_input, validation_dataset_size, 0)
 
     # RL training
     # (0) default AE, (1) Reinforcement learning training, (2) AE trained with rl-based training implementation
     rl = rl_settings['active']
-    # [0.15, 0.15 ** 2] # with higher exploration variance, the gradient estimator variance decreases at the cost of more bias...
-    exploration_values = rl_settings['exploration_variance']
-    # [2000] # only activated during tx_train
-    per_epoch_bound = rl_settings['exploration_boundaries']
-    exploration_boundaries = list(
-        np.round(np.array(per_epoch_bound) / 2 * iterations_per_epoch).astype('int'))
-    exploration_variance = resnet_rl_sinfony.PertubationVarianceSchedule(
-        exploration_values, exploration_boundaries)
-
-    # NN Com system design
-    # (0) only image recognition, (1) with (multi) com. system inbetween
-    transceiver_split = model_settings['communication']['transceiver_split']
-    # Number of Tx/Rx layers: 1 (default)
-    number_layer = model_settings['communication']['number_txrx_layer']
-    if transceiver_split == 1:
-        # Training w/o noise
-        if model_settings['noise']['active'] is False:
-            # training without noise
-            sigma_train = np.array([0, 0])
-        else:
-            # training with noise
-            sigma_train = mop.snr2standard_deviation(
-                np.array([model_settings['noise']['snr_min_train'], model_settings['noise']['snr_max_train']]))[::-1]
-    total_number_iterations = number_epochs * iterations_per_epoch
-    weight_decay = tf.keras.regularizers.l2(
-        model_settings['resnet']['weight_decay'])
-    weight_decay_communication = tf.keras.regularizers.l2(
-        model_settings['communication']['weight_decay'])
-    if transceiver_split == 1:
-        encoding_config = resnet_sinfony.EncodingConfiguration(transmit_normalization=True, normalization_axis=model_settings['communication']['power_normalization_axis'], encoding_layer_width=model_settings['communication'][
-            'number_channel_uses'], number_encoding_layer=number_layer, image_split_factor=model_settings['communication']['image_split_factor'], weight_initialization=model_settings['communication']['weight_initialization'], weight_decay=weight_decay_communication)
-        decoding_config = resnet_sinfony.DecodingConfiguration(decoding_layer_width=model_settings['communication']['rx_layer_width'], number_decoding_layer=number_layer, rx_joint_layers=model_settings['communication'][
-            'rx_same'], rx_final_layer_linear=model_settings['communication']['rx_linear'], weight_initialization=model_settings['communication']['weight_initialization'], weight_decay=weight_decay_communication)
-        communication_channel = resnet_sinfony.CommunicationChannel(
-            sigma_train)
-        communication_config = resnet_sinfony.CommunicationConfiguration(
-            encoding_config=encoding_config, decoding_config=decoding_config, communication_channel=communication_channel)
 
     # Some training functionality of model.fit()
     if rl == 0:
@@ -198,144 +155,50 @@ if __name__ == '__main__':
         # - Callbacks for early stopping and model checkpoints -
         # EarlyStopping(monitor = 'val_loss', patience = 3, restore_best_weights = True)
         early_stopping = []
-        # tf.keras.callbacks.ModelCheckpoint(pathfile, monitor = 'val_loss', verbose = VERBOSE, save_best_only = False, mode = 'auto', period = 1, save_weights_only = False, save_freq = 'epoch')
+        # keras.callbacks.ModelCheckpoint(pathfile_model, monitor = 'val_loss', verbose = VERBOSE, save_best_only = False, mode = 'auto', period = 1, save_weights_only = False, save_freq = 'epoch')
         model_checkpoint = []
         # Track training loss and accuracy of each batch iteration
         batch_tracking = mt.BatchTrackingCallback()
+    else:
+        VERBOSE = 'auto'
+        batch_tracking = None
+        model_checkpoint = None
+        early_stopping = None
 
     # Optimizer
-    if training_settings['learning_rate_schedule']['active']:
-        # Learning rate schedules
-        # Original ResNet: 1/2, 3/4 of training learning rate division by 10, in total 64k iterations
-        # at 32000, 48000 iterations of 64000 in total: [100, 150] for CIFAR / [3, 6] for MNIST / [2, 50] for hirise / [100] for RL CIFAR
-        epoch_bound = training_settings['learning_rate_schedule']['epoch_bound']
-        boundaries = list(np.round(np.array(epoch_bound)
-                                   * iterations_per_epoch).astype('int'))
-        # [1e-1, 1e-2, 1e-3] for ae training / [0.001, 0.0001, 0.00001] for adam / [1e-3, 1e-4, 1e-5] for rl training / [1e-3, 1e-4] for rl CIFAR training sgdlr2
-        values = training_settings['learning_rate_schedule']['values']
-        learning_rate_schedule = tf.keras.optimizers.schedules.PiecewiseConstantDecay(
-            boundaries, values)
-        # , nesterov = True) # No advantage of Nesterov momentum with DNNs (?)
-        learning_rate = learning_rate_schedule
-    momentum = training_settings['momentum']
-    if optimizer.lower() == 'adam':
-        # Adam and its variants
-        # Optimizer for rx training # Nadam() # yogi() # Generalization/validation performance expected to be bad
-        optimizer = Adam(learning_rate=learning_rate)
-        if rl != 0:
-            # Optimizer for tx training
-            optimizer_tx = Adam(learning_rate=learning_rate)
-    else:
-        # Default: Stochastic Gradient Descent with momentum 0.9 as in ResNet paper
-        optimizer = SGD(learning_rate=learning_rate, momentum=momentum)
-        if rl != 0:
-            optimizer_tx = SGD(learning_rate=learning_rate, momentum=momentum)
-    # Optimizer for rx finetuning: None (default, i.e., optimizer)
-    if rl_settings['own_optimizer_rxfinetuning']:
-        optimizer_rx2 = optimizer
-    else:
-        optimizer_rx2 = None
-    if rl != 0:
-        spg_config = resnet_rl_sinfony.StochasticPolicyGradientConfiguration(rx_steps=rl_settings['rx_steps'], tx_steps=rl_settings['tx_steps'], receiver_finetuning_epochs=rl_settings[
-            'number_epochs_receiver_finetuning'], exploration_variance_schedule=exploration_variance, print_iteration=rl_settings['iteration_print'])
-
-    # ResNet20 model
-    number_classes = train_labels.shape[1]			# 10 classes for CIFAR10, MNIST
-    # Defines ResNet layer number, 3 for smallest ResNet20 for CIFAR10 (2 for MNIST)
-    number_residual_units = model_settings['resnet']['number_residual_units']
-    if dataset.lower() == 'cifar10' and number_residual_units <= 2:
-        print(
-            'Warning: Number of residual units is below minimum number for CIFAR10 dataset!')
-    # 3 for CIFAR10, MNIST
-    number_resnet_blocks = model_settings['resnet']['number_resnet_blocks']
-    image_shapes = []
-    for image_dataset in test_input:
-        image_shapes.append(image_dataset.shape[1:])
-    number_filters = model_settings['resnet']['number_filters']
-    if len(test_input) == 1 and isinstance(number_filters, list):
-        # If only one image, then use first number of filters entry
-        number_filters = number_filters[0]
-    # Convert number_residual_units to a list whose length matches number_resnet_blocks if not already
-    # NOTE: Then, the first element is repeated!
-    number_residual_units = resnet.repeat_entry_2_list(
-        number_residual_units, number_resnet_blocks)
-    resnet_config = resnet.ResnetConfiguration(architecture=model_settings['resnet']['architecture'],
-                                               image_shape=image_shapes,
-                                               number_classes=number_classes,
-                                               number_filters=number_filters,
-                                               number_residual_units=number_residual_units,
-                                               number_resnet_blocks=number_resnet_blocks,
-                                               preactivation=model_settings['resnet']['preactivation'],
-                                               bottleneck=model_settings['resnet']['bottleneck'],
-                                               batch_normalization=model_settings['resnet']['batch_normalization'],
-                                               weight_initialization=model_settings[
-                                                   'resnet']['weight_initialization'],
-                                               weight_decay=weight_decay)
-
-    # Evaluation/Validation
-    # SNR in dB range: [-30, 20] (default)
-    snr_range = evaluation_settings['snr_range']
-    # SNR in dB steps: 1 (default)
-    snr_step_size = evaluation_settings['snr_step_size']
-    # Rounds through validation data with different noise realizations
-    validation_rounds = evaluation_settings['validation_rounds']
-    # SNR value for interface data / T-SNE embedding: -10 / 20
-    snr_evaluation = evaluation_settings['evaluation_snr']
+    optimizer, optimizer_tx, optimizer_rx2, spg_config = model_builder.create_optimizer(
+        training_settings=training_settings,
+        rl_settings=rl_settings,
+        iterations_per_epoch=iterations_per_epoch,
+        learning_rate=training_settings['learning_rate'],
+        optimizer=training_settings['optimizer'],
+        rl=rl,
+    )
 
     # TRAINING AND EVALUATION SCRIPT
 
-    # Preprocessing
-    train_input_normalized, test_input_normalized = datasets.preprocess_pixels(
-        train_input, test_input)
-    # If computational heavy (RL approach), use subset of validation set
-    valY = test_labels[:validation_dataset_size, ...]
-    valX = mt1.create_batch(test_input_normalized, validation_dataset_size, 0)
-    # Summarize loaded dataset
-    if show_dataset is True:
-        datasets.summarize_dataset(
-            train_input, train_labels, test_input, test_labels)
+    # ResNet20 model
+    if dataset.lower() == 'cifar10' and model_settings['resnet']['number_residual_units'] <= 2:
+        print(
+            'Warning: Number of residual units is below minimum number for CIFAR10 dataset!')
+    number_classes, image_shapes = datasets.get_data_properties(
+        test_labels, test_input)
+    model, sigma_train = model_builder.create_model_from_config(
+        params, number_classes, image_shapes)
 
-    # Create/load model
-    resnet_layer_number = resnet.calculate_resnet_layer_number(
-        number_resnet_blocks, number_residual_units, model_settings['resnet']['bottleneck'])
-    print('ResNet', resnet_layer_number, ' chosen')
+    # if load is True:
+    #     # Load existing model:
+    #     print('Loading model...')
+    #     # Load SINFONY via weights or model save
+    #     model = try_load(model, pathfile_model, from_weights=use_weights)
+    #     print('Model loaded.')
+    #     # For loading, compile is necessary
+    #     model.compile(optimizer=optimizer,
+    #                   loss='categorical_crossentropy', metrics=['accuracy'])
 
-    # if load is False:
-    # Check whether multi-image input and choose model accordingly
-    if len(image_shapes) == 1:
-        # image_shapes = image_shapes[0]
-        # number_filters = number_filters[0]
-        # Create new model:
-        if transceiver_split == 1:
-            # Select SINFONY or RL-SINFONY
-            if rl == 1:
-                # RL-SINFONY
-                model = resnet_rl_sinfony.ResnetRLSinfony(
-                    resnet_config=resnet_config, communication_config=communication_config)
-                # model2 = resnet_cifar_rl(shape=resnet_config.image_shape, classes=resnet_config.number_classes, filters=resnet_config.number_filters, num_res=resnet_config.number_residual_units[0], num_resblocks=resnet_config.number_resnet_blocks, preactivation=resnet_config.preactivation,
-                #                          bottleneck=resnet_config.bottleneck, axnorm=communication_config.encoding_config.normalization_axis, n_tx=communication_config.encoding_config.encoding_layer_width, n_rx=communication_config.decoding_config.decoding_layer_width, rx_same=communication_config.decoding_config.rx_joint_layers, rx_linear=communication_config.decoding_config.rx_final_layer_linear, num_layer=communication_config.decoding_config.number_decoding_layer, image_fac=communication_config.encoding_config.image_split_factor)
-            elif rl == 2:
-                # SINFONY trained via RL-SINFONY training loop
-                model = resnet_rl_sinfony.ResnetAE2(
-                    resnet_config=resnet_config, communication_config=communication_config)
-            else:
-                # SINFONY
-                model, tx, rx = resnet_sinfony.resnet_sinfony_imagesplit(
-                    resnet_config=resnet_config, communication_config=communication_config)
-        else:
-            # Standard image recognition based on total image
-            model = resnet.resnet(resnet_config=resnet_config)
-    else:
-        # Multiple images models
-        if transceiver_split == 1:
-            if rl == 1:
-                print('Not implemented yet.')
-            else:
-                model, tx, rx = resnet_sinfony.resnet_sinfony(
-                    resnet_config=resnet_config, communication_config=communication_config)
-        else:
-            model = resnet_sinfony.resnet_multi_image(resnet_config=resnet_config, number_combination_layer=model_settings[
-                'resnet']['multi_image_layer_number'], combination_layer_width=model_settings['resnet']['multi_image_layer_width'])
+    # if model.name != 'tfsm_layer':
+    #     # Summarize AE-based SINFONY
+    #     model.summary()
 
     # Convert models to new Tensorflow version
     # Load existing model and extract weights:
@@ -348,8 +211,8 @@ if __name__ == '__main__':
     # model.summary()
     pathfile_model2_results = os.path.join(path_script, subpath_results,
                                            load_settings['simulation_filename_prefix'] + filename)
-    layer_found = sinfony_io.find_layer_by_name(model, 'rx_layer0')
-    layer_found.get_weights()
+    # layer_found = find_layer_by_name(model, 'rx_layer0')
+    # layer_found.get_weights()
 
     # Set weights to that of old model
     if load_from_weights is True:
@@ -358,14 +221,14 @@ if __name__ == '__main__':
             path_script, subpath_results, filename + '_weights.h5')
         # pathfile_weights2 = os.path.join(
         #     path_script, subpath_results, filename, filename)
-        model(test_input, test_labels, np.array(
-            [0.0, 0.0], dtype='float32'), np.array(0.0, dtype='float32'))
+        # model(test_input, test_labels, np.array(
+        #     [0.0, 0.0], dtype='float32'), np.array(0.0, dtype='float32'))
         model.load_weights(pathfile_weights, skip_mismatch=False)
         # model2.load_weights(pathfile_weights2, skip_mismatch=False)
         # model = model2
         print('Weights loaded.')
-        layer_found = sinfony_io.find_layer_by_name(model, 'rx_layer0')
-        layer_found.get_weights()
+        # layer_found = find_layer_by_name(model, 'rx_layer0')
+        # layer_found.get_weights()
     else:
         print('Loading model...')
         # Load SINFONY model
@@ -381,72 +244,75 @@ if __name__ == '__main__':
     model.compile(
         optimizer=optimizer, loss='categorical_crossentropy', metrics=['accuracy'])
 
-    # TODO: Unify with model.save before
-    # Save old Keras model for use in new Tensorflow version:
-    # Note: Requires sionna conda env
-    if load is False:
-        print('Saving model...')
-        pathfile_weights = os.path.join(
-            path_script, subpath_results, 'weights_' + filename + '.weights.h5')
-        if save_only_weights is True:
-            model.save_weights(pathfile_weights)
-        else:
-            model.save(pathfile + '.keras')
-        print('Model saved.')
-    else:
-        # Compile and train model
-        # Load training history to include evaluation
-        print('Load training history...')
-        results = saveobj.load(pathfile_model2_results)
-        if results is None:
-            results = {}
-        else:
-            results = dict(results)
-        print('Loaded!')
+    # # TODO: Unify with model.save before
+    # # Save old Keras model for use in new Tensorflow version:
+    # # Note: Requires sionna conda env
+    # if load is False:
+    #     print('Saving model...')
+    #     pathfile_weights = os.path.join(
+    #         path_script, subpath_results, 'weights_' + filename + '.weights.h5')
+    #     if save_only_weights is True:
+    #         model.save_weights(pathfile_weights)
+    #     else:
+    #         model.save(pathfile_model + '.keras')
+    #     print('Model saved.')
+    # else:
+    #     # Compile and train model
+    #     # Load training history to include evaluation
+    #     print('Load training history...')
+    #     results = saveobj.load(pathfile_model2_results)
+    #     if results is None:
+    #         results = {}
+    #     else:
+    #         results = dict(results)
+    #     print('Loaded!')
 
-    # Evaluation of model
-    snrs = mop.snr_range2snrlist(snr_range, snr_step_size)
-    if evaluation_mode == 0:
-        print('Evaluate model...')
-        print(filename)
-        # Evaluate model for different SNRs
-        if transceiver_split == 1:
-            # SINFONY/RL-SINFONY
-            if rl >= 1:
-                accuracy, loss = model_evaluation.evaluate_rlsinfony(model, test_input, test_labels,
-                                                                     snrs=snrs, validation_rounds=validation_rounds)
-            else:
-                accuracy, loss = model_evaluation.evaluate_sinfony(model, test_input, test_labels,
-                                                                   snrs=snrs, validation_rounds=validation_rounds)
-        else:
-            # Standard image recognition: Evaluate model accuracy once for test data
-            if rl >= 1:
-                _, _, loss_i, accuracy_i = model(
-                    test_input, test_labels, sigma=tf.convert_to_tensor([0, 0], dtype='float32'))
-            else:
-                accuracy_i, loss_i = model_evaluation.evaluate_image_classifier(
-                    model, test_input, test_labels)
-            # Independent from SNR / constant, but plotted over SNR range
-            loss = np.array(loss_i) * np.ones(snrs.shape)
-            accuracy = np.array(accuracy_i) * np.ones(snrs.shape)
-            print(f'Validation Accuracy: {accuracy_i * 100.0:.3f}%')
-        # Show performance curve
-        plt.figure(1)
-        plt.semilogy(snrs, 1 - accuracy)
-        plt.xlabel('SNR')
-        plt.ylabel(
-            'semantic performance measure: classification error rate')
-        plt.figure(2)
-        plt.semilogy(snrs, loss)
-        plt.xlabel('SNR')
-        plt.ylabel('crossentropy loss')
+    # # Evaluation of model
+    # # Evaluation/Validation of model
+    # evaluation_settings = params['evaluation']
+    # snrs = mop.snr_range2snrlist(
+    #     evaluation_settings['snr_range'], evaluation_settings['snr_step_size'])
 
-        # Save evaluation
-        print('Save evaluation...')
-        results['snr'] = snrs
-        results['val_loss'] = loss
-        results['val_acc'] = accuracy
-        saveobj.save(pathfile2, results)
-        print('Evaluation saved.')
+    # print('Evaluate model...')
+    # print(filename)
+    # # Evaluate model for different SNRs
+    # if transceiver_split == 1:
+    #     # SINFONY/RL-SINFONY
+    #     if rl >= 1:
+    #         accuracy, loss = model_evaluation.evaluate_rlsinfony(model, test_input, test_labels,
+    #                                                              snrs=snrs, validation_rounds=evaluation_settings['validation_rounds'])
+    #     else:
+    #         accuracy, loss = model_evaluation.evaluate_sinfony(model, test_input, test_labels,
+    #                                                            snrs=snrs, validation_rounds=evaluation_settings['validation_rounds'])
+    # else:
+    #     # Standard image recognition: Evaluate model accuracy once for test data
+    #     if rl >= 1:
+    #         _, _, loss_i, accuracy_i = model(
+    #             test_input, test_labels, sigma=tf.convert_to_tensor([0, 0], dtype='float32'))
+    #     else:
+    #         accuracy_i, loss_i = model_evaluation.evaluate_image_classifier(
+    #             model, test_input, test_labels)
+    #     # Independent from SNR / constant, but plotted over SNR range
+    #     loss = np.array(loss_i) * np.ones(snrs.shape)
+    #     accuracy = np.array(accuracy_i) * np.ones(snrs.shape)
+    #     print(f'Validation Accuracy: {accuracy_i * 100.0:.3f}%')
+    # # Show performance curve
+    # plt.figure(1)
+    # plt.semilogy(snrs, 1 - accuracy)
+    # plt.xlabel('SNR')
+    # plt.ylabel(
+    #     'semantic performance measure: classification error rate')
+    # plt.figure(2)
+    # plt.semilogy(snrs, loss)
+    # plt.xlabel('SNR')
+    # plt.ylabel('crossentropy loss')
+
+    # # Save evaluation
+    # print('Save evaluation...')
+    # results['snr'] = snrs
+    # results['val_loss'] = loss
+    # results['val_acc'] = accuracy
+    # saveobj.save(pathfile_results, results)
+    # print('Evaluation saved.')
 
 # EOF
