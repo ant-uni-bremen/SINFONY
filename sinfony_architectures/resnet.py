@@ -13,7 +13,7 @@ Belongs to simulation framework for numerical results of the articles:
 
 # Tensorflow 2 packages
 # import tensorflow as tf
-# import tf.keras as keras
+# import tensorflow.keras as keras
 import keras
 
 
@@ -99,6 +99,7 @@ def clone_initializer(initializer):
 
 
 # @keras.utils.register_keras_serializable()
+@keras.saving.register_keras_serializable()
 class Residual(keras.layers.Layer):
     """The Residual block of ResNet for ResNet-18/34 and ResNet-CIFAR10.
     For ReLU activations weight initialization with he_uniform is better than glorot
@@ -171,6 +172,7 @@ class Residual(keras.layers.Layer):
 
 
 # @keras.utils.register_keras_serializable()
+@keras.saving.register_keras_serializable()
 class ResidualBottleneck(keras.layers.Layer):
     """The Residual block of ResNet in bottleneck version for ResNet-50/101/152.
     For ReLU activations weight initialization with he_uniform is better than glorot
@@ -254,6 +256,7 @@ class ResidualBottleneck(keras.layers.Layer):
 
 
 # @keras.utils.register_keras_serializable()
+@keras.saving.register_keras_serializable()
 class ResnetBlock(keras.layers.Layer):
     '''ResNet block
     '''

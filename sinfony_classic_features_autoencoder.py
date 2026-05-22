@@ -25,25 +25,23 @@ import yaml
 
 # Tensorflow 2 packages
 import tensorflow as tf
+# import tensorflow.keras as keras
+import keras
 # Keras functionality
-from tensorflow.keras.models import Model
+from keras.models import Model
 # , Conv2D, MaxPooling2D, Flatten, Add, Lambda, Concatenate, Layer, GaussianNoise
-from tensorflow.keras.layers import Input, Dense
-from tensorflow.keras.optimizers import SGD, Adam  # , Nadam
+from keras.layers import Input, Dense
+from keras.optimizers import SGD, Adam  # , Nadam
 
 
 # Own packages
 import datasets
-# Note: Important to load models from old files, there a reference to mf including layers is hardcoded
-import utilities.my_training as mf
 import utilities.my_training as mt
 from utilities.my_functions import print_time, savemodule
 import utilities.my_math_operations as mop
-
-
-# Only necessary for Windows, otherwise kernel crashes
-if os.name.lower() == 'nt':
-    os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
+from sinfony_io import try_load, try_save
+from model_builder import create_model
+from model_evaluation import print_iteration, print_validation_round
 
 
 def classic_features_autoencoder(number_channel_uses, layer_width_transmitter, layer_width_receiver, sigma, input_shape=1, output_shape=1, number_txrx_layer=1, receiver_final_layer_linear=False, power_normalization_axis=0):
@@ -61,7 +59,7 @@ def classic_features_autoencoder(number_channel_uses, layer_width_transmitter, l
     rx: Receiver model
     '''
     # Transmitter design
-    transmit_in = Input(shape=(input_shape))
+    transmit_in = Input(shape=(input_shape,))
     transmit_layer = transmit_in
     for _ in range(0, number_txrx_layer):
         transmit_layer = Dense(layer_width_transmitter, activation='relu',
@@ -69,8 +67,8 @@ def classic_features_autoencoder(number_channel_uses, layer_width_transmitter, l
                                kernel_initializer='he_uniform')(transmit_layer)
     transmit_layer3 = Dense(number_channel_uses,
                             activation='linear')(transmit_layer)
-    transmit_out = mt.normalize_input(
-        transmit_layer3, axis=power_normalization_axis)
+    transmit_out = mt.NormalizeInputLayer(axis=power_normalization_axis)(
+        transmit_layer3)
     tx = Model(inputs=transmit_in, outputs=transmit_out)
 
     # Receiver Design
@@ -95,7 +93,7 @@ def classic_features_autoencoder(number_channel_uses, layer_width_transmitter, l
     rx = Model(inputs=receiver_in, outputs=receiver_out)
 
     # Model for autoencoder training
-    autoencoder_in = Input(shape=(input_shape))
+    autoencoder_in = Input(shape=(input_shape,))
     channel_in = tx(autoencoder_in)
     channel_out = mt.GaussianNoise2(sigma)(channel_in)
     autoencoder_out = rx(channel_out)
@@ -124,7 +122,7 @@ def evaluate_feature_autoencoder(models_autoencoder, source_signal, validation_d
     return reconstructed_source
 
 
-def evaluate_feature_autoencoder_over_snr(evaluated_models_autoencoder, model_sinfony, features_validation, validation_data, test_labels, snrs=np.linspace(-30, 20, 1), validation_rounds=10):
+def evaluate_feature_autoencoder_over_snr(evaluated_models_autoencoder, model_sinfony, features_validation, validation_data, test_labels, snrs=np.linspace(-30, 20, 1), validation_rounds=10, loss_function=keras.losses.categorical_crossentropy):
     '''Evaluate the feature autoencoder for source_signal and validation_data over SNRs
     '''
     # SINFONY/RL-SINFONY evaluated with classic communication
@@ -145,27 +143,26 @@ def evaluate_feature_autoencoder_over_snr(evaluated_models_autoencoder, model_si
             reconstructed_source = evaluate_feature_autoencoder(
                 evaluated_models_autoencoder, features_validation, validation_data)
             # Extract semantics based on received signal y = r_r = reconstructed_source
-            number_classes = model_sinfony.layers[-1].predict(
+            class_probabilities = model_sinfony.layers[-1].predict(
                 reconstructed_source)
 
             # Calculate average loss and accuracy
-            loss_ii = np.mean(model_sinfony.loss(test_labels, number_classes))
+            loss_ii = np.mean(loss_function(test_labels, class_probabilities))
             accuracy_ii = np.mean(
-                np.argmax(number_classes, axis=-1) == np.argmax(test_labels, axis=-1))
+                np.argmax(class_probabilities, axis=-1) == np.argmax(test_labels, axis=-1))
 
             # Add current measures to total measures
             loss_i = (validation_round * loss_i + loss_ii) / \
                 (validation_round + 1)
             accuracy_i = (validation_round * accuracy_i +
                           accuracy_ii) / (validation_round + 1)
-            print(
-                f'Validation Round: {validation_round + 1}/{validation_rounds}, CE: {loss_i:.4f}, Acc: {accuracy_i:.2f}, Time: {print_time(time.time() - start_time2)}')
-
+            print_validation_round(
+                validation_round, validation_rounds, loss_i, accuracy_i, start_time2)
         # Append list with evaluation for each SNR value
         evaluation_measures[0].append(loss_i)
         evaluation_measures[1].append(accuracy_i)
-        print(
-            f'Iteration: {snr_index + 1}/{len(snrs)}, SNR: {snr}, CE: {loss_i:.4f}, Acc: {accuracy_i:.2f}, Time: {print_time(time.time() - start_time)}')
+        print_iteration(snr_index + 1, len(snrs), snr,
+                        loss_i, accuracy_i, start_time)
 
     accuracy = np.array(evaluation_measures[1])
     loss = np.array(evaluation_measures[0])
@@ -186,7 +183,7 @@ if __name__ == '__main__':
     # Workaround for interactive sessions: Only allow config file names starting 'semantic_config'
     SETTINGS_FILE = sys.argv[1] if len(sys.argv) > 1 and sys.argv[1][0:15].lower(
     ) == 'semantic_config' else SETTINGS_FILE
-    # Change to 'settings_saved' to reload simulations settings
+    # Change from 'settings' to 'models' to reload simulations settings
     SETTINGS_FOLDER = 'settings'
     settings_path = os.path.join(path_script, SETTINGS_FOLDER, SETTINGS_FILE)
     with open(settings_path, 'r', encoding='UTF8') as file:
@@ -199,7 +196,8 @@ if __name__ == '__main__':
 
     # Simulation parameters
     filename_extension = load_settings['filename_suffix']
-    filename_prefix = load_settings['simulation_filename_prefix']
+    simulation_filename_prefix = load_settings['simulation_filename_prefix']
+    simulation_filename_suffix = load_settings['simulation_filename_suffix']
     save_object = savemodule(form=load_settings['save_format'])
 
     # Loaded dataset and SINFONY design
@@ -211,20 +209,17 @@ if __name__ == '__main__':
     image_split = dataset_settings['image_split']
     train_input, train_labels, test_input, test_labels = datasets.load_dataset(
         dataset, validation_split=validation_split, image_split=True, preprocess=False)
-    # NOTE: Not implemented for input list of images
-    train_input = train_input[0]
-    test_input = test_input[0]
     # File for distributed image classification with perfect links
     if dataset == 'mnist':
         subpath = 'mnist'
-        filename = 'ResNet14_MNIST2_Ne20'
+        filename_sinfony = 'ResNet14_MNIST2_Ne20'    # ResNet14_MNIST2
     elif dataset == 'cifar10':
         subpath = 'cifar10'
-        filename = 'ResNet20_CIFAR2'
+        filename_sinfony = 'ResNet20_CIFAR2'
     else:
         print('Dataset not implemented into script.')
         subpath = ''
-        filename = ''
+        filename_sinfony = ''
     # Path for SINFONY model
     path_sinfony = os.path.join(load_settings['path_models'], subpath)
 
@@ -235,6 +230,8 @@ if __name__ == '__main__':
     filename_extension_ae_model = filename_extension    # '_ntx56_NL56_snr-4_6'
     # Path for Autoencoder models
     path_classic = load_settings['path_classic']
+
+    filename_classic = feature_input + '_' + filename_sinfony
 
     # Autoencoder architecture for feature output
     number_channel_uses = model_settings['number_channel_uses']
@@ -248,7 +245,7 @@ if __name__ == '__main__':
     number_epochs = training_settings['number_epochs']
     batch_size = training_settings['batch_size']
     loss = training_settings['loss']
-    optimizer = training_settings['optimizer']
+    optimizer_class = training_settings['optimizer']
     learning_rate = training_settings['learning_rate']
     snr_min_train = model_settings['noise']['snr_min_train']
     snr_max_train = model_settings['noise']['snr_max_train']
@@ -261,16 +258,19 @@ if __name__ == '__main__':
         boundaries = list(np.round(np.array(epoch_bound)
                                    * iterations_per_epoch).astype('int'))
         values = training_settings['learning_rate_schedule']['values']
-        learning_rate_schedule = tf.keras.optimizers.schedules.PiecewiseConstantDecay(
+        learning_rate_schedule = keras.optimizers.schedules.PiecewiseConstantDecay(
             boundaries, values)
         # , nesterov = True) # No advantage of Nesterov momentum with DNNs (?)
         learning_rate = learning_rate_schedule
     momentum = training_settings['momentum']
-    if optimizer.lower() == 'adam':
+    if optimizer_class.lower() == 'adam':
         # Adam and its variants
-        optimizer = Adam(learning_rate=learning_rate)
+        optimizer_class = Adam  # (learning_rate=learning_rate)
+        opt_config = {"learning_rate": learning_rate}
     else:
-        optimizer = SGD(learning_rate=learning_rate, momentum=momentum)
+        # (learning_rate=learning_rate, momentum=momentum)
+        optimizer_class = SGD
+        opt_config = {"learning_rate": learning_rate, "momentum": momentum}
 
     # Evaluation parameters
     validation_rounds = evaluation_settings['validation_rounds']
@@ -280,21 +280,26 @@ if __name__ == '__main__':
     # Evaluation script
 
     # Load the SINFONY model
-    # Path of script being executed
-    path_script = os.path.dirname(os.path.abspath(__file__))
-    pathfile = os.path.join(path_script, path_sinfony, filename)
-    print('Loading model ' + filename + '...')
-    model_sinfony = tf.keras.models.load_model(pathfile)
+    print('Loading model ' + filename_sinfony + '...')
+    pathfile_sinfony = os.path.join(
+        path_script, path_sinfony, filename_sinfony)
+    number_classes, image_shapes = datasets.get_data_properties(
+        test_labels, test_input)
+    model_sinfony, sigma_train = create_model(
+        pathfile_sinfony + '.yaml', number_classes, image_shapes)
+    model_sinfony = try_load(
+        model_sinfony, pathfile_sinfony, from_weights=True)
     print('Model loaded.')
     if show_dataset is True:
         model_sinfony.summary()
 
     # Preprocess Data set
-    train_input_normalized = datasets.preprocess_pixels_image(train_input)
-    test_input_normalized = datasets.preprocess_pixels_image(test_input)
+    # NOTE: Not implemented for input list of images
+    train_input_normalized = datasets.preprocess_pixels_image(train_input[0])
+    test_input_normalized = datasets.preprocess_pixels_image(test_input[0])
     if show_dataset is True:
-        datasets.summarize_dataset([train_input], train_labels, [
-                                   test_input], test_labels)
+        datasets.summarize_dataset(
+            train_input, train_labels, test_input, test_labels)
 
     features_train = model_sinfony.layers[1].predict(train_input_normalized)
     features_validation = model_sinfony.layers[1].predict(
@@ -305,28 +310,28 @@ if __name__ == '__main__':
     rng = np.random.default_rng()
 
     # Analog Autoencoder Training
-    filename_model = feature_input + filename_extension_ae_model
+    filename_model = filename_classic + filename_extension_ae_model
     pathfile_model = os.path.join(path_script, path_classic, filename_model)
     if feature_input == 'AErvec':
         print('AE for all agents / feature vectors rvec:')
         validation_data = features_validation.reshape(
             [-1, features_validation.shape[-1]])
+        # Prepare dataset for rvec
+        input_shape = features_train.shape[-1]
+        output_shape = input_shape
         if load is False:
             print('Start training...')
-            # Prepare dataset for rvec
-            input_shape = features_train.shape[-1]
-            output_shape = input_shape
             data = features_train.reshape([-1, features_train.shape[-1]])
         else:
             print('Load model...')
     elif feature_input == 'AE':
         print('AE model for each entry accross all rvec entries r_i:')
         validation_data = features_validation.flatten()
+        # Prepare dataset for entries in rvec
+        input_shape = 1
+        output_shape = 1
         if load is False:
             print('Start training...')
-            # Prepare dataset for entries in rvec
-            input_shape = 1
-            output_shape = 1
             data = features_train.flatten()
         else:
             print('Load model...')
@@ -337,22 +342,29 @@ if __name__ == '__main__':
         validation_data = features_validation.reshape(
             [features_validation.shape[0], -1, features_validation.shape[-1]])
         number_distributed_agents = validation_data.shape[1]
+        models_autoencoder = []
+        input_shape = features_train.shape[-1]
+        output_shape = input_shape
+        for index_autoencoder in range(0, number_distributed_agents):
+            print('Initialize Autoencoder' +
+                  str(index_autoencoder) + '...')
+            model_autoencoder, _, _ = classic_features_autoencoder(number_channel_uses, layer_width_tx_intermediate, layer_width_rx_intermediate, mop.snr2standard_deviation(np.array([snr_min_train, snr_max_train]))[
+                ::-1], input_shape=input_shape, output_shape=output_shape, number_txrx_layer=number_txrx_layer, receiver_final_layer_linear=receiver_final_layer_linear, power_normalization_axis=power_normalization_axis)
+            optimizer = mt.new_optimizer(
+                opt_class=optimizer_class, opt_config=opt_config)
+            model_autoencoder.compile(optimizer=optimizer, loss=loss)
+            models_autoencoder.append(model_autoencoder)
         if load is False:
             print('Start training...')
             # Training
             start_time2 = time.time()
-            models_autoencoder = []
-            input_shape = features_train.shape[-1]
-            output_shape = input_shape
             data = features_train.reshape(
                 [features_train.shape[0], -1, features_train.shape[-1]])
             for index_autoencoder in range(0, number_distributed_agents):
                 print('Start training Autoencoder' +
                       str(index_autoencoder) + '...')
-                model_autoencoder, _, _ = classic_features_autoencoder(number_channel_uses, layer_width_tx_intermediate, layer_width_rx_intermediate, mop.snr2standard_deviation(np.array([snr_min_train, snr_max_train]))[
-                    ::-1], input_shape=input_shape, output_shape=output_shape, number_txrx_layer=number_txrx_layer, receiver_final_layer_linear=receiver_final_layer_linear, power_normalization_axis=power_normalization_axis)
-                model_autoencoder.compile(optimizer=optimizer, loss=loss)
                 start_time = time.time()
+                model_autoencoder = models_autoencoder[index_autoencoder]
                 history = model_autoencoder.fit(data[:, index_autoencoder, ...], data[:, index_autoencoder, ...],
                                                 epochs=number_epochs,
                                                 batch_size=batch_size,
@@ -363,40 +375,44 @@ if __name__ == '__main__':
                 print('Total time ' + 'Autoencoder' + str(index_autoencoder) + ': ' +
                       print_time(time.time() - start_time))
                 # Save model
-                filename_model = feature_input + \
-                    str(index_autoencoder) + filename_extension_ae_model
+                filename_model = feature_input + '_' + filename_sinfony + \
+                    filename_extension_ae_model + \
+                    '_Nr' + str(index_autoencoder)
                 pathfile_model = os.path.join(
                     path_script, path_classic, filename_model)
                 print('Saving model...')
-                model_autoencoder.save(pathfile_model)
+                # model_autoencoder.save(pathfile_model)
+                try_save(
+                    model_autoencoder, pathfile_model, to_weights=True)
                 print('Model saved.')
-                models_autoencoder.append(model_autoencoder)
             print('Total time all Autoencoders: ' +
                   print_time(time.time() - start_time2))
         else:
             # Load model
             print('Load model...')
-            models_autoencoder = []
             for index_autoencoder in range(0, number_distributed_agents):
-                filename_model = feature_input + \
-                    str(index_autoencoder) + filename_extension_ae_model
+                filename_model = feature_input + '_' + filename_sinfony + \
+                    filename_extension_ae_model + \
+                    '_Nr' + str(index_autoencoder)
                 pathfile_model = os.path.join(
                     path_script, path_classic, filename_model)
                 print('Loading Autoencoder model' +
                       str(index_autoencoder) + '...')
-                model_autoencoder = tf.keras.models.load_model(pathfile_model)
+                models_autoencoder[index_autoencoder] = try_load(
+                    models_autoencoder[index_autoencoder], pathfile_model, from_weights=True)
                 print('Autoencoder model ' + str(index_autoencoder) + ' loaded.')
                 if show_dataset is True:
-                    model_autoencoder.summary()
-                models_autoencoder.append(model_autoencoder)
+                    models_autoencoder[index_autoencoder].summary()
     else:
         # Usual Autoencoder training script
+        model_autoencoder, _, _ = classic_features_autoencoder(number_channel_uses, layer_width_tx_intermediate, layer_width_rx_intermediate, mop.snr2standard_deviation(np.array([snr_min_train, snr_max_train]))[
+            ::-1], input_shape=input_shape, output_shape=output_shape, number_txrx_layer=number_txrx_layer, receiver_final_layer_linear=receiver_final_layer_linear, power_normalization_axis=power_normalization_axis)
+        optimizer = mt.new_optimizer(
+            opt_class=optimizer_class, opt_config=opt_config)
+        model_autoencoder.compile(optimizer=optimizer, loss=loss)
         if load is False:
             # Training
             start_time = time.time()
-            model_autoencoder, _, _ = classic_features_autoencoder(number_channel_uses, layer_width_tx_intermediate, layer_width_rx_intermediate, mop.snr2standard_deviation(np.array([snr_min_train, snr_max_train]))[
-                ::-1], input_shape=input_shape, output_shape=output_shape, number_txrx_layer=number_txrx_layer, receiver_final_layer_linear=receiver_final_layer_linear, power_normalization_axis=power_normalization_axis)
-            model_autoencoder.compile(optimizer=optimizer, loss=loss)
             history = model_autoencoder.fit(data, data,
                                             epochs=number_epochs,
                                             batch_size=batch_size,
@@ -408,12 +424,14 @@ if __name__ == '__main__':
                   print_time(time.time() - start_time))
             # Save model
             print('Saving Autoencoder model...')
-            model_autoencoder.save(pathfile_model)
+            # model_autoencoder.save(pathfile_model)
+            try_save(model_autoencoder, pathfile_model, to_weights=True)
             print('Autoencoder Model saved.')
         else:
             # Load model
             print('Loading Autoencoder model...')
-            model_autoencoder = tf.keras.models.load_model(pathfile_model)
+            model_autoencoder = try_load(
+                model_autoencoder, pathfile_model, from_weights=True)
             print('Autoencoder Model loaded.')
             if show_dataset is True:
                 model_autoencoder.summary()
@@ -443,18 +461,15 @@ if __name__ == '__main__':
         "val_loss": loss,
         "val_acc": accuracy,
     }
-    filename_classic = feature_input + '_' + filename
-    pathfile = os.path.join(path_script, path_classic,
-                            filename_prefix + filename_classic + filename_extension)
-    save_object.save(pathfile, results)
+    pathfile_results = os.path.join(path_script, path_classic,
+                                    simulation_filename_prefix + filename_classic + filename_extension + simulation_filename_suffix)
+    save_object.save(pathfile_results, results)
     print('Evaluation saved.')
 
     # Save settings when evaluation is done
-    # SETTINGS_SAVED_FOLDER = 'settings_saved'
-    SETTINGS_SAVED_FOLDER = 'models/classic'
+    SETTINGS_SAVED_FOLDER = 'models/classic'    # 'settings_saved'
     saved_settings_path = os.path.join(path_script, SETTINGS_SAVED_FOLDER)
-    with open(os.path.join(saved_settings_path, filename_classic + '.yaml'), 'w', encoding='utf8') as written_file:
+    with open(os.path.join(saved_settings_path, filename_classic + filename_extension + '.yaml'), 'w', encoding='utf8') as written_file:
         yaml.safe_dump(params, written_file, default_flow_style=False)
     print('Settings saved!')
-
 # EOF

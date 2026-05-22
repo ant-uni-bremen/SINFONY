@@ -26,7 +26,8 @@ import time
 import yaml
 
 # Tensorflow 2 packages
-import tensorflow as tf
+# import tensorflow as tf
+import keras
 import sionna as sn
 
 
@@ -34,16 +35,12 @@ import sionna as sn
 import utilities.huffman_coding as hc
 import datasets
 import utilities.my_float as mfl
-# Note: Important to load models from old files, there a reference to mf including layers is hardcoded
-import utilities.my_training as mf
 import utilities.my_training as mt
-from utilities.my_functions import print_time, get_ram, savemodule
+from utilities.my_functions import print_time, savemodule
 import utilities.my_math_operations as mop
-
-
-# Only necessary for Windows, otherwise kernel crashes
-if os.name.lower() == 'nt':
-    os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
+from sinfony_io import try_load
+from model_builder import create_model
+from model_evaluation import print_iteration, print_validation_round
 
 
 def classic_digital_communication(source_signal, huffman, information_word_length, encoder, mapper, channel, demapper, decoder, interleaver, deinterleaver, snr, floatx=None, probability_bit=None):
@@ -96,16 +93,12 @@ def classic_digital_communication(source_signal, huffman, information_word_lengt
         snr, snr, transmit_signal.shape[0]))[..., np.newaxis].astype('float32')
     if mapper.constellation._constellation_type == 'pam':
         # Complex channel with half the variance in real- and imaginary part
-        received_signal = channel(
-            [transmit_signal,  2 * noise_standard_deviation ** 2])
-        # Also consider here doubled variance
-        llr_channel = demapper(
-            [received_signal, 2 * noise_standard_deviation ** 2])
+        # Consider here doubled variance
+        noise_variance_effective = 2 * noise_standard_deviation ** 2
     else:
-        received_signal = channel(
-            [transmit_signal,  noise_standard_deviation ** 2])
-        llr_channel = demapper(
-            [received_signal, noise_standard_deviation ** 2])
+        noise_variance_effective = noise_standard_deviation ** 2
+    received_signal = channel(transmit_signal,  no=noise_variance_effective)
+    llr_channel = demapper(received_signal, no=noise_variance_effective)
     llr_deinterleaved = deinterleaver(llr_channel)
     # Soft information of code_bits_received cannot pass through Huffman decoding
     code_bits_received = decoder(llr_deinterleaved)
@@ -196,8 +189,8 @@ def feature_transmission(source_signal, blocks, huffman, information_word_length
                 reconstructed_source[index_block * blocks:(index_block + 1) * blocks, index_x, index_y, :] = classic_digital_communication(source_signal[index_block * blocks:(index_block + 1) * blocks, index_x, index_y, :].flatten(
                 ), huffman, information_word_length, encoder, mapper, channel, demapper, decoder, interleaver, deinterleaver, snr, floatx=floatx, probability_bit=probability_bit).reshape((blocks, -1))
     # Extract semantics based on received signal received_signal = r_r = reconstructed_source
-    # number_classes = model.layers[-1].predict(reconstructed_source)
-    return reconstructed_source  # number_classes
+    # class_probabilities = model.layers[-1].predict(reconstructed_source)
+    return reconstructed_source  # class_probabilities
 
 
 if __name__ == '__main__':
@@ -214,7 +207,7 @@ if __name__ == '__main__':
     # Workaround for interactive sessions: Only allow config file names starting 'semantic_config'
     SETTINGS_FILE = sys.argv[1] if len(sys.argv) > 1 and sys.argv[1][0:15].lower(
     ) == 'semantic_config' else SETTINGS_FILE
-    # Change to 'settings_saved' to reload simulations settings
+    # Change from 'settings' to 'models' to reload simulations settings
     SETTINGS_FOLDER = 'settings'
     settings_path = os.path.join(path_script, SETTINGS_FOLDER, SETTINGS_FILE)
     with open(settings_path, 'r', encoding='UTF8') as file:
@@ -226,15 +219,14 @@ if __name__ == '__main__':
 
     # Initialization
     mt.gpu_select(number=load_settings['gpu'], memory_growth=True)
-    tf.keras.backend.clear_session()                # Clearing graphs
-    tf.keras.backend.set_floatx(load_settings['numerical_precision'])
-    # Random seed in every run, predictable random numbers for debugging with np.random.seed(0)
-    np.random.seed()
+    keras.backend.clear_session()
+    keras.backend.set_floatx(load_settings['numerical_precision'])
 
     # Simulation parameters
     classic = evaluation_settings['classic_mode']
-    filename_extension = load_settings['simulation_filename_suffix']
-    filename_prefix = load_settings['simulation_filename_prefix']
+    filename_extension = load_settings['filename_suffix']
+    simulation_filename_prefix = load_settings['simulation_filename_prefix']
+    simulation_filename_suffix = load_settings['simulation_filename_suffix']
     saveobj = savemodule(form=load_settings['save_format'])
 
     # Loaded dataset
@@ -254,44 +246,44 @@ if __name__ == '__main__':
         if classic == 2:
             # NOTE: Only simulated for 'ResNet14_MNIST'
             # File for central image classification
-            filename = 'ResNet14_MNIST'
+            filename_sinfony = 'ResNet14_MNIST'
         else:
-            filename = 'ResNet14_MNIST2_Ne20'
+            filename_sinfony = 'ResNet14_MNIST2_Ne20'
     elif dataset == 'cifar10':
         subpath = 'cifar10'
         RGB_entries = True
         if classic == 2:
-            filename = 'ResNet20_CIFAR'
+            filename_sinfony = 'ResNet20_CIFAR_human'  # ResNet20_CIFAR
         else:
-            filename = 'ResNet20_CIFAR2'
+            filename_sinfony = 'ResNet20_CIFAR2'
     elif dataset == 'fraeser':
         subpath = 'fraeser'
         RGB_entries = True
         if classic == 2:
-            filename = 'ResNet18_fraeser'               # ResNet18_fraeser_test
+            filename_sinfony = 'ResNet18_fraeser'               # ResNet18_fraeser_test
         else:
             # NOTE: Should be SINFONY version without noise and transceiver layers, not, e.g., sinfony18_fraeser_lr1e-3_3
             # Due to default image split, the same file can be used here
-            filename = 'ResNet18_fraeser'
+            filename_sinfony = 'ResNet18_fraeser'
     elif dataset == 'speech_commands':
         subpath = 'speechcommands'
         RGB_entries = False
         if classic == 2:
-            filename = 'ResNet18_speechcommands_imagenet'
+            filename_sinfony = 'ResNet18_speechcommands_imagenet'
         else:
             print('SINFONY version without noise and transceiver layers missing.')
     elif dataset == 'urbansound8k':
         subpath = 'urbansound8k'
         RGB_entries = False
         if classic == 2:
-            filename = 'ResNet18_urbansound8k_imagenet'
+            filename_sinfony = 'ResNet18_urbansound8k_imagenet'
         else:
             print('SINFONY version without noise and transceiver layers missing.')
     else:
         RGB_entries = False
         print('Dataset not implemented into script.')
         subpath = ''
-        filename = ''
+        filename_sinfony = ''
 
     # Path for SINFONY model
     path_sinfony = os.path.join(load_settings['path_models'], subpath)
@@ -332,10 +324,14 @@ if __name__ == '__main__':
     # Evaluation script
 
     # Load the SINFONY model
-    # Path of script being executed
-    pathfile = os.path.join(path_script, path_sinfony, filename)
-    print('Loading model ' + filename + '...')
-    model = tf.keras.models.load_model(pathfile)
+    print('Loading model ' + filename_sinfony + '...')
+    pathfile_model = os.path.join(
+        path_script, path_sinfony, filename_sinfony)
+    number_classes, image_shapes = datasets.get_data_properties(
+        test_labels, test_input)
+    model, sigma_train = create_model(
+        pathfile_model + '.yaml', number_classes, image_shapes)
+    model = try_load(model, pathfile_model, from_weights=True)
     print('Model loaded.')
     if show_dataset is True:
         model.summary()
@@ -427,18 +423,18 @@ if __name__ == '__main__':
     # Information word length
     information_word_length = int(code_word_length * rate_channel_code)
     # Communications components from Sionna
-    encoder = sn.fec.ldpc.LDPC5GEncoder(
+    encoder = sn.phy.fec.ldpc.LDPC5GEncoder(
         information_word_length, code_word_length)
-    interleaver = sn.fec.interleaving.RowColumnInterleaver(
+    interleaver = sn.phy.fec.interleaving.RowColumnInterleaver(
         row_depth=num_bits_per_symbol)
-    deinterleaver = sn.fec.interleaving.Deinterleaver(interleaver)
-    constellation = sn.mapping.Constellation(
+    deinterleaver = sn.phy.fec.interleaving.Deinterleaver(interleaver)
+    constellation = sn.phy.mapping.Constellation(
         modulation, num_bits_per_symbol=num_bits_per_symbol)
-    mapper = sn.mapping.Mapper(constellation=constellation)
-    channel = sn.channel.AWGN()
-    demapper = sn.mapping.Demapper('app', constellation=constellation)
-    decoder = sn.fec.ldpc.LDPC5GDecoder(
-        encoder, cn_type='boxplus')  # , hard_out = False
+    mapper = sn.phy.mapping.Mapper(constellation=constellation)
+    channel = sn.phy.channel.AWGN()
+    demapper = sn.phy.mapping.Demapper('app', constellation=constellation)
+    decoder = sn.phy.fec.ldpc.LDPC5GDecoder(
+        encoder, cn_update='boxplus')  # , hard_out = False
     # Compute total rate
     rate_total = rate_huffman_code * rate_channel_code
     if classic == 2:
@@ -467,6 +463,7 @@ if __name__ == '__main__':
     # SINFONY/RL-SINFONY evaluated with classic communication
     start_time = time.time()
     evaluation_measures = [[], []]
+    loss_function = keras.losses.categorical_crossentropy
     for snr_index, snr in enumerate(snrs):
         loss_i = 0
         accuracy_i = 0
@@ -489,8 +486,8 @@ if __name__ == '__main__':
                 reconstructed_sources = np.concatenate(
                     reconstructed_sources, axis=-1)
                 # Extract semantics based on received signal received_signal = r_r = reconstructed_source
-                number_classes = model.layers[-1](reconstructed_sources)
-                # number_classes = model.layers[-1].predict(reconstructed_sources)
+                class_probabilities = model.layers[-1](reconstructed_sources)
+                # class_probabilities = model.layers[-1].predict(reconstructed_sources)
             elif classic == 2:
                 reconstructed_sources = []
                 for test_input_item in test_input:
@@ -504,12 +501,12 @@ if __name__ == '__main__':
                         reconstructed_sources.append(
                             np.clip(reconstructed_source, a_min=0, a_max=None))
                 # Extract semantics based on all received images
-                number_classes = model.predict(reconstructed_sources)
+                class_probabilities = model.predict(reconstructed_sources)
             else:
-                number_classes = None
+                class_probabilities = None
             # Calculate average loss and accuracy
-            loss_ii = np.mean(model.loss(test_labels, number_classes))
-            accuracy_ii = np.mean(np.argmax(number_classes, axis=-1) ==
+            loss_ii = np.mean(loss_function(test_labels, class_probabilities))
+            accuracy_ii = np.mean(np.argmax(class_probabilities, axis=-1) ==
                                   np.argmax(test_labels, axis=-1))
 
             # Add current measures to total measures
@@ -519,14 +516,14 @@ if __name__ == '__main__':
                           accuracy_ii) / (validation_round + 1)
             # Free RAM, otherwise it accumulates
             gc.collect()
-            print(
-                f'Validation Round: {validation_round + 1}/{validation_rounds}, CE: {loss_i:.4f}, Acc: {accuracy_i:.2f}, Time: {print_time(time.time() - start_time2)}, RAM: {get_ram():.2f} GB')
+            print_validation_round(
+                validation_round, validation_rounds, loss_i, accuracy_i, start_time2)
 
         # Append list with evaluation for each SNR value
         evaluation_measures[0].append(loss_i)
         evaluation_measures[1].append(accuracy_i)
-        print(
-            f'Iteration: {snr_index + 1}/{len(snrs)}, SNR: {snr}, CE: {loss_i:.4f}, Acc: {accuracy_i:.2f}, Time: {print_time(time.time() - start_time)}, RAM: {get_ram():.2f} GB')
+        print_iteration(snr_index + 1, len(snrs), snr,
+                        loss_i, accuracy_i, start_time)
 
     accuracy = np.array(evaluation_measures[1])
     loss = np.array(evaluation_measures[0])
@@ -542,15 +539,15 @@ if __name__ == '__main__':
         "val_loss": loss,
         "val_acc": accuracy,
     }
-    pathfile = os.path.join(path_script, path_classic, filename_prefix +
-                            algorithm + '_' + filename + filename_extension)
-    saveobj.save(pathfile, results)
+    pathfile_results = os.path.join(path_script, path_classic, simulation_filename_prefix +
+                                    algorithm + '_' + filename_sinfony + filename_extension + simulation_filename_suffix)
+    saveobj.save(pathfile_results, results)
     print('Evaluation saved.')
 
     # Save settings when evaluation is done
     SETTINGS_SAVED_FOLDER = 'models/classic'    # 'settings_saved'
     saved_settings_path = os.path.join(path_script, SETTINGS_SAVED_FOLDER)
-    with open(os.path.join(saved_settings_path, algorithm + '_' + filename + '.yaml'), 'w', encoding='utf8') as written_file:
+    with open(os.path.join(saved_settings_path, algorithm + '_' + filename_sinfony + filename_extension + '.yaml'), 'w', encoding='utf8') as written_file:
         yaml.safe_dump(params, written_file, default_flow_style=False)
     print('Settings saved!')
 
