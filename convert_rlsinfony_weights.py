@@ -547,7 +547,7 @@ def get_batch(inputX, inputY, batch_size):
     '''
     for i in range(0, len(inputX) // batch_size):
         idx = i * batch_size
-        yield inputX[idx:idx+batch_size], inputY[idx:idx+batch_size]
+        yield inputX[idx:idx + batch_size], inputY[idx:idx + batch_size]
 
 
 def shuffle_data(inputX, inputY):
@@ -910,7 +910,7 @@ if __name__ == '__main__':
     # Evaluation mode: (0) default: Validation for SNR range, (1) Saving probability data for interface to application, (2) t-SNE embedding for visualization
     evaluation_mode = 0
     # ResNet20_CIFAR4_RL_sgdlr2_Ne400_snr-4_6_0, ResNet20_CIFAR4_sgdlr_Ne200_snr-4_6_conv2, ResNet14_MNIST4_RL_snr-4_6_test, ResNet14_MNIST4_RL_sgd_Ne3000, ResNet52_rblock5_hirise128, ResNet14_MNIST#N, ResNet20_CIFAR#N
-    filename = 'ResNet14_MNIST4_RL_adam_Ne6000_snr-4_6_conv1'
+    filename = 'ResNet14_MNIST4_sgd_Ne3000_snr-4_6_conv10'
     path = 'models/mnist_rl'									# Sub path for saved data
     # Path of script being executed
     path0 = os.path.dirname(os.path.abspath(__file__))
@@ -959,7 +959,7 @@ if __name__ == '__main__':
     # Power normalization axis: (0) batch dimension, (1) encode vector dimension n_tx
     axnorm = 0
     # 14/16| Tx layer length: (-1) without, (0) same length as layer before Tx, (>0) adjust length
-    n_tx = 56
+    n_tx = 14
     # 56/64| Rx layer length: (-1) without, (0) same length as Tx layer, (>0) adjust length
     n_rx = 56
     # For comparison/orientation:
@@ -1052,12 +1052,12 @@ if __name__ == '__main__':
     # Choose the format you want to test
     model_ext = ''  # '.keras' or '.hdf5'
     save_weights = True
-    delete_models = True
+    delete_models = False
 
     # Loop through all files in the directory
     for fname in os.listdir(model_dir):
         if fname.endswith(model_ext):
-            if not fname.endswith('.npz') and not fname.endswith('.h5'):
+            if not fname.endswith('.npz') and not fname.endswith('.h5') and not fname.endswith('.yaml'):
 
                 model_path = os.path.join(model_dir, fname)
                 weight_path = os.path.join(

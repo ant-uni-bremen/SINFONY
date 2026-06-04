@@ -117,7 +117,7 @@ if __name__ == '__main__':
                 # 'MNIST4 RL Ne300 tf.function': ['mnist_rl/' + dn + 'ResNet14_MNIST4_RL_Ne300_2' + suf, 'r--x', 14, True],
                 # 'MNIST4 RL Ne200 Tx1step': ['mnist_rl/' + dn + 'ResNet14_MNIST4_RL_Tx1step' + suf, 'r--x', 14, True],
                 # 'MNIST4 RL Ne200 Rx5step': ['mnist_rl/' + dn + 'ResNet14_MNIST4_RL_Rx5step' + suf, 'r--', 14, True],
-                # 'MNIST6 ntx56 RL gelöscht': ['mnist_rl/' + dn + 'ResNet14_MNIST6_RL' + suf, 'y-o', 56, True],
+                # 'MNIST6 ntx56 RL deleted': ['mnist_rl/' + dn + 'ResNet14_MNIST6_RL' + suf, 'y-o', 56, True],
                 # 'MNIST6 ntx56': ['mnist/' + dn + 'ResNet14_MNIST6' + suf, 'y-<', 56, True],
                 # 'MNIST6 ntx56 snr-4 6': ['mnist/' + dn + 'ResNet14_MNIST6snr-4_6' + suf, 'y-o', 56, True],
                 }

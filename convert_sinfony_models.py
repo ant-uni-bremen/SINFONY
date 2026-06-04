@@ -38,8 +38,10 @@ import utilities.my_training as mt
 import utilities.my_training_tf1 as mt1
 # Note: Important to load models from old files, there a reference to mf including layers is hardcoded
 import utilities.my_training as mf
-from sinfony_io import try_load, try_save, find_layer_by_name
+from sinfony_io import try_load, try_save, try_load_model, try_load_weights, find_layer_by_name
 import model_builder
+import h5py
+import re
 
 
 def compare_model_weights(m1, m2, rtol=1e-6, atol=1e-8, verbose=True):
@@ -75,6 +77,194 @@ def compare_model_weights(m1, m2, rtol=1e-6, atol=1e-8, verbose=True):
 
     return same
 
+# resnet_block (global 2-25, local 0-23):
+# Old:  k0,b1, k2,b3, g4,b5, g6,b7, k8,b9, k10,b11, g12,b13, g14,b15, mm16,mv17, mm18,mv19, mm20,mv21, mm22,mv23
+# New:  k,b, k,b, g,b,mm,mv, g,b,mm,mv,   k,b, k,b, g,b,mm,mv, g,b,mm,mv
+# Reorder: 0,1, 2,3, 4,5,16,17, 6,7,18,19,  8,9, 10,11, 12,13,20,21, 14,15,22,23
+
+
+def inspect_h5_weights(weights_path):
+    with h5py.File(weights_path, 'r') as f:
+        def print_weight(name, obj):
+            if isinstance(obj, h5py.Dataset):
+                print(f'{name} {obj.shape} {obj.dtype}')
+        f.visititems(print_weight)
+
+
+def inspect_model_weights(model):
+    for w in model.weights:
+        print(w.path, w.shape)
+
+
+def load_weights_remapped(model, weights_path):
+    saved_weights = {}
+
+    def collect_weights(name, obj):
+        if isinstance(obj, h5py.Dataset):
+            match = re.search(r'_(\d+)_(\d+)$', name)
+            if match:
+                global_idx = int(match.group(1))
+                saved_weights[global_idx] = obj[:]
+
+    with h5py.File(weights_path + '_weights.h5', 'r') as f:
+        f.visititems(collect_weights)
+
+    sw = [saved_weights[k] for k in sorted(saved_weights.keys())]
+
+    # Remapping: old global index -> new position
+    # conv2d: 0,1 -> same
+    # resnet_block (2-25): reorder within block
+    # resnet_block_1 (26-51): same pattern
+    # resnet_block_2 (52-77): same pattern
+    # batch_normalization_12 (78-81): same
+    # dense (82-83): same
+
+    def remap_resnet_block(sw, start):
+        # old local: 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23
+        # new local: 0,1,2,3,4,5,16,17,6,7,18,19,8,9,10,11,12,13,20,21,14,15,22,23
+        old_order = [0, 1, 2, 3, 4, 5, 16, 17, 6, 7, 18, 19,
+                     8, 9, 10, 11, 12, 13, 20, 21, 14, 15, 22, 23]
+        return [sw[start + i] for i in old_order]
+
+    def remap_resnet_block_1_2(sw, start):
+        # Old order (global indices relative to start):
+        # 0:k, 1:b, 2:k, 3:b, 4:k, 5:b,          <- kernels/biases unit1 + skip
+        # 6:g, 7:b, 8:g, 9:b,                      <- BN unit0 gamma/beta
+        # 10:k, 11:b, 12:k, 13:b,                  <- kernels/biases unit2
+        # 14:g, 15:b, 16:g, 17:b,                  <- BN unit1+2 gamma/beta
+        # 18:mm, 19:mv, 20:mm, 21:mv,              <- moving stats unit0+1
+        # 22:mm, 23:mv, 24:mm, 25:mv               <- moving stats unit2+3
+
+        # New model order:
+        # unit1: k,b, k,b, k(skip),b, g,b,mm,mv, g,b,mm,mv
+        # unit2: k,b, k,b,            g,b,mm,mv, g,b,mm,mv
+        old_order = [0, 1, 2, 3, 4, 5,
+                     6, 7, 18, 19, 8, 9, 20, 21,
+                     10, 11, 12, 13,
+                     14, 15, 22, 23, 16, 17, 24, 25]
+        return [sw[start + i] for i in old_order]
+
+    reordered = (
+        [sw[0], sw[1]] +                    # conv2d
+        remap_resnet_block(sw, 2) +         # resnet_block (24 weights)
+        remap_resnet_block_1_2(sw, 26) +    # resnet_block_1 (26 weights)
+        remap_resnet_block_1_2(sw, 52) +    # resnet_block_2 (26 weights)
+        [sw[78], sw[79], sw[80], sw[81]] +  # batch_normalization_12
+        [sw[82], sw[83]]                    # dense
+    )
+
+    print(f'Saved weights: {len(reordered)}')
+    print(f'Model weights: {len(model.weights)}')
+
+    all_match = True
+    for i, (model_w, saved_w) in enumerate(zip(model.weights, reordered)):
+        if model_w.shape != tuple(saved_w.shape):
+            print(f'❌ {i}: {model_w.name} {model_w.shape} != {saved_w.shape}')
+            all_match = False
+        else:
+            print(f'✅ {i}: {model_w.name} {model_w.shape}')
+
+    if all_match:
+        model.set_weights(reordered)
+        print('✅ Weights loaded successfully!')
+        model.save_weights(weights_path + '.weights.h5')
+    else:
+        print('❌ Shape mismatches found')
+
+    return model
+
+
+def remap_resnet_block_plain(sw, start, n_units=3):
+    # Old order: (kb,gb) per unit, then all moving stats
+    # unit0: k(0),b(1),k(2),b(3), g(4),b(5),g(6),b(7)
+    # unit1: k(8),b(9),k(10),b(11), g(12),b(13),g(14),b(15)
+    # unit2: k(16),b(17),k(18),b(19), g(20),b(21),g(22),b(23)
+    # moving: mm(24),mv(25),mm(26),mv(27),mm(28),mv(29),mm(30),mv(31),mm(32),mv(33),mm(34),mv(35)
+    n = n_units
+    old_order = []
+    for u in range(n):
+        kb = 8 * u        # k,b,k,b
+        gb = 8 * u + 4    # g,b,g,b
+        mm = 8 * n + 4 * u  # mm,mv,mm,mv
+        old_order += [kb, kb + 1, kb + 2, kb + 3,    # k,b,k,b
+                      gb, gb + 1, mm, mm + 1,     # g,b,mm,mv
+                      gb + 2, gb + 3, mm + 2, mm + 3]     # g,b,mm,mv
+    return [sw[start + i] for i in old_order]
+
+
+def remap_resnet_block_with_skip(sw, start, n_units=3):
+    # Old order: (kb,gb) per unit, then all moving stats
+    # unit0: k(0),b(1),k(2),b(3),k_skip(4),b_skip(5), g(6),b(7),g(8),b(9)
+    # unit1: k(10),b(11),k(12),b(13), g(14),b(15),g(16),b(17)
+    # unit2: k(18),b(19),k(20),b(21), g(22),b(23),g(24),b(25)
+    # moving: mm(26),mv(27),...,mm(37),mv(37)
+    n = n_units
+    total_kb_gb_first = 10   # 6 kb + 4 gb
+    total_kb_gb_rest = 8    # 4 kb + 4 gb
+    moving_start = total_kb_gb_first + total_kb_gb_rest * (n - 1)  # 26
+
+    old_order = []
+    # Unit 0
+    old_order += [0, 1, 2, 3, 4, 5,                    # k,b,k,b,k_skip,b_skip
+                  6, 7, moving_start + 0, moving_start + 1,   # g,b,mm,mv
+                  8, 9, moving_start + 2, moving_start + 3]   # g,b,mm,mv
+    # Units 1..n-1
+    for u in range(1, n):
+        kb = total_kb_gb_first + total_kb_gb_rest * (u - 1)
+        gb = kb + 4
+        mm = moving_start + 4 * u
+        old_order += [kb, kb + 1, kb + 2, kb + 3,   # k,b,k,b
+                      gb, gb + 1, mm, mm + 1,    # g,b,mm,mv
+                      gb + 2, gb + 3, mm + 2, mm + 3]    # g,b,mm,mv
+    return [sw[start + i] for i in old_order]
+
+
+def load_weights_remapped_20(model, weights_path):
+    import re
+    import h5py
+
+    saved_weights = {}
+
+    def collect_weights(name, obj):
+        if isinstance(obj, h5py.Dataset):
+            match = re.search(r'_(\d+)_(\d+)$', name)
+            if match:
+                global_idx = int(match.group(1))
+                saved_weights[global_idx] = obj[:]
+
+    with h5py.File(weights_path, 'r') as f:
+        f.visititems(collect_weights)
+
+    sw = [saved_weights[k] for k in sorted(saved_weights.keys())]
+
+    reordered = (
+        [sw[0], sw[1]] +
+        remap_resnet_block_plain(sw, 2, n_units=3) +      # global 2-37  (36 weights)
+        remap_resnet_block_with_skip(sw, 38, n_units=3) +  # global 38-75 (38 weights)
+        remap_resnet_block_with_skip(sw, 76, n_units=3) +  # global 76-113 (38 weights)
+        [sw[114], sw[115], sw[116], sw[117]] +
+        [sw[118], sw[119]]
+    )
+
+    print(f'Saved weights: {len(reordered)}')
+    print(f'Model weights: {len(model.weights)}')
+
+    all_match = True
+    for i, (model_w, saved_w) in enumerate(zip(model.weights, reordered)):
+        if model_w.shape != tuple(saved_w.shape):
+            print(f'❌ {i}: {model_w.name} {model_w.shape} != {saved_w.shape}')
+            all_match = False
+        else:
+            print(f'✅ {i}: {model_w.name} {model_w.shape}')
+
+    if all_match:
+        model.set_weights(reordered)
+        print('✅ Weights loaded successfully!')
+    else:
+        print('❌ Shape mismatches found')
+
+    return model
+
 
 if __name__ == '__main__':
     #     my_func_main()
@@ -83,14 +273,15 @@ if __name__ == '__main__':
     # Load parameters from configuration file
     # Get the script's directory
     path_script = os.path.dirname(os.path.abspath(__file__))
-    SETTINGS_FILE = 'urbansound8k/semantic_config_urbansound8k_central.yaml'
+    # SETTINGS_FILE = 'urbansound8k/semantic_config_urbansound8k_central.yaml'
+    SETTINGS_FILE = 'cifar10/ResNet20_CIFAR_test2.yaml'
+    # Change from 'settings' to 'models' to reload simulations settings
+    SETTINGS_FOLDER = 'models'
     # Load the provided configuration file or the default one
     # python SINFONY.py semantic_config.yaml
     # Workaround for interactive sessions: Only allow config file names starting 'semantic_config'
     SETTINGS_FILE = sys.argv[1] if len(sys.argv) > 1 and sys.argv[1][0:15].lower(
     ) == 'semantic_config' else SETTINGS_FILE
-    # Change to 'settings_saved' to reload simulations settings
-    SETTINGS_FOLDER = 'settings'
     settings_path = os.path.join(path_script, SETTINGS_FOLDER, SETTINGS_FILE)
     with open(settings_path, 'r', encoding='UTF8') as file:
         params = yaml.safe_load(file)
@@ -102,7 +293,7 @@ if __name__ == '__main__':
     transceiver_split = model_settings['communication']['transceiver_split']
 
     # Initialization
-    mt.gpu_select(number=load_settings.get('gpu', -2), memory_growth=False)
+    # mt.gpu_select(number=load_settings.get('gpu', -2), memory_growth=False)
     # keras.backend.set_floatx(load_settings['numerical_precision'])
 
     # Simulation
@@ -208,32 +399,32 @@ if __name__ == '__main__':
     load_from_weights = True
     # filename2 = 'ResNet14_MNIST4_Ne20_snr-4_6'
 
-    # model.summary()
     pathfile_model2_results = os.path.join(path_script, subpath_results,
                                            load_settings['simulation_filename_prefix'] + filename)
-    # layer_found = find_layer_by_name(model, 'rx_layer0')
-    # layer_found.get_weights()
 
     # Set weights to that of old model
     if load_from_weights is True:
         print('Loading model from weights...')
-        pathfile_weights = os.path.join(
-            path_script, subpath_results, filename + '_weights.h5')
-        # pathfile_weights2 = os.path.join(
-        #     path_script, subpath_results, filename, filename)
+        # pathfile_weights = os.path.join(
+        #     path_script, subpath_results, filename)
         # model(test_input, test_labels, np.array(
         #     [0.0, 0.0], dtype='float32'), np.array(0.0, dtype='float32'))
-        model.load_weights(pathfile_weights, skip_mismatch=False)
+        if model.name == 'ResNet14_CIFAR10':
+            model = load_weights_remapped(model, pathfile_model + '_weights.h5')
+        elif model.name == 'ResNet20_CIFAR10':
+            model = load_weights_remapped_20(model, pathfile_model + '_weights.h5')
+        else:
+            model = try_load_weights(model, pathfile_model)
+        # pathfile_weights2 = os.path.join(
+        #     path_script, subpath_results, filename, filename)
         # model2.load_weights(pathfile_weights2, skip_mismatch=False)
         # model = model2
         print('Weights loaded.')
-        # layer_found = find_layer_by_name(model, 'rx_layer0')
-        # layer_found.get_weights()
     else:
         print('Loading model...')
         # Load SINFONY model
         pathfile_model2 = os.path.join(path_script, subpath_results, filename)
-        model2 = keras.models.load_model(pathfile_model2)
+        model2 = try_load_model(pathfile_model2)
         # model2 = tf.keras.layers.TFSMLayer(
         #     pathfile_model2, call_endpoint="serving_default")
         print('Model loaded.')
@@ -244,18 +435,9 @@ if __name__ == '__main__':
     model.compile(
         optimizer=optimizer, loss='categorical_crossentropy', metrics=['accuracy'])
 
-    # # TODO: Unify with model.save before
-    # # Save old Keras model for use in new Tensorflow version:
-    # # Note: Requires sionna conda env
     # if load is False:
-    #     print('Saving model...')
-    #     pathfile_weights = os.path.join(
-    #         path_script, subpath_results, 'weights_' + filename + '.weights.h5')
-    #     if save_only_weights is True:
-    #         model.save_weights(pathfile_weights)
-    #     else:
-    #         model.save(pathfile_model + '.keras')
-    #     print('Model saved.')
+    #     # Save model weights:
+    #     try_save(model, pathfile_model, to_weights=save_only_weights)
     # else:
     #     # Compile and train model
     #     # Load training history to include evaluation

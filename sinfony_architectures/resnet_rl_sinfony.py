@@ -36,62 +36,64 @@ class ResnetRLSinfony(keras.Model):
 
     def __init__(self, communication_config, resnet_config=resnet.ResnetConfiguration()):
         super().__init__()
-        # self._training = training
-        # self._sigma = sigma
-        # self.perturbation_variance = perturbation_variance
-        # Tx
         self.image_split_factor = communication_config.encoding_config.image_split_factor
         if self.image_split_factor >= 2:
             self.transmitter = rs.resnet_multi_transmitter_imagesplit(
                 resnet_config=resnet_config, encoding_config=communication_config.encoding_config)
-            # label = 'ResNet_CIFAR10_AE_multitx'
         else:
             self.transmitter = rs.resnet_transmitter(
                 resnet_config=resnet_config, encoding_config=communication_config.encoding_config)
-            # label = 'ResNet_CIFAR10_AE'
-        # Rx
         self.receiver = rs.resnet_receiver_imagesplit(
-            received_signal_shape=(communication_config.encoding_config.image_split_factor, communication_config.encoding_config.image_split_factor, communication_config.encoding_config.encoding_layer_width), number_classes=resnet_config.number_classes, image_split_factor=self.image_split_factor, decoding_config=communication_config.decoding_config)
-        # model = Model(inputs = intx, outputs = outrx, name = label)
+            received_signal_shape=(communication_config.encoding_config.image_split_factor,
+                                   communication_config.encoding_config.image_split_factor, communication_config.encoding_config.encoding_layer_width),
+            number_classes=resnet_config.number_classes,
+            image_split_factor=self.image_split_factor,
+            decoding_config=communication_config.decoding_config)
 
-    @tf.function  # (jit_compile=True)
     def call(self, observation, true_labels, sigma, perturbation_variance=None):
         '''Compute model outputs and loss/accuracy
         '''
         if perturbation_variance is None:
-            perturbation_variance = tf.constant(0.0, tf.float32)
+            perturbation_variance = keras.ops.zeros(())  # scalar 0.0
+
         # Scaling to ensure conservation of average energy
         transmit_signal = self.transmitter(observation) * \
-            tf.sqrt(1 - perturbation_variance)
-        # TODO: Create policy object to enable adjustment of policy here
-        exploration_signal = mt.gaussian_noise3(transmit_signal, tf.sqrt(
-            [perturbation_variance, perturbation_variance]))
+            keras.ops.sqrt(1 - perturbation_variance)
+
+        exploration_signal = mt.gaussian_noise3(transmit_signal, keras.ops.sqrt(
+            keras.ops.stack([perturbation_variance, perturbation_variance])))
         received_signal = mt.gaussian_noise3(exploration_signal, sigma)
-        received_signal = tf.stop_gradient(
-            received_signal)		# no gradient between Tx and Rx
+        received_signal = keras.ops.stop_gradient(received_signal)
+
         estimated_labels = self.receiver(received_signal)
 
         # Average BCE for each baseband symbol and each batch example
         cross_entropy_empirical = keras.losses.categorical_crossentropy(
             true_labels, estimated_labels)
         # The RX loss is the usual average CE
-        receiver_loss = tf.reduce_mean(cross_entropy_empirical)
+        receiver_loss = keras.ops.mean(cross_entropy_empirical)
 
         # From the TX side, the CE is seen as a feedback from the RX through which backpropagation is not possible
-        cross_entropy_empirical2 = tf.stop_gradient(cross_entropy_empirical)
-        exploration_signal2 = tf.stop_gradient(exploration_signal)
-        if self.image_split_factor == 1:
-            lnpxs = - tf.reduce_sum((exploration_signal2 - transmit_signal) ** 2,
-                                    axis=-1) / (2 * perturbation_variance)
-        else:
-            # - 0.5 * tf.math.log((2 * np.pi * perturbation_variance) ** n_dim) # Gradient is backpropagated through `transmit_signal`
-            lnpxs = - tf.reduce_sum(tf.reduce_sum(tf.reduce_sum((exploration_signal2 - transmit_signal)
-                                    ** 2, axis=-1), axis=-1), axis=-1) / (2 * perturbation_variance)
-        transmitter_loss = tf.reduce_mean(
+        cross_entropy_empirical2 = keras.ops.stop_gradient(
+            cross_entropy_empirical)
+        exploration_signal2 = keras.ops.stop_gradient(exploration_signal)
+
+        # Unified reduce_sum over all non-batch dims (backend-agnostic)
+        lnpxs = - keras.ops.sum(
+            keras.ops.reshape((exploration_signal2 - transmit_signal) ** 2,
+                              [keras.ops.shape(transmit_signal)[0], -1]),
+            axis=-1
+        ) / (2 * perturbation_variance)
+
+        transmitter_loss = keras.ops.mean(
             lnpxs * cross_entropy_empirical2, axis=0)
 
-        accuracy = tf.reduce_mean(tf.cast(tf.math.equal(tf.argmax(
-            estimated_labels, axis=-1), tf.argmax(true_labels, axis=-1)), dtype='float32'))
+        accuracy = keras.ops.mean(keras.ops.cast(
+            keras.ops.equal(
+                keras.ops.argmax(estimated_labels, axis=-1),
+                keras.ops.argmax(true_labels, axis=-1)),
+            dtype='float32'))
+
         return estimated_labels, transmitter_loss, receiver_loss, accuracy
 
 
@@ -99,7 +101,7 @@ class ResnetAE2(ResnetRLSinfony):
     '''SINFONY trained via RL-SINFONY training procedure/function
     ResNet multi transmitter autoencoder-like defined like in reinforcement learning version for CIFAR with [6 * number_residual_units + 2] layers without bottleneck structure
     '''
-    @tf.function  # (jit_compile=True)
+
     def call(self, observation, true_labels, sigma, perturbation_variance=None):
         '''Compute model outputs and loss/accuracy
         perturbation_variance not used in AE approach, but placeholder to enable integration into RL-based training function
@@ -112,13 +114,15 @@ class ResnetAE2(ResnetRLSinfony):
         cross_entropy_empirical = keras.losses.categorical_crossentropy(
             true_labels, estimated_labels)
         # The RX loss is the usual average CE
-        rx_loss = tf.reduce_mean(cross_entropy_empirical)
+        rx_loss = keras.ops.mean(cross_entropy_empirical)
         # The Tx loss is the same for AE
         tx_loss = rx_loss
 
         # Compute classification accuracy
-        accuracy = tf.reduce_mean(tf.cast(tf.math.equal(
-            tf.argmax(estimated_labels, axis=-1), tf.argmax(true_labels, axis=-1)), dtype='float32'))
+        accuracy = keras.ops.mean(keras.ops.cast(keras.ops.equal(
+            keras.ops.argmax(estimated_labels, axis=-1),
+            keras.ops.argmax(true_labels, axis=-1)), dtype='float32'))
+
         return estimated_labels, tx_loss, rx_loss, accuracy
 
 
@@ -138,8 +142,8 @@ class PertubationVarianceSchedule():
         if self._iteration_boundary != (len(self.values) - 1):
             if self._iteration >= self.boundaries[self._iteration_boundary]:
                 self._iteration_boundary = self._iteration_boundary + 1
-        pertubation_variance = tf.constant(
-            self.values[self._iteration_boundary], tf.float32)
+        pertubation_variance = keras.ops.convert_to_tensor(
+            self.values[self._iteration_boundary], 'float32')
         self._iteration = self._iteration + 1
         return pertubation_variance
 
@@ -198,7 +202,7 @@ def rl_based_training(model, train_input, train_labels, opt, opt_tx=None, opt_rx
 
     # Function that implements one transmitter training iteration using RL.
     @tf.function
-    def train_tx(opt_tx, train_input, train_labels, sigma, exploration_variance_schedule=tf.constant(0.0, tf.float32)):
+    def train_tx(opt_tx, train_input, train_labels, sigma, exploration_variance_schedule=keras.ops.convert_to_tensor(0.0, 'float32')):
         # Forward pass
         with tf.GradientTape() as tape:
             # Keep only the TX loss

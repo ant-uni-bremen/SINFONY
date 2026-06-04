@@ -16,7 +16,7 @@ sys.path.append('.')                        # NOQA
 # Include parent folder, where own packages are
 sys.path.append('..')                       # NOQA
 
-import tensorflow as tf
+# import tensorflow as tf
 # import tensorflow.keras as keras
 import keras
 import numpy as np
@@ -46,7 +46,7 @@ class AttentionWeightLayer(keras.layers.Layer):
         # Optional: inputs are ignored
         positive_weights = keras.activations.relu(self.attention_weights)
         normalized_weights = positive_weights / (
-            tf.reduce_sum(positive_weights, axis=-1,
+            keras.ops.sum(positive_weights, axis=-1,
                           keepdims=True) + self.epsilon
         )
         return normalized_weights
@@ -72,9 +72,9 @@ class WeightedDistanceLayer(keras.layers.Layer):
         x, exemplars = inputs  # unpack inputs
         # Normalize the weights so they sum to 1 across the feature dimension
         attention_weights = self.attention_weight_layer(None)
-        weighted_diff = tf.square(tf.expand_dims(x, 1) - tf.expand_dims(exemplars, 0)) * \
+        weighted_diff = keras.ops.square(keras.ops.expand_dims(x, 1) - keras.ops.expand_dims(exemplars, 0)) * \
             attention_weights   # (B, N, D)
-        distances = tf.sqrt(tf.reduce_sum(
+        distances = keras.ops.sqrt(keras.ops.sum(
             weighted_diff, axis=-1) + self.epsilon)  # (B, N)
         return distances
 
@@ -103,17 +103,17 @@ class SimilarityLayer(keras.layers.Layer):
         distances, labels = inputs
         # Similarity: s = exp(-c * d)
         log_similarities = -keras.activations.relu(self.c) * distances
-        # log_similarities = -tf.abs(self.c) * distances  # (B, N)
-        # similarities = tf.exp(log_similarities)  # (B, N)
-        similarities_norm = tf.nn.softmax(log_similarities)
+        # log_similarities = -keras.ops.abs(self.c) * distances  # (B, N)
+        # similarities = keras.ops.exp(log_similarities)  # (B, N)
+        similarities_norm = keras.ops.softmax(log_similarities)
 
         # Weighted sum of similarities per class
-        probs = tf.matmul(similarities_norm, tf.cast(labels, tf.float32))
+        probs = keras.ops.matmul(similarities_norm, keras.ops.cast(labels, 'float32'))
 
         # Weighted sum of similarities per class
-        # numerators = tf.matmul(similarities, tf.cast(
-        #     self.labels, tf.float32))  # (B, C)
-        # denominators = tf.reduce_sum(
+        # numerators = keras.ops.matmul(similarities, keras.ops.cast(
+        #     self.labels, 'float32'))  # (B, C)
+        # denominators = keras.ops.sum(
         #     similarities, axis=1, keepdims=True)      # (B, 1)
         # epsilon2 = 0
         # probs = numerators / (denominators + epsilon2)  # (B, C)
@@ -140,15 +140,15 @@ class ExemplarMemoryLayer(keras.layers.Layer):
             self.exemplars = self.add_weight(
                 name='exemplars_memory',
                 shape=exemplars.shape,
-                initializer=tf.constant_initializer(exemplars),
+                initializer=keras.initializers.Constant(exemplars),
                 trainable=False,
             )
             self.labels = self.add_weight(
                 name='exemplar_labels',
                 shape=labels.shape,
-                initializer=tf.constant_initializer(labels),
+                initializer=keras.initializers.Constant(labels),
                 trainable=False,
-                dtype=tf.int64
+                dtype='int64'
             )
         elif exemplars_shape is not None and labels_shape is not None:
             self.exemplars_shape = exemplars_shape
@@ -166,7 +166,7 @@ class ExemplarMemoryLayer(keras.layers.Layer):
                 shape=labels_shape,
                 initializer='zeros',
                 trainable=False,
-                dtype=tf.int64
+                dtype='int64'
             )
         else:
             raise ValueError(
@@ -259,7 +259,7 @@ class GeneralizedContextModelDifferentiableMemory(keras.Model):
             shape=labels.shape,
             initializer=keras.initializers.Constant(labels),
             trainable=False,
-            dtype=tf.int64
+            dtype='int64'
         )
 
     def call(self, x, exemplars):
@@ -311,7 +311,7 @@ class GeneralizedContextModelOld(keras.Model):
             shape=self.labels_shape,
             initializer=keras.initializers.Constant(labels),
             trainable=False,
-            dtype=tf.int64
+            dtype='int64'
         )
         # Learnable scalar
         self.c = self.add_weight(
@@ -331,24 +331,24 @@ class GeneralizedContextModelOld(keras.Model):
         attention_weights_normalized = self.attention_weight_layer(None)
 
         # Weighted Euclidean distance (B, 1, D) - (1, N, D)
-        weighted_diff = tf.square(tf.expand_dims(x, 1) - tf.expand_dims(self.exemplars, 0)) * \
+        weighted_diff = keras.ops.square(keras.ops.expand_dims(x, 1) - keras.ops.expand_dims(self.exemplars, 0)) * \
             attention_weights_normalized   # (B, N, D)
-        distances = tf.sqrt(tf.reduce_sum(
+        distances = keras.ops.sqrt(keras.ops.sum(
             weighted_diff, axis=-1) + epsilon)  # (B, N)
 
         # Similarity: s = exp(-c * d)
         log_similarities = -keras.activations.relu(self.c) * distances
-        # log_similarities = -tf.abs(self.c) * distances  # (B, N)
-        # similarities = tf.exp(log_similarities)  # (B, N)
-        similarities_norm = tf.nn.softmax(log_similarities)
+        # log_similarities = -keras.ops.abs(self.c) * distances  # (B, N)
+        # similarities = keras.ops.exp(log_similarities)  # (B, N)
+        similarities_norm = keras.ops.softmax(log_similarities)
 
         # Weighted sum of similarities per class
-        probs = tf.matmul(similarities_norm, tf.cast(self.labels, tf.float32))
+        probs = keras.ops.matmul(similarities_norm, keras.ops.cast(self.labels, 'float32'))
 
         # Weighted sum of similarities per class
-        # numerators = tf.matmul(similarities, tf.cast(
-        #     self.labels, tf.float32))  # (B, C)
-        # denominators = tf.reduce_sum(
+        # numerators = keras.ops.matmul(similarities, keras.ops.cast(
+        #     self.labels, 'float32'))  # (B, C)
+        # denominators = keras.ops.sum(
         #     similarities, axis=1, keepdims=True)      # (B, 1)
         # epsilon2 = 0
         # probs = numerators / (denominators + epsilon2)  # (B, C)
@@ -393,7 +393,7 @@ class MaskingLayer(keras.layers.Layer):
 
     Args:
         output_dim (int): Number of output dimensions (e.g., number of classes).
-        mask_initializer (str or tf.initializer): Initializer for the mask.
+        mask_initializer (str or keras.initializer): Initializer for the mask.
             Use "ones" for no initial masking, "zeros" to suppress everything initially, etc.
         trainable (bool): If True, the mask will be learned during training.
         **kwargs: Additional keyword arguments passed to the Layer base class.
@@ -405,7 +405,7 @@ class MaskingLayer(keras.layers.Layer):
         self.mask = self.add_weight(
             name="mask",
             shape=mask.shape,
-            initializer=tf.constant_initializer(self.mask_initializer),
+            initializer=keras.initializers.Constant(self.mask_initializer),
             trainable=False,
         )
 
@@ -422,7 +422,7 @@ class OutputSelector(keras.layers.Layer):
         self.indices = indices
 
     def call(self, inputs):
-        return tf.gather(inputs, self.indices, axis=-1)
+        return keras.ops.take(inputs, self.indices, axis=-1)
 
     def get_config(self):
         return {"indices": self.indices, **super().get_config()}

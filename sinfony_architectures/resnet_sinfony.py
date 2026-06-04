@@ -14,7 +14,7 @@ Belongs to simulation framework for numerical results of the articles:
 # LOADED PACKAGES
 import numpy as np
 # Tensorflow 2 packages
-import tensorflow as tf
+# import tensorflow as tf
 # import tf.keras as keras
 import keras
 from keras.models import Model
@@ -139,7 +139,7 @@ def resnet_transmitter(resnet_config=resnet.ResnetConfiguration(), encoding_conf
 
     # Step 3 (Channel Encoding)
     encoder = encoding_layers(
-        input_shape=feature_extractor.layers[-1].output.shape[1:], encoding_config=encoding_config, encoder_number=transmitter_number)
+        input_shape=feature_extractor.output_shape[1:], encoding_config=encoding_config, encoder_number=transmitter_number)
     transmitter_output = encoder(x_tensor)
 
     transmitter = Model(inputs=transmitter_input, outputs=transmitter_output)
@@ -208,9 +208,9 @@ def resnet_receiver_imagesplit(received_signal_shape, number_classes=10, image_s
                 decoder_layerlist.append(Dense(
                     decoding_layer_width, activation="relu", kernel_initializer=decoding_config.weight_initialization, kernel_regularizer=decoding_config.weight_decay, name="rx_layer" + str(indl)))
             decoder = keras.Sequential(decoder_layerlist)
-        if rx_list is False and decoding_config.rx_joint_layers == 1:
-            # x_tensor = decoder(receiver_input) acts on each dimension
-            x_tensor = decoder(receiver_input)
+            if rx_list is False:
+                # x_tensor = decoder(receiver_input) acts on each dimension
+                x_tensor = decoder(receiver_input)
         elif rx_list is True and decoding_config.rx_joint_layers == 1 or decoding_config.rx_joint_layers == 0:
             decoder_list = [[], []]
             for index_x in range(0, image_split_factor):

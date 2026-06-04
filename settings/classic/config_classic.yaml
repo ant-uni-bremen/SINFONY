@@ -1,5 +1,5 @@
 load_settings:
-  simulation_filename_suffix: _rc25_n15360_h1000_test # '_rc25_n15360_h100','_rc5_n16000_h1000'
+  filename_suffix: _rc25_n15360_h500_test # '_rc25_n15360_h100','_rc5_n16000_h1000'
   path_classic: models/classic            # path of classic simulation files
   path_models: models                     # path of model files
   save_format: npz                        # save format
@@ -9,7 +9,7 @@ load_settings:
   gpu: -2                                 # Select GPU, default: 0, -1 (CPU), -2 (automatically)
 
 dataset:
-  dataset: mnist                          # mnist, cifar10, fashion_mnist, hirise64, hirisecrater, fraeser64
+  dataset: cifar10                        # mnist, cifar10, fashion_mnist, hirise64, hirisecrater, fraeser64
   show_dataset: True                      # Show first dataset examples, just for demonstration
   validation_split: 0.85                  # If dataset is not split yet into training and validation data
   image_split: True                       # Only for fraeser, default: True, split image according to given dataset rules
@@ -17,7 +17,7 @@ dataset:
 communication:
   rate_channel_code: 0.25                 # Code rate: 0.25, 0.5, 0.75
   code_word_length: 15360                 # Code length: 1000 (default), 16000 (rate_channel_code = 0.5), 15360 (rate_channel_code = 0.25), 11264 (rate_channel_code = 0.75)
-  blocks: 1000                            # Huffman encode [blocks] feature vectors into one block + channel encoding: 100, 1000 is practical
+  blocks: 500                             # Huffman encode [blocks] feature vectors into one block + channel encoding: 100, 1000 is practical
                                           # Huffman code is computational bottleneck: But the smaller the blocks, the less severe errors are
   modulation: pam                         # Modulation
   num_bits_per_symbol: 1                  
@@ -28,4 +28,4 @@ evaluation:
   bits_per_image_value: 8                 # Images have RGB color entries: 8 bits -> [0, 256]
   snr_range: [-1, 5]                      # SNR in dB range: [-1, 5] (default)
   snr_step_size: 0.5                      # SNR in dB steps: 1 (default)
-  validation_rounds: 10                   # Rounds through validation data at one SNR
+  validation_rounds: 1                    # Rounds through validation data at one SNR

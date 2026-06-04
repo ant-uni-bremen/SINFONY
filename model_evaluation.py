@@ -25,7 +25,7 @@ import time
 import numpy as np
 
 # Tensorflow 2 packages
-import tensorflow as tf
+# import tensorflow as tf
 # import tf.keras as keras
 import keras
 
@@ -49,7 +49,7 @@ def gcm_train(exemplars, exemplar_labels, test_exemplars, test_exemplars_labels,
     return gcm_model
 
 
-def evaluate_gcm_memory(gcm_input, sinfony, transceiver_split, train_input, train_labels, snr_training, test_input, test_labels, snr_test, training_epochs=20, batch_size=64, validation_batch_size=None, opt_class=tf.keras.optimizers.SGD, opt_config={"learning_rate": 1e-3, "momentum": 0.9}, validation_rounds=10, gcm_decision_policy=False, fixed_dataset_per_memory_size=True, memory_sizes=None):
+def evaluate_gcm_memory(gcm_input, sinfony, transceiver_split, train_input, train_labels, snr_training, test_input, test_labels, snr_test, training_epochs=20, batch_size=64, validation_batch_size=None, opt_class=keras.optimizers.SGD, opt_config={"learning_rate": 1e-3, "momentum": 0.9}, validation_rounds=10, gcm_decision_policy=False, fixed_dataset_per_memory_size=True, memory_sizes=None):
     '''Evaluate GCM for different memory sizes for multiple validation rounds (= dataset epochs)
     fixed_dataset_per_memory_size: Use the same dataset per memory size for simulation speedup
     '''
@@ -127,11 +127,11 @@ def evaluate_gcm_memory(gcm_input, sinfony, transceiver_split, train_input, trai
         print_iteration(idx_memory + 1, len(memory_sizes),
                         memory_size, loss_i, accuracy_i, start_time)
         if gcm_decision_policy is True:
-            accuracy = [np.array(evaluation_measures[1]),
-                        np.array(evaluation_measures[2])]
+            accuracy = [keras.ops.convert_to_numpy(evaluation_measures[1]),
+                        keras.ops.convert_to_numpy(evaluation_measures[2])]
         else:
-            accuracy = np.array(evaluation_measures[1])
-        loss = np.array(evaluation_measures[0])
+            accuracy = keras.ops.convert_to_numpy(evaluation_measures[1])
+        loss = keras.ops.convert_to_numpy(evaluation_measures[0])
     return accuracy, loss, memory_sizes
 
 
@@ -148,7 +148,7 @@ def evaluate_gcm_working_memory(evaluated_model, test_input, test_labels, valida
 
     if not working_memory_sizes:
         working_memory_sizes = range(-size_attention_weights,  # -size_attention_weights+1
-                                     size_attention_weights+1)
+                                     size_attention_weights + 1)
 
     for idx_memory, working_memory_size in enumerate(working_memory_sizes):
         # Take GCM's k largest or smallest weights to model working memory capacity
@@ -197,11 +197,11 @@ def evaluate_gcm_working_memory(evaluated_model, test_input, test_labels, valida
         print_iteration(idx_memory + 1, len(working_memory_sizes),
                         working_memory_size, loss_i, accuracy_i, start_time)
     if gcm_decision_policy is True:
-        accuracy = [np.array(evaluation_measures[1]),
-                    np.array(evaluation_measures[2])]
+        accuracy = [keras.ops.convert_to_numpy(evaluation_measures[1]),
+                    keras.ops.convert_to_numpy(evaluation_measures[2])]
     else:
-        accuracy = np.array(evaluation_measures[1])
-    loss = np.array(evaluation_measures[0])
+        accuracy = keras.ops.convert_to_numpy(evaluation_measures[1])
+    loss = keras.ops.convert_to_numpy(evaluation_measures[0])
     return accuracy, loss, working_memory_sizes
 
 
@@ -257,11 +257,11 @@ def evaluate_sinfony(evaluated_model, test_input, test_labels, snrs=np.linspace(
         print_iteration(snr_index + 1, len(snrs), snr,
                         loss_i, accuracy_i, start_time)
     if gcm_decision_policy is True:
-        accuracy = [np.array(evaluation_measures[1]),
-                    np.array(evaluation_measures[2])]
+        accuracy = [keras.ops.convert_to_numpy(evaluation_measures[1]),
+                    keras.ops.convert_to_numpy(evaluation_measures[2])]
     else:
-        accuracy = np.array(evaluation_measures[1])
-    loss = np.array(evaluation_measures[0])
+        accuracy = keras.ops.convert_to_numpy(evaluation_measures[1])
+    loss = keras.ops.convert_to_numpy(evaluation_measures[0])
     return accuracy, loss
 
 
@@ -301,7 +301,7 @@ def evaluate_rlsinfony(evaluated_model, test_input, test_labels, snrs=np.linspac
             # Evaluate for validation_rounds with different noise realizations (akin to training epochs)
             # RL-SINFONY validation step
             _, _, loss_ii, accuracy_ii = evaluated_model(
-                test_input, test_labels, sigma=tf.convert_to_tensor(sigma_test, dtype='float32'))
+                test_input, test_labels, sigma=keras.ops.convert_to_tensor(sigma_test, dtype='float32'))
 
             # Add current measures to total measures
             loss_i = (validation_round * loss_i + loss_ii) / \
@@ -318,8 +318,8 @@ def evaluate_rlsinfony(evaluated_model, test_input, test_labels, snrs=np.linspac
         evaluation_measures[1].append(accuracy_i)
         print_iteration(snr_index + 1, len(snrs), snr,
                         loss_i, accuracy_i, start_time)
-    accuracy = np.array(evaluation_measures[1])
-    loss = np.array(evaluation_measures[0])
+    accuracy = keras.ops.convert_to_numpy(evaluation_measures[1])
+    loss = keras.ops.convert_to_numpy(evaluation_measures[0])
     return accuracy, loss
 
 
@@ -345,7 +345,7 @@ def print_validation_round(validation_round, validation_rounds, loss, accuracy, 
     Helper function to print validation round information
     """
     print(
-        f'Validation Round: {validation_round + 1}/{validation_rounds}, CE: {loss:.4f}, Acc: {accuracy*100:.2f}%, Time: {print_time(time.time() - start_time2)}, RAM: {get_ram():.2f} GB')
+        f'Validation Round: {validation_round + 1}/{validation_rounds}, CE: {loss:.4f}, Acc: {accuracy * 100:.2f}%, Time: {print_time(time.time() - start_time2)}, RAM: {get_ram():.2f} GB')
 
 
 def print_iteration(iteration, total, snr, loss, accuracy, start_time):
@@ -353,4 +353,4 @@ def print_iteration(iteration, total, snr, loss, accuracy, start_time):
     Helper function to print iteration information
     """
     print(
-        f'Iteration: {iteration}/{total}, SNR: {snr}, CE: {loss:.4f}, Acc: {accuracy*100:.2f}%, Time: {print_time(time.time() - start_time)}')
+        f'Iteration: {iteration}/{total}, SNR: {snr}, CE: {loss:.4f}, Acc: {accuracy * 100:.2f}%, Time: {print_time(time.time() - start_time)}')

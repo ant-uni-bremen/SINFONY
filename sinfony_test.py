@@ -37,33 +37,8 @@ import utilities.my_math_operations as mop
 from utilities.my_functions import savemodule
 import utilities.my_training as mt
 import utilities.my_training_tf1 as mt1
-from sinfony_io import try_load, try_save
+from sinfony_io import try_load, try_save, compare_model_accuracies
 import model_builder
-
-
-def compare_model_accuracies(accuracy, accuracy_load, tolerance=2e-2):
-    """
-    Compare model accuracies and print the result.
-
-    Args:
-        accuracy: The accuracy values to compare
-        accuracy_load: The loaded accuracy values to compare against
-        tolerance: The tolerance level for considering accuracies equal (default: 2e-2)
-
-    Returns:
-        bool: True if accuracies are equal within tolerance, False otherwise
-    """
-    accuracy_deviation = np.mean(
-        np.abs(accuracy - accuracy_load))
-    accuracy_equal = accuracy_deviation <= tolerance
-    if accuracy_equal:
-        print(
-            f'✅ Models have same accuracies! (accuracy_deviation = {accuracy_deviation*100:.2f}%)')
-    else:
-        print(
-            f'❌ Models differ in accuracies! (accuracy_deviation = {accuracy_deviation*100:.2f}%)')
-
-    return accuracy_equal
 
 
 if __name__ == '__main__':
@@ -81,8 +56,8 @@ if __name__ == '__main__':
     # Get the script's directory
     path_script = os.path.dirname(os.path.abspath(__file__))
     # Default: 'mnist'
-    SETTINGS_FILE = 'mnist'
-    # Change to 'settings_saved' to reload simulations settings
+    SETTINGS_FILE = 'mnist_rl'
+    # Change from 'settings' to 'models' to reload simulations settings
     SETTINGS_FOLDER = 'models'
     settings_path = os.path.join(path_script, SETTINGS_FOLDER, SETTINGS_FILE)
     entries = os.listdir(settings_path)
@@ -314,7 +289,10 @@ if __name__ == '__main__':
                     f"Simulation results file not found, jump to next file: {e}")
                 raise
 
-            accuracy_load = results2['val_acc'][np.isin(results2['snr'], snrs)]
+            if results2['val_acc'].ndim == 0:
+                accuracy_load = results2['val_acc'].flatten()[0]
+            else:
+                accuracy_load = results2['val_acc'][np.isin(results2['snr'], snrs)]
 
             accuracy_equal = compare_model_accuracies(
                 accuracy, accuracy_load, tolerance=2e-2)

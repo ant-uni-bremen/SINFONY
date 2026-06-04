@@ -80,7 +80,7 @@ reinforcement_learning:
 
 evaluation:
   mode: 0                                 # Evaluation mode: (0) default: Validation for SNR range, (1) Saving probability data for interface to application, (2) t-SNE embedding for visualization
-  snr_range: [10, 20]                    # SNR in dB range: [-30, 20] (default)
+  snr_range: [-30, 20]                    # SNR in dB range: [-30, 20] (default)
   snr_step_size: 1                        # SNR in dB steps: 1 (default)
   validation_rounds: 10                   # Rounds through validation data at one SNR
   evaluation_snr: 20                      # SNR value for interface data / T-SNE embedding: -10 / 20

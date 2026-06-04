@@ -31,7 +31,7 @@ import librosa
 import soundata
 
 # Tensorflow 2 packages
-import tensorflow as tf
+# import tensorflow as tf
 # import tf.keras as keras
 import keras
 
@@ -849,10 +849,12 @@ def stft_dataset_in_partitions(data_waveforms, frame_length, frame_step, number_
     data_spectrograms = []
     if number_partitions == 1:
         for waveforms in data_waveforms:
-            spectrograms = keras.ops.abs(tf.signal.stft(
+            spectrograms = keras.ops.abs(keras.ops.stft(
                 waveforms.astype(dtype) / normalization_constant,
-                frame_length=frame_length,
-                frame_step=frame_step,
+                sequence_length=frame_length,
+                sequence_stride=frame_step,
+                fft_length=frame_length,
+                center=False
             )) ** 2
             data_spectrograms.append(spectrograms)
     else:
@@ -863,20 +865,24 @@ def stft_dataset_in_partitions(data_waveforms, frame_length, frame_step, number_
                 start = ind * partition_size
                 end = start + partition_size
                 spectrogram = keras.ops.abs(
-                    tf.signal.stft(
+                    keras.ops.stft(
                         waveforms[start:end, ...].astype(
                             dtype) / normalization_constant,
-                        frame_length=frame_length,
-                        frame_step=frame_step,
+                        sequence_length=frame_length,
+                        sequence_stride=frame_step,
+                        fft_length=frame_length,
+                        center=False
                     )
                 ) ** 2
                 spectrograms.append(spectrogram)
             spectrogram = keras.ops.abs(
-                tf.signal.stft(
+                keras.ops.stft(
                     waveforms[end:, ...].astype(
                         dtype) / normalization_constant,
-                    frame_length=frame_length,
-                    frame_step=frame_step,
+                    sequence_length=frame_length,
+                    sequence_stride=frame_step,
+                    fft_length=frame_length,
+                    center=False
                 )
             ) ** 2
             spectrograms.append(spectrogram)

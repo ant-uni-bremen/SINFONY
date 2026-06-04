@@ -10,6 +10,7 @@ Simulation framework for numerical results of the articles:
 3. E. Beck, H.- Y. Lin, P. Rückert, Y. Bao, B. von Helversen, S. Fehrler, K. Tracht, and A. Dekorsy, “Integrating Semantic Communication and Human Decision-Making into an End-to-End Sensing-Decision Framework”, arXiv preprint: 2412.05103, Dec. 2024. doi: 10.48550/arXiv.2412.05103.
 """
 
+
 import sys                                  # NOQA
 # Include current folder, where start simulation script and packages are
 sys.path.append('.')                        # NOQA
@@ -23,8 +24,9 @@ import yaml
 from matplotlib import pyplot as plt
 
 # Tensorflow 2 packages
-import tensorflow as tf
+# import tensorflow as tf
 # import tensorflow.keras as keras
+# os.environ['KERAS_BACKEND'] = 'torch'
 import keras
 
 # Own packages
@@ -35,7 +37,7 @@ import utilities.my_math_operations as mop
 from utilities.my_functions import savemodule
 import utilities.my_training as mt
 import utilities.my_training_tf1 as mt1
-from sinfony_io import try_load, try_save
+from sinfony_io import try_load, try_save, compare_model_accuracies
 import model_builder
 from sinfony_visualization import visualize_tsne_embedding
 
@@ -48,14 +50,14 @@ if __name__ == '__main__':
     # Get the script's directory
     path_script = os.path.dirname(os.path.abspath(__file__))
     # Default: 'mnist/semantic_config_mnist_sinfony.yaml'
-    SETTINGS_FILE = 'mnist/ResNet14_MNIST2_Ne20.yaml'
+    SETTINGS_FILE = 'mnist/ResNet14_MNIST_Ne20.yaml'
+    # Change from 'settings' to 'models' to reload simulations settings
+    SETTINGS_FOLDER = 'models'
     # Load the provided configuration file or the default one
     # python SINFONY.py semantic_config.yaml
     # Workaround for interactive sessions: Only allow config file names starting 'semantic_config'
     SETTINGS_FILE = sys.argv[1] if len(sys.argv) > 1 and sys.argv[1][0:15].lower(
     ) == 'semantic_config' else SETTINGS_FILE
-    # Change from 'settings' to 'models' to reload simulations settings
-    SETTINGS_FOLDER = 'models'
     settings_path = os.path.join(path_script, SETTINGS_FOLDER, SETTINGS_FILE)
     with open(settings_path, 'r', encoding='UTF8') as file:
         params = yaml.safe_load(file)
@@ -67,7 +69,7 @@ if __name__ == '__main__':
     transceiver_split = model_settings['communication']['transceiver_split']
 
     # Initialization
-    mt.gpu_select(number=load_settings.get('gpu', -2), memory_growth=False)
+    # mt.gpu_select(number=load_settings.get('gpu', -2), memory_growth=False)
     keras.backend.set_floatx(load_settings['numerical_precision'])
 
     # Simulation
@@ -81,7 +83,8 @@ if __name__ == '__main__':
     pathfile_model = os.path.join(path_script, subpath_results, filename)
     pathfile_results = os.path.join(path_script, subpath_results,
                                     load_settings.get('simulation_filename_prefix', '') + filename + load_settings.get('simulation_filename_suffix', ''))
-    saveobj = savemodule(form=load_settings.get('save_format', 'npz'))
+    save_file_ending = load_settings.get('save_format', 'npz')
+    save_object = savemodule(form=save_file_ending)
 
     # Data set
     # mnist, cifar10, fashion_mnist, hirise64, hirisecrater, fraeser64
@@ -171,7 +174,7 @@ if __name__ == '__main__':
     if load is False:
         if rl >= 1:
             # RL-SINFONY
-            sigma_train = tf.convert_to_tensor(
+            sigma_train = keras.ops.convert_to_tensor(
                 sigma_train, dtype='float32')
             results = resnet_rl_sinfony.rl_based_training(model, train_input, train_labels, optimizer, optimizer_tx, optimizer_rx2, validation_input=valX,
                                                           validation_labels=valY, epochs=number_epochs, training_batch_size=batch_size, sigma=sigma_train, stochastic_policy_gradient_config=spg_config)
@@ -190,12 +193,12 @@ if __name__ == '__main__':
         try_save(model, pathfile_model, to_weights=use_weights)
         # Save training history to avoid data loss, if validation fails
         print('Save training history...')
-        saveobj.save(pathfile_results, results)
+        save_object.save(pathfile_results, results)
         print('Saved!')
     else:
         # Load training history to include evaluation
         print('Load training history...')
-        results = saveobj.load(pathfile_results)
+        results = save_object.load(pathfile_results)
         if results is None:
             results = {}
         else:
@@ -232,7 +235,7 @@ if __name__ == '__main__':
             # Standard image recognition: Evaluate model accuracy once for test data
             if rl >= 1:
                 _, _, loss_i, accuracy_i = model(
-                    test_input, test_labels, sigma=tf.convert_to_tensor([0, 0], dtype='float32'))
+                    test_input, test_labels, sigma=keras.ops.convert_to_tensor([0, 0], dtype='float32'))
             else:
                 accuracy_i, loss_i = model_evaluation.evaluate_image_classifier(
                     model, test_input, test_labels)
@@ -251,13 +254,27 @@ if __name__ == '__main__':
         plt.xlabel('SNR')
         plt.ylabel('crossentropy loss')
 
+        # Check for existing evaluation and find unique filename
+        counter = 1
+        original_pathfile_results = pathfile_results
+        while os.path.isfile(pathfile_results + '.' + save_file_ending):
+            results2 = save_object.load(pathfile_results)
+            accuracy_load = results2['val_acc'][np.isin(results2['snr'], snrs)]
+            accuracy_equal = compare_model_accuracies(
+                accuracy, accuracy_load, tolerance=2e-2)
+            counter += 1
+            pathfile_results = f"{original_pathfile_results}{counter}"
+
         # Save evaluation
-        print('Save evaluation...')
-        results['snr'] = snrs
-        results['val_loss'] = loss
-        results['val_acc'] = accuracy
-        saveobj.save(pathfile_results, results)
-        print('Evaluation saved.')
+        if counter == 1:
+            print('Save evaluation...')
+            results['snr'] = snrs
+            results['val_loss'] = loss
+            results['val_acc'] = accuracy
+            save_object.save(pathfile_results, results)
+            print('Evaluation saved.')
+        else:
+            print('Evaluation not saved as file is already available.')
     elif evaluation_mode == 2:
         # t-SNE embedding for visualization
         if rl == 0:

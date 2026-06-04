@@ -59,14 +59,14 @@ def try_load_weights(model, pathfile):
         except Exception as e:
             print(f"❌ Failed to load weights from {weights_path}: {e}")
             # Try fallback with by_name=True and skip_mismatch=False
-            try:
-                print(f"Retrying with by_name=True and skip_mismatch=False...")
-                model.load_weights(weights_path, by_name=True, skip_mismatch=False)
-                print(f"✅ Successfully loaded weights with fallback from: {weights_path}")
-                return model
-            except Exception as e2:
-                print(f"❌ Failed to load weights with fallback from {weights_path}: {e2}")
-                continue
+            # try:
+            #     print(f"Retrying with by_name=True and skip_mismatch=False...")
+            #     model.load_weights(weights_path, by_name=True, skip_mismatch=False)
+            #     print(f"✅ Successfully loaded weights with fallback from: {weights_path}")
+            #     return model
+            # except Exception as e2:
+            #     print(f"❌ Failed to load weights with fallback from {weights_path}: {e2}")
+            #     continue
 
     raise FileNotFoundError(
         f"Weights not found at '{pathfile}'")
@@ -242,3 +242,28 @@ def set_noise_variance(target, snr):
 
     raise TypeError(
         f"Unsupported target type for setting noise variance: {type(target)}")
+
+
+def compare_model_accuracies(accuracy, accuracy_load, tolerance=2e-2):
+    """
+    Compare model accuracies and print the result.
+
+    Args:
+        accuracy: The accuracy values to compare
+        accuracy_load: The loaded accuracy values to compare against
+        tolerance: The tolerance level for considering accuracies equal (default: 2e-2)
+
+    Returns:
+        bool: True if accuracies are equal within tolerance, False otherwise
+    """
+    accuracy_deviation = np.mean(
+        np.abs(accuracy - accuracy_load))
+    accuracy_equal = accuracy_deviation <= tolerance
+    if accuracy_equal:
+        print(
+            f'✅ Models have same accuracies! (accuracy_deviation = {accuracy_deviation * 100:.2f}%)')
+    else:
+        print(
+            f'❌ Models differ in accuracies! (accuracy_deviation = {accuracy_deviation * 100:.2f}%)')
+
+    return accuracy_equal

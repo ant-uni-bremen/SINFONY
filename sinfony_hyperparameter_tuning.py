@@ -21,9 +21,10 @@ import numpy as np
 import yaml
 
 # Tensorflow 2 packages
-import tensorflow as tf
+# import tensorflow as tf
 # from tensorflow.keras.callbacks import EarlyStopping
-from tensorflow.keras.optimizers import SGD, Adam  # , Nadam
+import keras
+from keras.optimizers import SGD, Adam  # , Nadam
 import keras_tuner as kt
 # from tensorflow.keras.models import Model
 # , Add, Concatenate, Layer, GaussianNoise #, Activation
@@ -37,12 +38,6 @@ import sinfony_architectures.resnet_rl_sinfony as resnet_rl_sinfony
 import utilities.my_math_operations as mop
 from utilities.my_functions import savemodule
 import utilities.my_training as mt
-# Note: Important to load models from old files, there a reference to mf including layers is hardcoded
-import my_training as mf
-
-# Only necessary for Windows, otherwise kernel crashes
-if os.name.lower() == 'nt':
-    os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
 
 class build_model_resnet():
@@ -121,8 +116,8 @@ if __name__ == '__main__':
 
     # Initialization
     mt.gpu_select(number=load_settings['gpu'], memory_growth=False)
-    tf.keras.backend.clear_session()          	                    # Clearing graphs
-    tf.keras.backend.set_floatx(load_settings['numerical_precision'])
+    keras.backend.clear_session()          	                    # Clearing graphs
+    keras.backend.set_floatx(load_settings['numerical_precision'])
     # Random seed in every run, predictable random numbers for debugging with np.random.seed(0)
     np.random.seed()
 
@@ -192,9 +187,9 @@ if __name__ == '__main__':
                 np.array([model_settings['noise']['snr_min_train'], model_settings['noise']['snr_max_train']]))[::-1]
     total_number_iterations = number_epochs * iterations_per_epoch
     # TODO: l2 regularization only for ResNet feature extractor?
-    weight_decay = tf.keras.regularizers.l2(
+    weight_decay = keras.regularizers.l2(
         model_settings['resnet']['weight_decay'])
-    weight_decay_communication = tf.keras.regularizers.l2(
+    weight_decay_communication = keras.regularizers.l2(
         model_settings['communication']['weight_decay'])
     if transceiver_split == 1:
         encoding_config = resnet_sinfony.EncodingConfiguration(transmit_normalization=True, normalization_axis=model_settings['communication']['power_normalization_axis'], encoding_layer_width=model_settings['communication'][
@@ -212,7 +207,7 @@ if __name__ == '__main__':
         # - Callbacks for early stopping and model checkpoints -
         # EarlyStopping(monitor = 'val_loss', patience = 3, restore_best_weights = True)
         early_stopping = []
-        # tf.keras.callbacks.ModelCheckpoint(pathfile, monitor = 'val_loss', verbose = VERBOSE, save_best_only = False, mode = 'auto', period = 1, save_weights_only = False, save_freq = 'epoch')
+        # keras.callbacks.ModelCheckpoint(pathfile, monitor = 'val_loss', verbose = VERBOSE, save_best_only = False, mode = 'auto', period = 1, save_weights_only = False, save_freq = 'epoch')
         model_checkpoint = []
         # Track training loss and accuracy of each batch iteration
         batch_tracking = mt.BatchTrackingCallback()
@@ -227,7 +222,7 @@ if __name__ == '__main__':
                                    * iterations_per_epoch).astype('int'))
         # [1e-1, 1e-2, 1e-3] for ae training / [0.001, 0.0001, 0.00001] for adam / [1e-3, 1e-4, 1e-5] for rl training / [1e-3, 1e-4] for rl CIFAR training sgdlr2
         values = training_settings['learning_rate_schedule']['values']
-        learning_rate_schedule = tf.keras.optimizers.schedules.PiecewiseConstantDecay(
+        learning_rate_schedule = keras.optimizers.schedules.PiecewiseConstantDecay(
             boundaries, values)
         # , nesterov = True) # No advantage of Nesterov momentum with DNNs (?)
         learning_rate = learning_rate_schedule

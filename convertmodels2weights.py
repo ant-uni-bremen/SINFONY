@@ -49,7 +49,7 @@ def shift_layer_index_to_zero(root, prefix="tx_layer"):
                 n = int(m.group(1))
                 rest = m.group(2) or ""
                 if n > 0:
-                    new_name = f"{prefix}{n-1}{rest}"
+                    new_name = f"{prefix}{n - 1}{rest}"
                     print(f"{layer.name} -> {new_name}")
                     layer._name = new_name
             if hasattr(layer, "layers") and layer.layers:
@@ -134,7 +134,7 @@ if __name__ == '__main__':
     # tf.get_logger().setLevel(logging.DEBUG)
     # Get the directory where the script is located
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    model_dir = os.path.join(script_dir, 'models', 'classic')
+    model_dir = os.path.join(script_dir, 'models', 'mnist')
 
     # Choose the format you want to test
     model_ext = ''  # '.keras' or '.hdf5'

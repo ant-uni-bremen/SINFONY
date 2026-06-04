@@ -38,7 +38,7 @@ import utilities.my_float as mfl
 import utilities.my_training as mt
 from utilities.my_functions import print_time, savemodule
 import utilities.my_math_operations as mop
-from sinfony_io import try_load
+from sinfony_io import try_load, compare_model_accuracies
 from model_builder import create_model
 from model_evaluation import print_iteration, print_validation_round
 
@@ -227,7 +227,8 @@ if __name__ == '__main__':
     filename_extension = load_settings['filename_suffix']
     simulation_filename_prefix = load_settings['simulation_filename_prefix']
     simulation_filename_suffix = load_settings['simulation_filename_suffix']
-    saveobj = savemodule(form=load_settings['save_format'])
+    save_file_ending = load_settings.get('save_format', 'npz')
+    save_object = savemodule(form=save_file_ending)
 
     # Loaded dataset
     # mnist, cifar10, fashion_mnist, hirise64, hirisecrater, fraeser64
@@ -532,6 +533,18 @@ if __name__ == '__main__':
     plt.figure(2)
     plt.semilogy(snrs, loss)
 
+    # Check for existing evaluation and find unique filename
+    pathfile_results = os.path.join(path_script, path_classic, simulation_filename_prefix +
+                                    algorithm + '_' + filename_sinfony + filename_extension + simulation_filename_suffix)
+    counter = 1
+    original_pathfile_results = pathfile_results
+    while os.path.isfile(pathfile_results + '.' + save_file_ending):
+        results2 = save_object.load(pathfile_results)
+        accuracy_load = results2['val_acc'][np.isin(results2['snr'], snrs)]
+        accuracy_equal = compare_model_accuracies(accuracy, accuracy_load, tolerance=2e-2)
+        counter += 1
+        pathfile_results = f"{original_pathfile_results}{counter}"
+
     # Save evaluation
     print('Save evaluation...')
     results = {
@@ -539,9 +552,7 @@ if __name__ == '__main__':
         "val_loss": loss,
         "val_acc": accuracy,
     }
-    pathfile_results = os.path.join(path_script, path_classic, simulation_filename_prefix +
-                                    algorithm + '_' + filename_sinfony + filename_extension + simulation_filename_suffix)
-    saveobj.save(pathfile_results, results)
+    save_object.save(pathfile_results, results)
     print('Evaluation saved.')
 
     # Save settings when evaluation is done
