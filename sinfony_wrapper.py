@@ -24,9 +24,12 @@ import os
 import numpy as np
 from matplotlib import pyplot as plt
 
-# Tensorflow 2 packages
-# import tensorflow as tf
-# import tensorflow.keras as keras
+os.environ['KERAS_BACKEND'] = 'tensorflow'
+if os.environ['KERAS_BACKEND'] == 'tensorflow':
+    from utilities.gpu_select_tf import gpu_select
+    backend_tf = True
+else:
+    backend_tf = False
 import keras
 
 # Own packages
@@ -176,7 +179,7 @@ class SinfonyWrapper():
         '''Read SNR from model
         '''
         noise_layer = find_layer_by_name(self.model, 'gaussian_noise2')
-        self.snr = 10*np.log10(1 / noise_layer.get_weights()[0] ** 2)
+        self.snr = 10 * np.log10(1 / noise_layer.get_weights()[0] ** 2)
 
     def set_snr(self, snr=6):
         '''Set SNR in SINFONY model
@@ -318,8 +321,8 @@ if __name__ == '__main__':
     #     my_func_main()
     # def my_func_main():
 
-    # import my_training as mt
-    # mt.gpu_select(number=3, memory_growth=False)
+    if backend_tf:
+        gpu_select(number=3, memory_growth=False)
 
     # Choose project/dataset
     # Possible data sets: mnist, cifar10, fraeser (human rover), fraeser64, hise, hise64, hise256, speechcommands, urbansound8k

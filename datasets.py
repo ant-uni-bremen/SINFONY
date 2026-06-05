@@ -30,14 +30,10 @@ import tensorflow_datasets as tfds
 import librosa
 import soundata
 
-# Tensorflow 2 packages
-# import tensorflow as tf
-# import tf.keras as keras
 import keras
 
 # Own packages
-import utilities.my_training as mt
-import utilities.my_training_tf1 as mt1
+import utilities.my_dataset_handling as mdh
 
 
 def test_get_batches():
@@ -52,11 +48,11 @@ def test_get_batches():
     number_image_inputs = len(train_input)
     for epoch in range(epochs):
         batch_number = 0
-        train_input, train_labels = mt1.shuffle_dataset(
+        train_input, train_labels = mdh.shuffle_dataset(
             train_input, train_labels)
         if not dimensions_same:
             break
-        for batch_x, _ in mt1.get_batch_dataset(train_input, train_labels, training_batch_size):
+        for batch_x, _ in mdh.get_batch_dataset(train_input, train_labels, training_batch_size):
             print_str = f'[Rx] Epoch: {epoch + 1}/{epochs}, Batch: {batch_number + 1}/{number_batches}'
             print(print_str)
             batch_number = batch_number + 1
@@ -232,9 +228,9 @@ def load_dataset_tools(resolution=None, image_split=True, number_augmentations=0
     elif LABEL == 'individual':
         label_list_used = labels_list2
     elif LABEL == 'and':
-        label_list_used = np.logical_and(labels_list, labels_list2)*1
+        label_list_used = np.logical_and(labels_list, labels_list2) * 1
     elif LABEL == 'or':
-        label_list_used = np.logical_or(labels_list, labels_list2)*1
+        label_list_used = np.logical_or(labels_list, labels_list2) * 1
     else:
         label_list_used = labels_list
     # First load with full resolution
@@ -291,7 +287,7 @@ def load_dataset_tools(resolution=None, image_split=True, number_augmentations=0
 
     # Shuffle training and validation dataset -> avoids reproducability
     if shuffle:
-        data_input_split, data_labels = mt1.shuffle_dataset(
+        data_input_split, data_labels = mdh.shuffle_dataset(
             data_input_split, data_labels)
 
     # Split into training and validation data
@@ -308,9 +304,9 @@ def load_dataset_tools(resolution=None, image_split=True, number_augmentations=0
         train_labels, validation_labels = indices2validationsplit(
             validation_indices, data_labels)
     else:
-        train_input, validation_input = mt1.dataset_split(
+        train_input, validation_input = mdh.dataset_split(
             data_input_split, validation_split=validation_split)
-        train_labels, validation_labels = mt1.dataset_split(
+        train_labels, validation_labels = mdh.dataset_split(
             data_labels, validation_split=validation_split)
 
     # Data augmentation for training set
@@ -325,13 +321,13 @@ def load_dataset_tools(resolution=None, image_split=True, number_augmentations=0
     # Report prior probabilities of tool dataset
     prior_probability = np.mean(label_list_used)
     print(
-        f'Prior probablity of - Tool damaged: {prior_probability} - Tool ok: {1-prior_probability}')
+        f'Prior probablity of - Tool damaged: {prior_probability} - Tool ok: {1 - prior_probability}')
     prior_probability_train = np.mean(train_labels)
     print(
-        f'Training set prior probablity of - Tool damaged: {prior_probability_train} - Tool ok: {1-prior_probability_train}')
+        f'Training set prior probablity of - Tool damaged: {prior_probability_train} - Tool ok: {1 - prior_probability_train}')
     prior_probability_validation = np.mean(validation_labels)
     print(
-        f'Validation set prior probablity of - Tool damaged: {prior_probability_validation} - Tool ok: {1-prior_probability_validation}')
+        f'Validation set prior probablity of - Tool damaged: {prior_probability_validation} - Tool ok: {1 - prior_probability_validation}')
     return train_input, validation_input, train_labels, validation_labels
 
 
@@ -395,9 +391,9 @@ def load_dataset_hise(dataset=None, resolution=None, validation_split=0.85, numb
         train_labels = data_labels[0::number_images, ...]
 
     # Split into training and validation data
-    train_input, validation_input = mt1.dataset_split(
+    train_input, validation_input = mdh.dataset_split(
         train_input, validation_split=validation_split)
-    train_labels, validation_labels = mt1.dataset_split(
+    train_labels, validation_labels = mdh.dataset_split(
         train_labels, validation_split=validation_split)
 
     # Data augmentation
@@ -769,13 +765,13 @@ def load_dataset_tools_with_greater_4mm(resolution=None, image_split=True, numbe
         data_input_greater_4mm_split[1][:, :x_dimension, ...], data_input_4mm_split[1].shape[1], data_input_4mm_split[1].shape[2], interpolation='bilinear')
 
     # Split into training and validation data
-    train_input_4mm, validation_input_4mm = mt1.dataset_split(
+    train_input_4mm, validation_input_4mm = mdh.dataset_split(
         data_input_4mm_split, validation_split=validation_split)
-    train_labels_4mm, validation_labels_4mm = mt1.dataset_split(
+    train_labels_4mm, validation_labels_4mm = mdh.dataset_split(
         data_labels_4mm, validation_split=validation_split)
-    train_input_greater_4mm, validation_input_greater_4mm = mt1.dataset_split(
+    train_input_greater_4mm, validation_input_greater_4mm = mdh.dataset_split(
         data_input_greater_4mm_split, validation_split=validation_split)
-    train_labels_greater_4mm, validation_labels_greater_4mm = mt1.dataset_split(
+    train_labels_greater_4mm, validation_labels_greater_4mm = mdh.dataset_split(
         data_labels_greater_4mm, validation_split=validation_split)
 
     train_input = [np.concatenate([train_input_4mm[0], train_input_greater_4mm[0]]), np.concatenate(
@@ -1054,7 +1050,8 @@ if __name__ == '__main__':
     #     my_func_main()
     # def my_func_main():
 
-    mt.gpu_select(number=-1, memory_growth=True, cpus=64)
+    # from utilities.gpu_select_tf import gpu_select
+    # gpu_select(number=-1, memory_growth=True, cpus=64)
 
     # train_input, validation_input, train_labels, validation_labels = load_dataset_tools(
     #     resolution=None, image_split=True, number_augmentations=0, validation_split=0.85)

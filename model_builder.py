@@ -18,7 +18,7 @@ import sinfony_architectures.resnet_sinfony as resnet_sinfony
 import sinfony_architectures.resnet_rl_sinfony as resnet_rl_sinfony
 import utilities.my_math_operations as mop
 from keras.optimizers import SGD, Adam  # , Nadam
-from utilities.my_training import epochiterations2iterationboundaries
+from utilities.my_layers_keras3 import epochiterations2iterationboundaries
 
 
 def create_model_from_config(params, number_classes, image_shapes):

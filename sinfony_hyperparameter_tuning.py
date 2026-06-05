@@ -20,9 +20,12 @@ import os
 import numpy as np
 import yaml
 
-# Tensorflow 2 packages
-# import tensorflow as tf
-# from tensorflow.keras.callbacks import EarlyStopping
+os.environ['KERAS_BACKEND'] = 'tensorflow'
+if os.environ['KERAS_BACKEND'] == 'tensorflow':
+    from utilities.gpu_select_tf import gpu_select
+    backend_tf = True
+else:
+    backend_tf = False
 import keras
 from keras.optimizers import SGD, Adam  # , Nadam
 import keras_tuner as kt
@@ -37,7 +40,7 @@ import sinfony_architectures.resnet_sinfony as resnet_sinfony
 import sinfony_architectures.resnet_rl_sinfony as resnet_rl_sinfony
 import utilities.my_math_operations as mop
 from utilities.my_functions import savemodule
-import utilities.my_training as mt
+import utilities.my_layers_keras3 as mt
 
 
 class build_model_resnet():
@@ -69,8 +72,7 @@ class build_model_resnet():
         # resnet_config.weight_decay = hyperparameters.Float(
         #     'weight_decay', min_value=0.00001, max_value=0.01, sampling='log')
         if len(resnet_config.image_shape) > 1:
-            model = resnet_sinfony.resnet_multi_image(
-                resnet_config=resnet_config, number_combination_layer=0, combination_layer_width=0)
+            model = resnet_sinfony.resnet_multi_image(resnet_config=resnet_config)
         else:
             model = resnet.resnet(resnet_config=resnet_config)
 
@@ -115,7 +117,8 @@ if __name__ == '__main__':
     evaluation_settings = params['evaluation']
 
     # Initialization
-    mt.gpu_select(number=load_settings['gpu'], memory_growth=False)
+    if backend_tf:
+        gpu_select(number=load_settings['gpu'], memory_growth=False)
     keras.backend.clear_session()          	                    # Clearing graphs
     keras.backend.set_floatx(load_settings['numerical_precision'])
     # Random seed in every run, predictable random numbers for debugging with np.random.seed(0)

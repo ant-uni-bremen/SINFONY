@@ -11,7 +11,8 @@ Simulation framework for numerical results of the articles:
 """
 
 # LOADED PACKAGES
-import utilities.my_training as mt
+import utilities.my_layers_keras3 as mt
+from utilities.gpu_select_tf import gpu_select
 from utilities.my_functions import print_time, savemodule
 import utilities.my_math_operations as mop
 import os
@@ -901,7 +902,7 @@ if __name__ == '__main__':
     # Computation accuracy: 'float16', 'float32', or 'float64'
     tf.keras.backend.set_floatx('float32')
     # Choose/disable GPU: (-2) default, (-1) CPU, (>=0) GPU
-    mt.gpu_select(number=-2, memory_growth='True')
+    gpu_select(number=-2, memory_growth='True')
     # Random seed in every run, predictable random numbers for debugging with np.random.seed(0)
     np.random.seed()
 

@@ -23,9 +23,12 @@ from matplotlib import pyplot as plt
 import time
 import yaml
 
-# Tensorflow 2 packages
-import tensorflow as tf
-# import tensorflow.keras as keras
+os.environ['KERAS_BACKEND'] = 'tensorflow'
+if os.environ['KERAS_BACKEND'] == 'tensorflow':
+    from utilities.gpu_select_tf import gpu_select
+    backend_tf = True
+else:
+    backend_tf = False
 import keras
 # Keras functionality
 from keras.models import Model
@@ -36,7 +39,7 @@ from keras.optimizers import SGD, Adam  # , Nadam
 
 # Own packages
 import datasets
-import utilities.my_training as mt
+import utilities.my_layers_keras3 as mt
 from utilities.my_functions import print_time, savemodule
 import utilities.my_math_operations as mop
 from sinfony_io import try_load, try_save, compare_model_accuracies
@@ -75,7 +78,7 @@ def classic_features_autoencoder(number_channel_uses, layer_width_transmitter, l
     receiver_in = Input(shape=(number_channel_uses, ))
     layer = receiver_in
     # Intermediate layers
-    for _ in range(0, number_txrx_layer-1):
+    for _ in range(0, number_txrx_layer - 1):
         layer = Dense(layer_width_receiver, activation='relu',
                       kernel_initializer='he_uniform')(layer)
     if number_txrx_layer >= 1:
@@ -193,6 +196,12 @@ if __name__ == '__main__':
     training_settings = params['training']
     model_settings = params['model']
     evaluation_settings = params['evaluation']
+
+    # Initialization
+    if backend_tf:
+        gpu_select(number=load_settings.get('gpu', -2), memory_growth=True)
+    keras.backend.clear_session()
+    keras.backend.set_floatx(load_settings['numerical_precision'])
 
     # Simulation parameters
     filename_extension = load_settings['filename_suffix']
@@ -468,19 +477,24 @@ if __name__ == '__main__':
         pathfile_results = f"{original_pathfile_results}{counter}"
 
     # Save evaluation
-    print('Save evaluation...')
-    results = {
-        "snr": snrs,
-        "val_loss": loss,
-        "val_acc": accuracy,
-    }
-    save_object.save(pathfile_results, results)
-    print('Evaluation saved.')
+    if counter == 1:
+        # Save settings when evaluation is done
+        SETTINGS_SAVED_FOLDER = 'models/classic'    # 'settings_saved'
+        saved_settings_path = os.path.join(path_script, SETTINGS_SAVED_FOLDER)
+        with open(os.path.join(saved_settings_path, filename_classic + filename_extension + '.yaml'), 'w', encoding='utf8') as written_file:
+            yaml.safe_dump(params, written_file, default_flow_style=False)
+        print('Settings saved!')
 
-    # Save settings when evaluation is done
-    SETTINGS_SAVED_FOLDER = 'models/classic'    # 'settings_saved'
-    saved_settings_path = os.path.join(path_script, SETTINGS_SAVED_FOLDER)
-    with open(os.path.join(saved_settings_path, filename_classic + filename_extension + '.yaml'), 'w', encoding='utf8') as written_file:
-        yaml.safe_dump(params, written_file, default_flow_style=False)
-    print('Settings saved!')
+        print('Save evaluation...')
+        results = {
+            "snr": snrs,
+            "val_loss": loss,
+            "val_acc": accuracy,
+        }
+        save_object.save(pathfile_results, results)
+        print('Evaluation saved.')
+    else:
+        print('Evaluation not saved as file is already available.')
+
+
 # EOF

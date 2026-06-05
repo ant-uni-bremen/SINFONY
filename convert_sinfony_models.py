@@ -34,10 +34,11 @@ import model_evaluation
 import sinfony_architectures.resnet_rl_sinfony as resnet_rl_sinfony
 import utilities.my_math_operations as mop
 from utilities.my_functions import savemodule
-import utilities.my_training as mt
-import utilities.my_training_tf1 as mt1
+import utilities.my_layers_keras3 as mt
+from utilities.gpu_select_tf import gpu_select
+import utilities.my_dataset_handling as mdh
 # Note: Important to load models from old files, there a reference to mf including layers is hardcoded
-import utilities.my_training as mf
+import utilities.my_layers_keras3 as mf
 from sinfony_io import try_load, try_save, try_load_model, try_load_weights, find_layer_by_name
 import model_builder
 import h5py
@@ -293,7 +294,7 @@ if __name__ == '__main__':
     transceiver_split = model_settings['communication']['transceiver_split']
 
     # Initialization
-    # mt.gpu_select(number=load_settings.get('gpu', -2), memory_growth=False)
+    # gpu_select(number=load_settings.get('gpu', -2), memory_growth=False)
     # keras.backend.set_floatx(load_settings['numerical_precision'])
 
     # Simulation
@@ -334,7 +335,7 @@ if __name__ == '__main__':
         validation_dataset_size = test_input[0].shape[0]
     # If computational heavy (RL approach), use subset of validation set
     valY = test_labels[:validation_dataset_size, ...]
-    valX = mt1.create_batch(test_input, validation_dataset_size, 0)
+    valX = mdh.create_batch(test_input, validation_dataset_size, 0)
 
     # RL training
     # (0) default AE, (1) Reinforcement learning training, (2) AE trained with rl-based training implementation

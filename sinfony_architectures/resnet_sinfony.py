@@ -21,7 +21,7 @@ from keras.models import Model
 from keras.layers import Input, Dense, Flatten
 
 import sinfony_architectures.resnet as resnet
-import utilities.my_training as mt
+import utilities.my_layers_keras3 as mt
 
 
 # Functions to create Autoencoder model of SINFONY via reparametrization trick

@@ -34,7 +34,7 @@ from utilities.my_functions import print_time, get_ram
 import utilities.my_math_operations as mop
 import gcm as gcm
 import sinfony_io
-from utilities.my_training import new_optimizer
+from utilities.my_layers_keras3 import new_optimizer
 
 
 def gcm_train(exemplars, exemplar_labels, test_exemplars, test_exemplars_labels, optimizer, training_epochs, batch_size):

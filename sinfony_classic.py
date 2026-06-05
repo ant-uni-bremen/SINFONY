@@ -25,8 +25,12 @@ from matplotlib import pyplot as plt
 import time
 import yaml
 
-# Tensorflow 2 packages
-# import tensorflow as tf
+os.environ['KERAS_BACKEND'] = 'tensorflow'
+if os.environ['KERAS_BACKEND'] == 'tensorflow':
+    from utilities.gpu_select_tf import gpu_select
+    backend_tf = True
+else:
+    backend_tf = False
 import keras
 import sionna as sn
 
@@ -35,7 +39,7 @@ import sionna as sn
 import utilities.huffman_coding as hc
 import datasets
 import utilities.my_float as mfl
-import utilities.my_training as mt
+import utilities.my_layers_keras3 as mt
 from utilities.my_functions import print_time, savemodule
 import utilities.my_math_operations as mop
 from sinfony_io import try_load, compare_model_accuracies
@@ -97,7 +101,7 @@ def classic_digital_communication(source_signal, huffman, information_word_lengt
         noise_variance_effective = 2 * noise_standard_deviation ** 2
     else:
         noise_variance_effective = noise_standard_deviation ** 2
-    received_signal = channel(transmit_signal,  no=noise_variance_effective)
+    received_signal = channel(transmit_signal, no=noise_variance_effective)
     llr_channel = demapper(received_signal, no=noise_variance_effective)
     llr_deinterleaved = deinterleaver(llr_channel)
     # Soft information of code_bits_received cannot pass through Huffman decoding
@@ -218,7 +222,8 @@ if __name__ == '__main__':
     evaluation_settings = params['evaluation']
 
     # Initialization
-    mt.gpu_select(number=load_settings['gpu'], memory_growth=True)
+    if backend_tf:
+        gpu_select(number=load_settings.get('gpu', -2), memory_growth=True)
     keras.backend.clear_session()
     keras.backend.set_floatx(load_settings['numerical_precision'])
 
@@ -360,11 +365,11 @@ if __name__ == '__main__':
         else:
             # Models with input split
             data_train = []
-            for index_model, model_layer in enumerate(model.layers[len(train_input_normalized)].layers[-len(train_input_normalized)-1:-1]):
+            for index_model, model_layer in enumerate(model.layers[len(train_input_normalized)].layers[-len(train_input_normalized) - 1:-1]):
                 data_train.append(model_layer.predict(
                     train_input_normalized[index_model]))
             data_validation = []
-            for index_model, model_layer in enumerate(model.layers[len(test_input_normalized)].layers[-len(test_input_normalized)-1:-1]):
+            for index_model, model_layer in enumerate(model.layers[len(test_input_normalized)].layers[-len(test_input_normalized) - 1:-1]):
                 data_validation.append(model_layer.predict(
                     test_input_normalized[index_model]))
 
@@ -546,20 +551,24 @@ if __name__ == '__main__':
         pathfile_results = f"{original_pathfile_results}{counter}"
 
     # Save evaluation
-    print('Save evaluation...')
-    results = {
-        "snr": snrs,
-        "val_loss": loss,
-        "val_acc": accuracy,
-    }
-    save_object.save(pathfile_results, results)
-    print('Evaluation saved.')
+    if counter == 1:
+        # Save settings when evaluation is done
+        SETTINGS_SAVED_FOLDER = 'models/classic'    # 'settings_saved'
+        saved_settings_path = os.path.join(path_script, SETTINGS_SAVED_FOLDER)
+        with open(os.path.join(saved_settings_path, algorithm + '_' + filename_sinfony + filename_extension + '.yaml'), 'w', encoding='utf8') as written_file:
+            yaml.safe_dump(params, written_file, default_flow_style=False)
+        print('Settings saved!')
 
-    # Save settings when evaluation is done
-    SETTINGS_SAVED_FOLDER = 'models/classic'    # 'settings_saved'
-    saved_settings_path = os.path.join(path_script, SETTINGS_SAVED_FOLDER)
-    with open(os.path.join(saved_settings_path, algorithm + '_' + filename_sinfony + filename_extension + '.yaml'), 'w', encoding='utf8') as written_file:
-        yaml.safe_dump(params, written_file, default_flow_style=False)
-    print('Settings saved!')
+        print('Save evaluation...')
+        results = {
+            "snr": snrs,
+            "val_loss": loss,
+            "val_acc": accuracy,
+        }
+        save_object.save(pathfile_results, results)
+        print('Evaluation saved.')
+    else:
+        print('Evaluation not saved as file is already available.')
+
 
 # EOF

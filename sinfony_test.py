@@ -25,7 +25,12 @@ import yaml
 
 # Tensorflow 2 packages
 import tensorflow as tf
-# import tensorflow.keras as keras
+os.environ['KERAS_BACKEND'] = 'tensorflow'
+if os.environ['KERAS_BACKEND'] == 'tensorflow':
+    from utilities.gpu_select_tf import gpu_select
+    backend_tf = True
+else:
+    backend_tf = False
 import keras
 
 
@@ -35,8 +40,8 @@ import model_evaluation
 import sinfony_architectures.resnet_rl_sinfony as resnet_rl_sinfony
 import utilities.my_math_operations as mop
 from utilities.my_functions import savemodule
-import utilities.my_training as mt
-import utilities.my_training_tf1 as mt1
+import utilities.my_layers_keras3 as mt
+import utilities.my_dataset_handling as mdh
 from sinfony_io import try_load, try_save, compare_model_accuracies
 import model_builder
 
@@ -46,7 +51,8 @@ if __name__ == '__main__':
     # def my_func_main():
 
     # Initialization
-    mt.gpu_select(number=-2, memory_growth=True)
+    if backend_tf:
+        gpu_select(number=-2, memory_growth=True)
 
     move_old_model = True
     snr_range = [0, 0]          # Default: [-30,20]
@@ -81,8 +87,9 @@ if __name__ == '__main__':
             transceiver_split = model_settings['communication']['transceiver_split']
 
             # Initialization
-            # mt.gpu_select(number=load_settings.get(
-            #     'gpu', -2), memory_growth=False)
+            # if backend_tf:
+            #     gpu_select(number=load_settings.get(
+            #         'gpu', -2), memory_growth=False)
             # keras.backend.set_floatx(load_settings['numerical_precision'])
 
             # Simulation
@@ -129,7 +136,7 @@ if __name__ == '__main__':
                 validation_dataset_size = test_input[0].shape[0]
             # If computational heavy (RL approach), use subset of validation set
             valY = test_labels[:validation_dataset_size, ...]
-            valX = mt1.create_batch(test_input, validation_dataset_size, 0)
+            valX = mdh.create_batch(test_input, validation_dataset_size, 0)
 
             # RL training
             # (0) default AE, (1) Reinforcement learning training, (2) AE trained with rl-based training implementation

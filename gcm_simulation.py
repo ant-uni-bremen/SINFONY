@@ -18,8 +18,12 @@ sys.path.append('..')                       # NOQA
 
 import os
 import gc
-# import tensorflow as tf
-# import tensorflow.keras as keras
+os.environ['KERAS_BACKEND'] = 'tensorflow'
+if os.environ['KERAS_BACKEND'] == 'tensorflow':
+    from utilities.gpu_select_tf import gpu_select
+    backend_tf = True
+else:
+    backend_tf = False
 import keras
 from keras.optimizers import SGD, Adam
 import numpy as np
@@ -27,7 +31,7 @@ from matplotlib import pyplot as plt
 import time
 
 import datasets
-from utilities.my_training import gpu_select, epoch2iterationboundaries, new_optimizer
+from utilities.my_layers_keras3 import epoch2iterationboundaries, new_optimizer
 import sinfony_wrapper as sw
 import model_evaluation
 import utilities.my_math_operations as mop
@@ -38,7 +42,8 @@ import gcm as gcm_model
 
 if __name__ == '__main__':
 
-    gpu_select(number=-2, memory_growth=True, cpus=64)
+    if backend_tf:
+        gpu_select(number=-2, memory_growth=True, cpus=64)
     use_weights = True
 
     # Choose project/dataset

@@ -25,7 +25,8 @@ from keras.optimizers import SGD, Adam
 import numpy as np
 
 import datasets
-from utilities.my_training import gpu_select, new_optimizer
+from utilities.my_layers_keras3 import new_optimizer
+from utilities.gpu_select_tf import gpu_select
 import sinfony_wrapper as sw
 import model_evaluation
 import utilities.my_math_operations as mop
@@ -135,7 +136,7 @@ def swap_adjacent_pairs(lst):
     # Iterate through the list in increments of 2 and swap adjacent elements
     for i in range(0, len(result) - 1, 2):
         # Swap the elements at positions i and i+1
-        result[i], result[i+1] = result[i+1], result[i]
+        result[i], result[i + 1] = result[i + 1], result[i]
 
     return result
 
@@ -561,7 +562,7 @@ if __name__ == '__main__':
                             if 'stddev' in var.name:
                                 print(f"Found: {var.name} = {var.numpy()}")
                                 new_stddev = tf.constant(
-                                    [1/100000, 1/100000], dtype=tf.float32)
+                                    [1 / 100000, 1 / 100000], dtype=tf.float32)
                                 var.assign(tf.cast(new_stddev, var.dtype))
                         test_result = tfsm_model(
                             test_input_norm[0][:test_size, ...])
@@ -573,7 +574,7 @@ if __name__ == '__main__':
                             if 'stddev' in var.name:
                                 print(f"Found: {var.name} = {var.numpy()}")
                                 new_stddev = tf.constant(
-                                    [1/100000, 1/100000], dtype=tf.float32)
+                                    [1 / 100000, 1 / 100000], dtype=tf.float32)
                                 var.assign(tf.cast(new_stddev, var.dtype))
                         if gcm_input == 1:
                             if number_features == -1:

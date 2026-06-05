@@ -11,19 +11,18 @@ Belongs to simulation framework for numerical results of the article:
 """
 
 # LOADED PACKAGES
+import os
 import time
 import numpy as np
 
 # Tensorflow 2 packages
-import tensorflow as tf
-# import tf.keras as keras
 import keras
 
 import sinfony_architectures.resnet as resnet
 import sinfony_architectures.resnet_sinfony as rs
 from utilities.my_functions import print_time
-import utilities.my_training as mt
-from utilities.my_training_tf1 import shuffle_dataset, get_batch_dataset
+import utilities.my_layers_keras3 as mt
+from utilities.my_dataset_handling import shuffle_dataset, get_batch_dataset
 
 
 # Reinforcement Learning version RL-SINFONY via Stochastic Policy Gradient
@@ -163,6 +162,124 @@ class StochasticPolicyGradientConfiguration():
         # self.optimizer_receiver_finetuning = optimizer_receiver_finetuning
 
 
+def create_training_status_string(epoch, total_epochs, batch, total_batches, rx_loss, accuracy, acc_val=None, rx_val_loss=None, tx_loss=None, tx_val_loss=None):
+    """
+    Helper function to create training status strings for consistent formatting
+
+    Args:
+        epoch: Current epoch number
+        total_epochs: Total number of epochs
+        batch: Current batch number
+        total_batches: Total number of batches
+        rx_loss: Receiver loss value
+        accuracy: Accuracy value
+        acc_val: Validation accuracy (optional)
+        rx_val_loss: Validation receiver loss (optional)
+        tx_loss: Transmitter loss value (needed for Tx training)
+        tx_val_loss: Validation transmitter loss (optional)
+
+    Returns:
+        Formatted string representing training status
+    """
+    epoch_label = f'Epoch: {epoch + 1}/{total_epochs}'
+
+    if tx_val_loss is None:
+        tx_val_loss = np.NaN
+    else:
+        tx_val_loss = keras.ops.convert_to_numpy(tx_val_loss)
+    if rx_val_loss is None:
+        rx_val_loss = np.NaN
+    else:
+        rx_val_loss = keras.ops.convert_to_numpy(rx_val_loss)
+    if acc_val is None:
+        acc_val = np.NaN
+    else:
+        acc_val = keras.ops.convert_to_numpy(acc_val)
+
+    if tx_loss is None:
+        tx_extension = ''
+        transceiver_label = '[Rx]'
+    else:
+        tx_extension = f', PG: {keras.ops.convert_to_numpy(tx_loss):.4f}/{tx_val_loss:.4f}'
+        transceiver_label = '[Tx]'
+
+    training_status = f'{transceiver_label} {epoch_label}, Batch: {batch + 1}/{total_batches}, CE: {keras.ops.convert_to_numpy(rx_loss):.4f}/{rx_val_loss:.4f}, Acc: {keras.ops.convert_to_numpy(accuracy):.2f}/{acc_val:.2f}' + tx_extension
+
+    return training_status
+
+
+BACKEND = os.environ.get('KERAS_BACKEND', 'tensorflow')
+
+if BACKEND == 'tensorflow':
+    import tensorflow as tf
+
+    @tf.function
+    def train_tx(model, opt_tx, train_input, train_labels, sigma, exploration_variance_schedule=keras.ops.convert_to_tensor(0.0, 'float32')):
+        '''Function that implements one transmitter training iteration using RL
+        '''
+        # Forward pass
+        with tf.GradientTape() as tape:
+            # Keep only the TX loss
+            _, tx_loss, rx_loss, accuracy = model(
+                train_input, train_labels, sigma, exploration_variance_schedule)
+        # Computing and applying gradients
+        weights = model.transmitter.trainable_weights
+        gradients = tape.gradient(tx_loss, weights)
+        opt_tx.apply_gradients(zip(gradients, weights))
+        return rx_loss, accuracy, tx_loss
+
+    @tf.function
+    def train_rx(model, opt_rx, train_input, train_labels, sigma):
+        '''Function that implements one receiver training iteration
+        Reused for receiver finetuning
+        '''
+        # Forward pass
+        with tf.GradientTape() as tape:
+            # Keep only the RX loss
+            # No perturbation is added
+            _, _, rx_loss, accuracy = model(train_input, train_labels, sigma)
+        # Computing and applying gradients
+        weights = model.receiver.trainable_weights
+        gradients = tape.gradient(rx_loss, weights)
+        opt_rx.apply_gradients(zip(gradients, weights))
+        # The RX loss is returned to print the progress
+        return rx_loss, accuracy
+
+elif BACKEND == 'torch':
+    # Not optimized for pytorch, but compatible
+    import torch
+
+    def train_tx(model, opt_tx, train_input, train_labels, sigma, exploration_variance_schedule=keras.ops.convert_to_tensor(0.0, 'float32')):
+        # Zero gradients on all trainable weights
+        for w in model.transmitter.trainable_weights:
+            w.value.requires_grad_(True)
+            w.value.grad = None
+
+        _, tx_loss, rx_loss, accuracy = model(
+            train_input, train_labels, sigma, exploration_variance_schedule)
+
+        tx_loss.backward()
+
+        # Apply gradients via Keras optimizer
+        grads = [w.value.grad for w in model.transmitter.trainable_weights]
+        opt_tx.apply(grads, model.transmitter.trainable_weights)
+        return rx_loss, accuracy, tx_loss
+
+    def train_rx(model, opt_rx, train_input, train_labels, sigma):
+        for w in model.receiver.trainable_weights:
+            w.value.requires_grad_(True)
+            w.value.grad = None
+
+        _, _, rx_loss, accuracy = model(train_input, train_labels, sigma)
+
+        rx_loss.backward()
+
+        grads = [w.value.grad for w in model.receiver.trainable_weights]
+        opt_rx.apply(grads, model.receiver.trainable_weights)
+
+        return rx_loss, accuracy
+
+
 def rl_based_training(model, train_input, train_labels, opt, opt_tx=None, opt_rx2=None, validation_input=None, validation_labels=None, epochs=10, training_batch_size=64, sigma=np.array([0, 0]), stochastic_policy_gradient_config=StochasticPolicyGradientConfiguration(), zero_epoch=False):
     '''Reinforcement-based training of the semantic communication system model
     model: model with parameters to be trained
@@ -200,50 +317,6 @@ def rl_based_training(model, train_input, train_labels, opt, opt_tx=None, opt_rx
         optimizer_rx2 = opt_rx2 		# For receiver finetuning
     total_steps = tx_steps + rx_steps
 
-    # Function that implements one transmitter training iteration using RL.
-    @tf.function
-    def train_tx(opt_tx, train_input, train_labels, sigma, exploration_variance_schedule=keras.ops.convert_to_tensor(0.0, 'float32')):
-        # Forward pass
-        with tf.GradientTape() as tape:
-            # Keep only the TX loss
-            _, tx_loss, rx_loss, accuracy = model(
-                train_input, train_labels, sigma, exploration_variance_schedule())
-        # Computing and applying gradients
-        weights = model.transmitter.trainable_weights
-        gradients = tape.gradient(tx_loss, weights)
-        opt_tx.apply_gradients(zip(gradients, weights))
-        return rx_loss, accuracy, tx_loss
-
-    # Function that implements one receiver training iteration
-    @tf.function
-    def train_rx(opt_rx, train_input, train_labels, sigma):
-        # Forward pass
-        with tf.GradientTape() as tape:
-            # Keep only the RX loss
-            # No perturbation is added
-            _, _, rx_loss, accuracy = model(train_input, train_labels, sigma)
-        # Computing and applying gradients
-        weights = model.receiver.trainable_weights
-        gradients = tape.gradient(rx_loss, weights)
-        opt_rx.apply_gradients(zip(gradients, weights))
-        # The RX loss is returned to print the progress
-        return rx_loss, accuracy
-
-    # Function that implements one finetuning receiver training iteration
-    @tf.function
-    def train_rx2(opt_rx2, train_input, train_labels, sigma):
-        # Forward pass
-        with tf.GradientTape() as tape:
-            # Keep only the RX loss
-            # No perturbation is added
-            _, _, rx_loss, accuracy = model(train_input, train_labels, sigma)
-        # Computing and applying gradients
-        weights = model.receiver.trainable_weights  # .receiver.trainable_weights
-        gradients = tape.gradient(rx_loss, weights)
-        opt_rx2.apply_gradients(zip(gradients, weights))
-        # The RX loss is returned to print the progress
-        return rx_loss, accuracy
-
     # Save performance measures / results of training in dictionary
     perf_meas = {
         'rx_loss': [],
@@ -258,16 +331,18 @@ def rl_based_training(model, train_input, train_labels, opt, opt_tx=None, opt_rx
     # training iteration:
     # Note: Not consistent with model.fit() output of SINFONY training history.
     if zero_epoch is True:
+        pv = exploration_variance_schedule()
         _, tx_loss, rx_loss, accuracy = model(
-            train_input, train_labels, sigma, exploration_variance_schedule())
-        _, tx_val_loss, rx_val_loss, acc_val = model(
-            train_input, train_labels, sigma, exploration_variance_schedule())
-        perf_meas['rx_val_loss'].append(rx_val_loss.numpy())
-        perf_meas['acc_val'].append(acc_val.numpy())
-        perf_meas['tx_val_loss'].append(tx_val_loss.numpy())
-        perf_meas['tx_loss'].append(tx_loss.numpy())
-        perf_meas['rx_loss'].append(rx_loss.numpy())
-        perf_meas['acc'].append(accuracy.numpy())
+            train_input, train_labels, sigma, pv)
+        if (validation_input is not None) and (validation_labels is not None):
+            _, tx_val_loss, rx_val_loss, acc_val = model(
+                validation_input, validation_labels, sigma, pv)
+            perf_meas['rx_val_loss'].append(keras.ops.convert_to_numpy(rx_val_loss))
+            perf_meas['acc_val'].append(keras.ops.convert_to_numpy(acc_val))
+            perf_meas['tx_val_loss'].append(keras.ops.convert_to_numpy(tx_val_loss))
+        perf_meas['tx_loss'].append(keras.ops.convert_to_numpy(tx_loss))
+        perf_meas['rx_loss'].append(keras.ops.convert_to_numpy(rx_loss))
+        perf_meas['acc'].append(keras.ops.convert_to_numpy(accuracy))
 
     # Training loop
     start_time0 = time.time()
@@ -282,36 +357,44 @@ def rl_based_training(model, train_input, train_labels, opt, opt_tx=None, opt_rx
         for batch_input, batch_labels in get_batch_dataset(train_input, train_labels, training_batch_size):
             if batch_count % total_steps >= rx_steps:
                 # One step of transmitter training
+                pv = exploration_variance_schedule()
                 rx_loss, accuracy, tx_loss = train_tx(
-                    optimizer_tx, batch_input, batch_labels, sigma, exploration_variance_schedule=exploration_variance_schedule)
+                    model, optimizer_tx, batch_input, batch_labels, sigma, exploration_variance_schedule=pv)
                 if (validation_input is None) or (validation_labels is None):
-                    training_status_string = f'[Tx] Epoch: {index_epoch + 1}/{epochs}, Batch: {batch_count + 1}/{number_batches}, CE: {rx_loss.numpy():.4f}, Acc: {accuracy.numpy():.2f}, PG: {tx_loss.numpy():.4f}'
+                    training_status_string = create_training_status_string(
+                        epoch=index_epoch, total_epochs=epochs, batch=batch_count, total_batches=number_batches,
+                        rx_loss=rx_loss, accuracy=accuracy, tx_loss=tx_loss)
                 else:
                     _, tx_val_loss, rx_val_loss, acc_val = model(
-                        validation_input, validation_labels, sigma, exploration_variance_schedule())
-                    training_status_string = f'[Tx] Epoch: {index_epoch + 1}/{epochs}, Batch: {batch_count + 1}/{number_batches}, CE: {rx_loss.numpy():.4f}/{rx_val_loss.numpy():.4f}, Acc: {accuracy.numpy():.2f}/{acc_val.numpy():.2f}, PG: {tx_loss.numpy():.4f}/{tx_val_loss.numpy():.4f}'
-                    perf_meas['rx_val_loss'].append(rx_val_loss.numpy())
-                    perf_meas['acc_val'].append(acc_val.numpy())
-                    perf_meas['tx_val_loss'].append(tx_val_loss.numpy())
-                perf_meas['tx_loss'].append(tx_loss.numpy())
+                        validation_input, validation_labels, sigma, pv)
+                    training_status_string = create_training_status_string(
+                        epoch=index_epoch, total_epochs=epochs, batch=batch_count, total_batches=number_batches,
+                        rx_loss=rx_loss, accuracy=accuracy, acc_val=acc_val, rx_val_loss=rx_val_loss, tx_loss=tx_loss, tx_val_loss=tx_val_loss)
+                    perf_meas['rx_val_loss'].append(keras.ops.convert_to_numpy(rx_val_loss))
+                    perf_meas['acc_val'].append(keras.ops.convert_to_numpy(acc_val))
+                    perf_meas['tx_val_loss'].append(keras.ops.convert_to_numpy(tx_val_loss))
+                perf_meas['tx_loss'].append(keras.ops.convert_to_numpy(tx_loss))
             else:
                 # One step of receiver training
                 rx_loss, accuracy = train_rx(
-                    optimizer_rx, batch_input, batch_labels, sigma)
+                    model, optimizer_rx, batch_input, batch_labels, sigma)
                 if (validation_input is None) or (validation_labels is None):
-                    training_status_string = f'[Rx] Epoch: {index_epoch + 1}/{epochs}, Batch: {batch_count + 1}/{number_batches}, CE: {rx_loss.numpy():.4f}, Acc: {accuracy.numpy():.2f}'
+                    training_status_string = create_training_status_string(
+                        epoch=index_epoch, total_epochs=epochs, batch=batch_count, total_batches=number_batches,
+                        rx_loss=rx_loss, accuracy=accuracy)
                 else:
                     _, _, rx_val_loss, acc_val = model(
                         validation_input, validation_labels, sigma)
-                    training_status_string = f'[Rx] Epoch: {index_epoch + 1}/{epochs}, Batch: {batch_count + 1}/{number_batches}, CE: {rx_loss.numpy():.4f}/{rx_val_loss.numpy():.4f}, Acc: {accuracy.numpy():.2f}/{acc_val.numpy():.2f}'
-                    perf_meas['rx_val_loss'].append(rx_val_loss.numpy())
-                    perf_meas['acc_val'].append(acc_val.numpy())
-            perf_meas['rx_loss'].append(rx_loss.numpy())
-            perf_meas['acc'].append(accuracy.numpy())
+                    training_status_string = create_training_status_string(
+                        epoch=index_epoch, total_epochs=epochs, batch=batch_count, total_batches=number_batches,
+                        rx_loss=rx_loss, accuracy=accuracy, acc_val=acc_val, rx_val_loss=rx_val_loss)
+                    perf_meas['rx_val_loss'].append(keras.ops.convert_to_numpy(rx_val_loss))
+                    perf_meas['acc_val'].append(keras.ops.convert_to_numpy(acc_val))
+            perf_meas['rx_loss'].append(keras.ops.convert_to_numpy(rx_loss))
+            perf_meas['acc'].append(keras.ops.convert_to_numpy(accuracy))
             # Printing periodically the progress
             if batch_count % print_iteration == 0:
-                print(
-                    f"{training_status_string}, Time: {time.time() - start_time:.2f}s, Tot. time: {print_time(time.time() - start_time0)}")
+                print_training_status(training_status_string, start_time, start_time0, print_time)
                 start_time = time.time()
             batch_count += 1
 
@@ -323,20 +406,39 @@ def rl_based_training(model, train_input, train_labels, opt, opt_tx=None, opt_rx
         train_input, train_labels = shuffle_dataset(
             train_input, train_labels)
         for batch_input, batch_labels in get_batch_dataset(train_input, train_labels, training_batch_size):
-            rx_loss, accuracy = train_rx2(
-                optimizer_rx2, batch_input, batch_labels, sigma)
+            rx_loss, accuracy = train_rx(
+                model, optimizer_rx2, batch_input, batch_labels, sigma)
             if (validation_input is None) or (validation_labels is None):
-                training_status_string = f'[Rx] Epoch: {index_epoch + 1}/{receiver_finetuning_epochs}, Batch: {batch_count + 1}/{number_batches}, CE: {rx_loss.numpy():.4f}, Acc: {accuracy.numpy():.2f}'
+                training_status_string = create_training_status_string(
+                    epoch=index_epoch, total_epochs=receiver_finetuning_epochs, batch=batch_count, total_batches=number_batches,
+                    rx_loss=rx_loss, accuracy=accuracy)
             else:
                 _, _, rx_val_loss, acc_val = model(
                     validation_input, validation_labels, sigma)
-                training_status_string = f'[Rx] Epoch: {index_epoch + 1}/{receiver_finetuning_epochs}, Batch: {batch_count + 1}/{number_batches}, CE: {rx_loss.numpy():.4f}/{rx_val_loss.numpy():.4f}, Acc: {accuracy.numpy():.2f}/{acc_val.numpy():.2f}'
-            perf_meas['rx_loss'].append(rx_loss)
-            perf_meas['acc'].append(accuracy)
+                training_status_string = create_training_status_string(
+                    epoch=index_epoch, total_epochs=receiver_finetuning_epochs, batch=batch_count, total_batches=number_batches,
+                    rx_loss=rx_loss, accuracy=accuracy, acc_val=acc_val, rx_val_loss=rx_val_loss)
+                perf_meas['rx_val_loss'].append(keras.ops.convert_to_numpy(rx_val_loss))
+                perf_meas['acc_val'].append(keras.ops.convert_to_numpy(acc_val))
+            perf_meas['rx_loss'].append(keras.ops.convert_to_numpy(rx_loss))
+            perf_meas['acc'].append(keras.ops.convert_to_numpy(accuracy))
             if batch_count % print_iteration == 0:
-                print(
-                    f"{training_status_string}, Time: {time.time() - start_time:.2f}s, Tot. time: {print_time(time.time() - start_time0)}")
+                print_training_status(training_status_string, start_time, start_time0, print_time)
                 start_time = time.time()
             batch_count += 1
 
     return perf_meas
+
+
+def print_training_status(training_status_string, start_time, start_time0, print_time):
+    """
+    Helper function to print training status with consistent formatting
+
+    Args:
+        training_status_string: Formatted training status string from create_training_status_string
+        start_time: Timestamp for last print iteration
+        start_time0: Timestamp for overall training start
+        print_time: Function to format elapsed time
+    """
+    print(
+        f"{training_status_string}, Time: {time.time() - start_time:.2f}s, Tot. time: {print_time(time.time() - start_time0)}")
