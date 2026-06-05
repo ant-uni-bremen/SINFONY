@@ -249,10 +249,13 @@ elif BACKEND == 'torch':
     # Not optimized for pytorch, but compatible
     import torch
 
+    def prepare_model_for_pytorch_training(model):
+        for w in model.trainable_weights:
+            w.value.requires_grad_(True)
+
     def train_tx(model, opt_tx, train_input, train_labels, sigma, exploration_variance_schedule=keras.ops.convert_to_tensor(0.0, 'float32')):
         # Zero gradients on all trainable weights
         for w in model.transmitter.trainable_weights:
-            w.value.requires_grad_(True)
             w.value.grad = None
 
         _, tx_loss, rx_loss, accuracy = model(
@@ -267,7 +270,6 @@ elif BACKEND == 'torch':
 
     def train_rx(model, opt_rx, train_input, train_labels, sigma):
         for w in model.receiver.trainable_weights:
-            w.value.requires_grad_(True)
             w.value.grad = None
 
         _, _, rx_loss, accuracy = model(train_input, train_labels, sigma)
@@ -345,6 +347,8 @@ def rl_based_training(model, train_input, train_labels, opt, opt_tx=None, opt_rx
         perf_meas['acc'].append(keras.ops.convert_to_numpy(accuracy))
 
     # Training loop
+    if BACKEND == 'torch':
+        prepare_model_for_pytorch_training(model)
     start_time0 = time.time()
     start_time = time.time()
     number_batches = len(train_input[0]) // training_batch_size

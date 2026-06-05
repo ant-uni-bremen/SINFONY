@@ -267,3 +267,25 @@ def compare_model_accuracies(accuracy, accuracy_load, tolerance=2e-2):
             f'❌ Models differ in accuracies! (accuracy_deviation = {accuracy_deviation * 100:.2f}%)')
 
     return accuracy_equal
+
+
+def find_unique_results_path(pathfile_results, save_object, accuracy, snrs, tolerance=2e-2):
+    """
+    Check for existing evaluation and find unique filename.
+    Returns unique pathfile_results string and counter.
+    """
+    counter = 1
+    original_pathfile_results = pathfile_results
+    accuracy_equal = False
+    while os.path.isfile(pathfile_results + '.' + save_object.format):
+        results2 = save_object.load(pathfile_results)
+        val_acc = results2['val_acc']
+        if val_acc.ndim == 0:
+            accuracy_load = val_acc.flatten()[0]
+        else:
+            accuracy_load = val_acc[np.isin(results2['snr'], snrs)]
+        accuracy_equal = compare_model_accuracies(
+            accuracy, accuracy_load, tolerance=tolerance)
+        counter += 1
+        pathfile_results = f"{original_pathfile_results}{counter}"
+    return pathfile_results, counter, accuracy_equal

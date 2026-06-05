@@ -22,12 +22,11 @@ ACCURACY_MEASURES = ['val_acc', 'accuracy', 'val_accuracy',
                      'acc', 'acc_val']  # Accuracy measures
 
 
-def copy_published_models2repository(selected_plots, datapath='models', simulation_filename_prefix='RES_'):
+def copy_published_models2repository(selected_plots, datapath='models', destination='./models_selected', simulation_filename_prefix='', simulation_filename_suffix='_results'):
     '''Copy published/selected models to GitHub repository
     '''
     import shutil
     # Copy all selected curves
-    git_path = './models_selected'
     load = savemodule()
     load_format = 'npz'
     for plot in selected_plots:
@@ -43,52 +42,57 @@ def copy_published_models2repository(selected_plots, datapath='models', simulati
                 # If curve activated in plot, load data
                 simulation_file_basename = os.path.basename(table_entries[0])
                 simulation_file_subpath = os.path.dirname(table_entries[0])
-                simulation_file = os.path.join(
-                    simulation_file_subpath, simulation_filename_prefix + simulation_file_basename)
-                pathfile = os.path.join(path, simulation_file)
-                load_file = load.load(pathfile, form=load_format)
+                simulation_file = os.path.join(simulation_file_subpath, simulation_file_basename)
+                simulation_pathfile = os.path.join(path, simulation_file)
+                load_file = load.load(simulation_pathfile, form=load_format)
+                print(simulation_file_basename)
                 if load_file is not None:
-                    source_folder = os.path.join(path, table_entries[0])
+                    filename = simulation_file_basename
+                    if simulation_filename_prefix:
+                        filename = filename.removeprefix(simulation_filename_prefix)
+                    if simulation_filename_suffix:
+                        filename = filename.removesuffix(simulation_filename_suffix)
+                    pathfile_source = os.path.join(path, filename)
+
                     destination_folder = os.path.join(
-                        git_path, path, simulation_file_subpath)
-                    destination_files = os.path.join(
-                        destination_folder, simulation_file_basename)
-                    destination_simulation_file = os.path.join(
-                        destination_folder, simulation_file_basename) + '.' + load_format
-                    # Remove the destination folder if it exists
-                    if os.path.exists(destination_files):
-                        shutil.rmtree(destination_files)
-                    # If the destination simulation file exists, remove it
-                    if os.path.exists(destination_simulation_file):
-                        os.remove(destination_simulation_file)
-
+                        destination, path, simulation_file_subpath)
                     # Check if the destination folder exists, if not, create it
-                    print(destination_folder)
-
                     if not os.path.exists(destination_folder):
                         os.makedirs(destination_folder)
+                    pathfile_destination = os.path.join(destination_folder, filename)
+
                     try:
                         # Copy the file to the destination folder
-                        source_simulation_file = pathfile + '.' + load_format
+                        source_simulation_file = simulation_pathfile + '.' + load_format
+                        destination_simulation_file = os.path.join(destination_folder, simulation_file_basename) + '.' + load_format
+                        # If the destination simulation file exists, remove it
+                        if os.path.exists(destination_simulation_file):
+                            os.remove(destination_simulation_file)
                         shutil.copy2(source_simulation_file,
                                      destination_simulation_file)
                         print(
                             f"File '{source_simulation_file}' copied to '{destination_simulation_file}' successfully.")
-                        # Copy model to destination folder
-                        tried_paths = [source_folder, source_folder + '.keras',
-                                       source_folder + '.hdf5', source_folder + '.h5']
-                        for idx_path, model_path in enumerate(tried_paths):
-                            if os.path.exists(model_path):
+                        # Copy model and settings file to destination folder
+                        tried_endings = ['', '.keras', '.yaml', '_weights.h5', '.weights.h5']
+                        for idx_path, tried_ending in enumerate(tried_endings):
+                            source_path = pathfile_source + tried_ending
+                            if os.path.exists(source_path):
                                 # Copy the entire folder to the destination folder
+                                destination_file = pathfile_destination + tried_ending
                                 if idx_path == 0:
+                                    # Remove the destination folder if it exists
+                                    if os.path.exists(destination_file):
+                                        shutil.rmtree(destination_file)
                                     shutil.copytree(
-                                        model_path, destination_files)
+                                        source_path, destination_file)
                                 else:
-                                    shutil.copy2(model_path, destination_files)
+                                    if os.path.exists(destination_file):
+                                        os.remove(destination_file)
+                                    shutil.copy2(source_path, destination_file)
                                 print(
-                                    f"Model '{model_path}' copied to '{destination_files}' successfully.")
+                                    f"File '{source_path}' copied to '{destination_file}' successfully.")
                             else:
-                                print(f"Model '{model_path}' not found.")
+                                print(f"File '{source_path}' not found.")
                     except IOError as e:
                         print(f"Error: {e}")
 
@@ -227,15 +231,12 @@ if __name__ == '__main__':
     x_axis = 'snr'
     logplot = True          # Logarithmic plot?
     select_plot = False     # Select one plot or plot all preselected plots
-    copy_models = False     # Copy published models to public repository
+    copy_models = True      # Copy published models to public repository
     # Fixed
     datapath = 'models'
     filename_prefix = ''
     suf = '_results'
-    if copy_models:
-        dn = ''
-    else:
-        dn = filename_prefix
+    dn = filename_prefix
 
     # Plot tables
 
@@ -418,7 +419,7 @@ if __name__ == '__main__':
 
     if copy_models:
         copy_published_models2repository(
-            selected_plots, datapath=datapath, simulation_filename_prefix=filename_prefix)
+            selected_plots, datapath=datapath, simulation_filename_prefix=filename_prefix, simulation_filename_suffix=suf)
     else:
         figures = plot_results_semcom(selected_plots=selected_plots, x_axis=x_axis, y_axis=y_axis, datapath=datapath,
                                       logplot=logplot, error_mode=error_mode, x_axis_normalization=x_axis_normalization)

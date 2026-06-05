@@ -24,12 +24,7 @@ import os
 import numpy as np
 from matplotlib import pyplot as plt
 
-os.environ['KERAS_BACKEND'] = 'tensorflow'
-if os.environ['KERAS_BACKEND'] == 'tensorflow':
-    from utilities.gpu_select_tf import gpu_select
-    backend_tf = True
-else:
-    backend_tf = False
+# from utilities.gpu_select_tf import gpu_select
 import keras
 
 # Own packages
@@ -321,8 +316,7 @@ if __name__ == '__main__':
     #     my_func_main()
     # def my_func_main():
 
-    if backend_tf:
-        gpu_select(number=3, memory_growth=False)
+    # gpu_select(number=3, memory_growth=False)
 
     # Choose project/dataset
     # Possible data sets: mnist, cifar10, fraeser (human rover), fraeser64, hise, hise64, hise256, speechcommands, urbansound8k

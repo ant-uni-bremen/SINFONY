@@ -502,8 +502,8 @@ if __name__ == '__main__':
         selected_plots = [cifar_rl]
 
     if copy_models:
-        plot_sinfony.copy_published_models2repository(
-            selected_plots, datapath=datapath, simulation_filename_prefix=filename_prefix)
+        plot_sinfony.copy_published_models2repository(selected_plots, datapath=datapath,
+                                                      simulation_filename_prefix=filename_prefix, simulation_filename_suffix=suf)
     else:
         figures = plot_sinfony.plot_results_semcom(selected_plots=selected_plots, x_axis=x_axis, y_axis=y_axis, datapath=datapath,
                                                    logplot=logplot, error_mode=error_mode, x_axis_normalization=x_axis_normalization)

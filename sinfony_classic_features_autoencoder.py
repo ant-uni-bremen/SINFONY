@@ -42,7 +42,7 @@ import datasets
 import utilities.my_layers_keras3 as mt
 from utilities.my_functions import print_time, savemodule
 import utilities.my_math_operations as mop
-from sinfony_io import try_load, try_save, compare_model_accuracies
+from sinfony_io import try_load, try_save, find_unique_results_path
 from model_builder import create_model
 from model_evaluation import print_iteration, print_validation_round
 
@@ -172,24 +172,8 @@ def evaluate_feature_autoencoder_over_snr(evaluated_models_autoencoder, model_si
     return accuracy, loss
 
 
-if __name__ == '__main__':
-    #     my_func_main()
-    # def my_func_main():
-
-    # Load parameters from configuration file
-    # Get the script's directory
-    path_script = os.path.dirname(os.path.abspath(__file__))
-    # Default: 'classic/config_classic_features_autoencoder.yaml'
-    SETTINGS_FILE = 'classic/config_classic_features_autoencoder.yaml'
-    # Load the provided configuration file or the default one
-    # python SINFONY.py semantic_config.yaml
-    # Workaround for interactive sessions: Only allow config file names starting 'semantic_config'
-    SETTINGS_FILE = sys.argv[1] if len(sys.argv) > 1 and sys.argv[1][0:15].lower(
-    ) == 'semantic_config' else SETTINGS_FILE
-    # Change from 'settings' to 'models' to reload simulations settings
-    SETTINGS_FOLDER = 'settings'
-    settings_path = os.path.join(path_script, SETTINGS_FOLDER, SETTINGS_FILE)
-    with open(settings_path, 'r', encoding='UTF8') as file:
+def simulation_sinfony_classic_features_autoencoder(settings_path, test_mode=False, load=None, snrs=None):
+    with open(settings_path + '.yaml', 'r', encoding='UTF8') as file:
         params = yaml.safe_load(file)
     load_settings = params['load_settings']
     dataset_settings = params['dataset']
@@ -198,7 +182,7 @@ if __name__ == '__main__':
     evaluation_settings = params['evaluation']
 
     # Initialization
-    if backend_tf:
+    if backend_tf and not test_mode:
         gpu_select(number=load_settings.get('gpu', -2), memory_growth=True)
     keras.backend.clear_session()
     keras.backend.set_floatx(load_settings['numerical_precision'])
@@ -234,7 +218,8 @@ if __name__ == '__main__':
     path_sinfony = os.path.join(load_settings['path_models'], subpath)
 
     # Analog Autoencoder parameters
-    load = load_settings['load']
+    if load is None:
+        load = load_settings['load']
     # AE, AErvec, AErvec_ind
     feature_input = model_settings['feature_input']
     filename_extension_ae_model = filename_extension    # '_ntx56_NL56_snr-4_6'
@@ -291,6 +276,7 @@ if __name__ == '__main__':
 
     # Load the SINFONY model
     print('Loading model ' + filename_sinfony + '...')
+    path_script = os.path.dirname(os.path.abspath(__file__))
     pathfile_sinfony = os.path.join(
         path_script, path_sinfony, filename_sinfony)
     number_classes, image_shapes = datasets.get_data_properties(
@@ -453,44 +439,71 @@ if __name__ == '__main__':
     # Evaluation of model
     print('Evaluate model...')
     # Evaluate model for different SNRs
-    snrs = np.linspace(snr_range[0], snr_range[1], int(
-        (snr_range[1] - snr_range[0]) / step_size) + 1)
+    if snrs is None:
+        snrs = np.linspace(snr_range[0], snr_range[1], int(
+            (snr_range[1] - snr_range[0]) / step_size) + 1)
     # SINFONY/RL-SINFONY evaluated with classic communication
     accuracy, loss = evaluate_feature_autoencoder_over_snr(
         models_autoencoder, model_sinfony, features_validation, validation_data, test_labels, snrs=snrs, validation_rounds=validation_rounds)
+    results = {
+        "snr": snrs,
+        "val_loss": loss,
+        "val_acc": accuracy,
+    }
 
-    plt.figure(1)
-    plt.semilogy(snrs, 1 - accuracy)
-    plt.figure(2)
-    plt.semilogy(snrs, loss)
-
-    # Check for existing evaluation and find unique filename
+    filename = filename_classic + filename_extension
     pathfile_results = os.path.join(path_script, path_classic,
-                                    simulation_filename_prefix + filename_classic + filename_extension + simulation_filename_suffix)
-    counter = 1
-    original_pathfile_results = pathfile_results
-    while os.path.isfile(pathfile_results + '.' + save_file_ending):
-        results2 = save_object.load(pathfile_results)
-        accuracy_load = results2['val_acc'][np.isin(results2['snr'], snrs)]
-        accuracy_equal = compare_model_accuracies(accuracy, accuracy_load, tolerance=2e-2)
-        counter += 1
-        pathfile_results = f"{original_pathfile_results}{counter}"
+                                    simulation_filename_prefix + filename + simulation_filename_suffix)
 
-    # Save evaluation
-    if counter == 1:
+    if not test_mode:
         # Save settings when evaluation is done
-        SETTINGS_SAVED_FOLDER = 'models/classic'    # 'settings_saved'
-        saved_settings_path = os.path.join(path_script, SETTINGS_SAVED_FOLDER)
-        with open(os.path.join(saved_settings_path, filename_classic + filename_extension + '.yaml'), 'w', encoding='utf8') as written_file:
+        SETTINGS_SAVED_FOLDER = 'models/classic_ae'    # 'settings_saved'
+        path_settings_save = os.path.join(path_script, SETTINGS_SAVED_FOLDER, filename)
+        with open(path_settings_save + '.yaml', 'w', encoding='utf8') as written_file:
             yaml.safe_dump(params, written_file, default_flow_style=False)
         print('Settings saved!')
 
+    return results, pathfile_results, save_object
+
+
+if __name__ == '__main__':
+    #     my_func_main()
+    # def my_func_main():
+
+    # Load parameters from configuration file
+    # Get the script's directory
+    path_script = os.path.dirname(os.path.abspath(__file__))
+    # Default: 'classic/config_classic_features_autoencoder'
+    SETTINGS_FILE = 'classic/config_classic_features_autoencoder'
+    # Load the provided configuration file or the default one
+    # python SINFONY.py semantic_config
+    # Workaround for interactive sessions: Only allow config file names starting 'semantic_config'
+    SETTINGS_FILE = sys.argv[1] if len(sys.argv) > 1 and sys.argv[1][0:15].lower(
+    ) == 'semantic_config' else SETTINGS_FILE
+    # Change from 'settings' to 'models' to reload simulations settings
+    SETTINGS_FOLDER = 'settings'
+    settings_path = os.path.join(path_script, SETTINGS_FOLDER, SETTINGS_FILE)
+
+    results, pathfile_results, save_object = simulation_sinfony_classic_features_autoencoder(settings_path)
+
+    # Show performance curve
+    plt.figure(1)
+    plt.semilogy(results['snr'], 1 - results['val_acc'])
+    plt.xlabel('SNR')
+    plt.ylabel(
+        'semantic performance measure: classification error rate')
+    plt.figure(2)
+    plt.semilogy(results['snr'], results['val_loss'])
+    plt.xlabel('SNR')
+    plt.ylabel('crossentropy loss')
+
+    # Check for existing evaluation and find unique filename
+    pathfile_results, counter, accuracy_equal = find_unique_results_path(
+        pathfile_results, save_object, results['val_acc'], results['snr'], tolerance=2e-2)
+
+    # Save evaluation
+    if counter == 1:
         print('Save evaluation...')
-        results = {
-            "snr": snrs,
-            "val_loss": loss,
-            "val_acc": accuracy,
-        }
         save_object.save(pathfile_results, results)
         print('Evaluation saved.')
     else:

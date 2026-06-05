@@ -46,7 +46,7 @@ if __name__ == '__main__':
 
     # SINFONY for human rover journal with sociologists, e.g., with tool dataset
 
-    tools = {'title': ['SINFONY: Tool Wear (705, 380, 1)', '', 256+256, False],
+    tools = {'title': ['SINFONY: Tool Wear (705, 380, 1)', '', 256 + 256, False],
              # 'Tag': ['data name', 'color in plot', channel uses, on/off],
              'ResNet18': ['fraeser/' + dn + 'ResNet18_fraeser_test' + suf, 'k--', 0, True],
              'ResNet6 64x64': ['fraeser/' + dn + 'ResNet6_fraeser64_test' + suf, 'k-', 0, True],
@@ -81,7 +81,7 @@ if __name__ == '__main__':
              }
     selected_plots.append(tools)
 
-    gcm_tools = {'title': ['SINFONY+GCM: Tool Wear (705, 380, 1)', 'fraeser', 256+256, False],
+    gcm_tools = {'title': ['SINFONY+GCM: Tool Wear (705, 380, 1)', 'fraeser', 256 + 256, False],
                  # 'Tag': ['data name', 'color in plot', channel uses, on/off],
                  'ResNet18 2': [dn + 'ResNet18_fraeser' + suf, 'k--x', 0, True],
                  'SINFONY snr-4 6 3': [dn + 'sinfony18_fraeser_lr1e-3_3' + suf, 'k-', 512, True],
@@ -105,7 +105,7 @@ if __name__ == '__main__':
                  }
     selected_plots.append(gcm_tools)
 
-    tools64 = {'title': ['SINFONY: Tool Wear (118, 64, 1)', 'fraeser', 36+64, False],
+    tools64 = {'title': ['SINFONY: Tool Wear (118, 64, 1)', 'fraeser', 36 + 64, False],
                # 'Tag': ['data name', 'color in plot', channel uses, on/off],
                'ResNet6 64x64': [dn + 'ResNet6_fraeser64_test' + suf, 'k-', 0, True],
                # 'ResNet6 64x64 2': [dn + 'ResNet6_fraeser64' + suf, 'k--x', 0, True],
@@ -323,7 +323,7 @@ if __name__ == '__main__':
                                 }
     selected_plots.append(gcm_cifar_joint_training)
 
-    gcm_tools_joint_training = {'title': ['SINFONY+GCM: Tool Wear (705, 380, 1) joint training', 'fraeser', 256+256, False],
+    gcm_tools_joint_training = {'title': ['SINFONY+GCM: Tool Wear (705, 380, 1) joint training', 'fraeser', 256 + 256, False],
                                 # 'Tag': ['data name', 'color in plot', channel uses, on/off],
                                 'ResNet18 2': [dn + 'ResNet18_fraeser' + suf, 'k--x', 0, True],
                                 'SINFONY snr-4 6 ntx128': [dn + 'sinfony18_fraeser_ntx128' + suf, 'k--', 128, True],
@@ -388,8 +388,8 @@ if __name__ == '__main__':
         selected_plots = [tools]
 
     if copy_models:
-        plot_sinfony.copy_published_models2repository(
-            selected_plots, datapath=datapath, simulation_filename_prefix=filename_prefix)
+        plot_sinfony.copy_published_models2repository(selected_plots, datapath=datapath,
+                                                      simulation_filename_prefix=filename_prefix, simulation_filename_suffix=suf)
     else:
         figures = plot_sinfony.plot_results_semcom(selected_plots=selected_plots, x_axis=x_axis, y_axis=y_axis, datapath=datapath,
                                                    logplot=logplot, error_mode=error_mode, x_axis_normalization=x_axis_normalization)

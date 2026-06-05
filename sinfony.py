@@ -24,6 +24,7 @@ import yaml
 from matplotlib import pyplot as plt
 
 os.environ['KERAS_BACKEND'] = 'tensorflow'
+
 if os.environ['KERAS_BACKEND'] == 'tensorflow':
     from utilities.gpu_select_tf import gpu_select
     backend_tf = True
@@ -39,29 +40,14 @@ import utilities.my_math_operations as mop
 from utilities.my_functions import savemodule
 import utilities.my_layers_keras3 as mt
 import utilities.my_dataset_handling as mdh
-from sinfony_io import try_load, try_save, compare_model_accuracies
+from sinfony_io import try_load, try_save, find_unique_results_path
 import model_builder
-from sinfony_visualization import visualize_tsne_embedding
 
 
-if __name__ == '__main__':
-    #     my_func_main()
-    # def my_func_main():
-
-    # Load parameters from configuration file
-    # Get the script's directory
-    path_script = os.path.dirname(os.path.abspath(__file__))
-    # Default: 'mnist/semantic_config_mnist_sinfony.yaml'
-    SETTINGS_FILE = 'mnist/semantic_config_mnist_rlsinfony.yaml'
-    # Change from 'settings' to 'models' to reload simulations settings
-    SETTINGS_FOLDER = 'settings'
-    # Load the provided configuration file or the default one
-    # python SINFONY.py semantic_config.yaml
-    # Workaround for interactive sessions: Only allow config file names starting 'semantic_config'
-    SETTINGS_FILE = sys.argv[1] if len(sys.argv) > 1 and sys.argv[1][0:15].lower(
-    ) == 'semantic_config' else SETTINGS_FILE
-    settings_path = os.path.join(path_script, SETTINGS_FOLDER, SETTINGS_FILE)
-    with open(settings_path, 'r', encoding='UTF8') as file:
+def simulation_sinfony(settings_path, test_mode=False, load=None, snrs=None):
+    '''SINFONY simulation
+    '''
+    with open(settings_path + '.yaml', 'r', encoding='UTF8') as file:
         params = yaml.safe_load(file)
     load_settings = params['load_settings']
     dataset_settings = params['dataset']
@@ -71,18 +57,20 @@ if __name__ == '__main__':
     transceiver_split = model_settings['communication']['transceiver_split']
 
     # Initialization
-    if backend_tf:
+    if backend_tf and not test_mode:
         gpu_select(number=load_settings.get('gpu', -2), memory_growth=False)
     keras.backend.set_floatx(load_settings['numerical_precision'])
 
     # Simulation
     # Load model and reevaluate: False (default) # params.get('load', False)
-    load = load_settings.get('load', False)
+    if load is None:
+        load = load_settings.get('load', False)
     use_weights = load_settings.get('use_weights', True)
     filename = load_settings['filename']
     # Sub path for saved data
     subpath_results = load_settings['path']
     # Path of script being executed
+    path_script = os.path.dirname(os.path.abspath(__file__))
     pathfile_model = os.path.join(path_script, subpath_results, filename)
     pathfile_results = os.path.join(path_script, subpath_results,
                                     load_settings.get('simulation_filename_prefix', '') + filename + load_settings.get('simulation_filename_suffix', ''))
@@ -209,17 +197,18 @@ if __name__ == '__main__':
         print('Loaded!')
 
     # Save settings when training is done
-    SETTINGS_SAVED_FOLDER = os.path.join(
-        path_script, subpath_results)  # 'settings_saved'
-    saved_settings_path = os.path.join(path_script, SETTINGS_SAVED_FOLDER)
-    with open(os.path.join(saved_settings_path, filename + '.yaml'), 'w', encoding='utf8') as written_file:
-        yaml.safe_dump(params, written_file, default_flow_style=False)
-    print('Settings saved!')
+    if not test_mode:
+        SETTINGS_SAVED_FOLDER = os.path.join(path_script, subpath_results)  # 'settings_saved'
+        saved_settings_path = os.path.join(path_script, SETTINGS_SAVED_FOLDER)
+        with open(os.path.join(saved_settings_path, filename + '.yaml'), 'w', encoding='utf8') as written_file:
+            yaml.safe_dump(params, written_file, default_flow_style=False)
+        print('Settings saved!')
 
     # Evaluation/Validation of model
     evaluation_settings = params['evaluation']
-    snrs = mop.snr_range2snrlist(
-        evaluation_settings['snr_range'], evaluation_settings['snr_step_size'])
+    if snrs is None:
+        snrs = mop.snr_range2snrlist(
+            evaluation_settings['snr_range'], evaluation_settings['snr_step_size'])
     # Evaluation mode: (0) default: Validation for SNR range, (2) t-SNE embedding for visualization
     evaluation_mode = evaluation_settings.get('mode', 0)
     if evaluation_mode == 0:
@@ -246,43 +235,55 @@ if __name__ == '__main__':
             loss = np.array(loss_i) * np.ones(snrs.shape)
             accuracy = np.array(accuracy_i) * np.ones(snrs.shape)
             print(f'Validation Accuracy: {accuracy_i * 100.0:.3f}%')
-        # Show performance curve
-        plt.figure(1)
-        plt.semilogy(snrs, 1 - accuracy)
-        plt.xlabel('SNR')
-        plt.ylabel(
-            'semantic performance measure: classification error rate')
-        plt.figure(2)
-        plt.semilogy(snrs, loss)
-        plt.xlabel('SNR')
-        plt.ylabel('crossentropy loss')
+        results['snr'] = snrs
+        results['val_loss'] = loss
+        results['val_acc'] = accuracy
 
-        # Check for existing evaluation and find unique filename
-        counter = 1
-        original_pathfile_results = pathfile_results
-        while os.path.isfile(pathfile_results + '.' + save_file_ending):
-            results2 = save_object.load(pathfile_results)
-            accuracy_load = results2['val_acc'][np.isin(results2['snr'], snrs)]
-            accuracy_equal = compare_model_accuracies(
-                accuracy, accuracy_load, tolerance=2e-2)
-            counter += 1
-            pathfile_results = f"{original_pathfile_results}{counter}"
+    return results, pathfile_results, save_object
 
-        # Save evaluation
-        if counter == 1:
-            print('Save evaluation...')
-            results['snr'] = snrs
-            results['val_loss'] = loss
-            results['val_acc'] = accuracy
-            save_object.save(pathfile_results, results)
-            print('Evaluation saved.')
-        else:
-            print('Evaluation not saved as file is already available.')
-    elif evaluation_mode == 2:
-        # t-SNE embedding for visualization
-        if rl == 0:
-            visualize_tsne_embedding(
-                model, evaluation_settings['evaluation_snr'], test_input, test_labels, dataset)
+
+if __name__ == '__main__':
+    #     my_func_main()
+    # def my_func_main():
+
+    # Load parameters from configuration file
+    # Get the script's directory
+    path_script = os.path.dirname(os.path.abspath(__file__))
+    # Default: 'mnist/semantic_config_mnist_sinfony'
+    SETTINGS_FILE = 'mnist/semantic_config_mnist_rlsinfony'
+    # Change from 'settings' to 'models' to reload simulations settings
+    SETTINGS_FOLDER = 'settings'
+    # Load the provided configuration file or the default one
+    # python SINFONY.py semantic_config
+    # Workaround for interactive sessions: Only allow config file names starting 'semantic_config'
+    SETTINGS_FILE = sys.argv[1] if len(sys.argv) > 1 and sys.argv[1][0:15].lower(
+    ) == 'semantic_config' else SETTINGS_FILE
+    settings_path = os.path.join(path_script, SETTINGS_FOLDER, SETTINGS_FILE)
+
+    results, pathfile_results, save_object = simulation_sinfony(settings_path)
+
+    # Show performance curve
+    plt.figure(1)
+    plt.semilogy(results['snr'], 1 - results['val_acc'])
+    plt.xlabel('SNR')
+    plt.ylabel(
+        'semantic performance measure: classification error rate')
+    plt.figure(2)
+    plt.semilogy(results['snr'], results['val_loss'])
+    plt.xlabel('SNR')
+    plt.ylabel('crossentropy loss')
+
+    # Check for existing evaluation and find unique filename
+    pathfile_results, counter, accuracy_equal = find_unique_results_path(
+        pathfile_results, save_object, results['val_acc'], results['snr'], tolerance=2e-2)
+
+    # Save evaluation
+    if counter == 1:
+        print('Save evaluation...')
+        save_object.save(pathfile_results, results)
+        print('Evaluation saved.')
+    else:
+        print('Evaluation not saved as file is already available.')
 
 
 # EOF

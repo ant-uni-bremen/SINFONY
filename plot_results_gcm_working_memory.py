@@ -118,7 +118,7 @@ if __name__ == '__main__':
                                       }
     selected_plots.append(gcm_working_memory_cifar_ntx64)
 
-    gcm_working_memory_tools = {'title': ['SINFONY: Human Rover Tools (705, 380, 1)', 'fraeser', 256+256, False],
+    gcm_working_memory_tools = {'title': ['SINFONY: Human Rover Tools (705, 380, 1)', 'fraeser', 256 + 256, False],
                                 # 'Tag': ['data name', 'color in plot', channel uses, on/off],
                                 # 'ResNet18 2': [dn + 'ResNet18_fraeser' + suf, 'k--x', 0, True],
                                 # 'SINFONY snr-4 6 3': [dn + 'sinfony18_fraeser_lr1e-3_3' + suf, 'k-', 512, True],
@@ -171,8 +171,8 @@ if __name__ == '__main__':
         selected_plots = [gcm_working_memory_mnist]
 
     if copy_models:
-        plot_sinfony.copy_published_models2repository(
-            selected_plots, datapath=datapath, simulation_filename_prefix=filename_prefix)
+        plot_sinfony.copy_published_models2repository(selected_plots, datapath=datapath,
+                                                      simulation_filename_prefix=filename_prefix, simulation_filename_suffix=suf)
     else:
         figures = plot_sinfony.plot_results_semcom(selected_plots=selected_plots, x_axis=x_axis, y_axis=y_axis, datapath=datapath,
                                                    logplot=logplot, error_mode=error_mode, x_axis_normalization=x_axis_normalization)

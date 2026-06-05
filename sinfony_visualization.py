@@ -27,7 +27,7 @@ import utilities.my_math_operations as mop
 def visualize_tsne_embedding(visualized_model, snr_evaluation_test, test_input, test_labels, visualized_dataset):
     '''Visualize t-SNE embedding
     '''
-    # TODO: Script so far only works with SINFONY models
+    # TODO: Script so far only works with SINFONY models and is ouddated
     cmap = plt.cm.jet					# define the colormap
     # extract all colors from the .jet map
     cmaplist = [cmap(i) for i in range(cmap.N)]
