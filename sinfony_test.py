@@ -19,9 +19,6 @@ sys.path.append('..')                       # NOQA
 # LOADED PACKAGES
 import os
 import shutil
-import numpy as np
-import yaml
-# from matplotlib import pyplot as plt
 
 # Tensorflow 2 packages
 os.environ['KERAS_BACKEND'] = 'tensorflow'
