@@ -180,12 +180,15 @@ def simulation_sinfony(settings_path, test_mode=False, load=None, snrs=None):
                 results['acc'] = batch_tracking.batch_end_acc
                 # Save val_loss from model.fit() history under different name since it will be overwritten otherwise
                 results['val_loss_history'] = results.pop('val_loss')
-        # Save model weights:
-        try_save(model, pathfile_model, to_weights=use_weights)
-        # Save training history to avoid data loss, if validation fails
-        print('Save training history...')
-        save_object.save(pathfile_results, results)
-        print('Saved!')
+        if not test_mode:
+            # Save model weights:
+            try_save(model, pathfile_model, to_weights=use_weights)
+            # Save training history to avoid data loss, if validation fails
+            print('Save training history...')
+            save_object.save(pathfile_results, results)
+            print('Saved!')
+        else:
+            print('No model save in test mode.')
     else:
         # Load training history to include evaluation
         print('Load training history...')
@@ -203,6 +206,8 @@ def simulation_sinfony(settings_path, test_mode=False, load=None, snrs=None):
         with open(os.path.join(saved_settings_path, filename + '.yaml'), 'w', encoding='utf8') as written_file:
             yaml.safe_dump(params, written_file, default_flow_style=False)
         print('Settings saved!')
+    else:
+        print('No settings save in test mode.')
 
     # Evaluation/Validation of model
     evaluation_settings = params['evaluation']

@@ -376,11 +376,14 @@ def simulation_sinfony_classic_features_autoencoder(settings_path, test_mode=Fal
                     '_Nr' + str(index_autoencoder)
                 pathfile_model = os.path.join(
                     path_script, path_classic, filename_model)
-                print('Saving model...')
-                # model_autoencoder.save(pathfile_model)
-                try_save(
-                    model_autoencoder, pathfile_model, to_weights=True)
-                print('Model saved.')
+                if not test_mode:
+                    print('Saving model...')
+                    # model_autoencoder.save(pathfile_model)
+                    try_save(
+                        model_autoencoder, pathfile_model, to_weights=True)
+                    print('Model saved.')
+                else:
+                    print('No model save in test mode.')
             print('Total time all Autoencoders: ' +
                   print_time(time.time() - start_time2))
         else:
@@ -419,10 +422,13 @@ def simulation_sinfony_classic_features_autoencoder(settings_path, test_mode=Fal
             print('Total time ' + 'Autoencoder: ' +
                   print_time(time.time() - start_time))
             # Save model
-            print('Saving Autoencoder model...')
-            # model_autoencoder.save(pathfile_model)
-            try_save(model_autoencoder, pathfile_model, to_weights=True)
-            print('Autoencoder Model saved.')
+            if not test_mode:
+                print('Saving Autoencoder model...')
+                # model_autoencoder.save(pathfile_model)
+                try_save(model_autoencoder, pathfile_model, to_weights=True)
+                print('Autoencoder Model saved.')
+            else:
+                print('No model save in test mode.')
         else:
             # Load model
             print('Loading Autoencoder model...')
@@ -462,6 +468,8 @@ def simulation_sinfony_classic_features_autoencoder(settings_path, test_mode=Fal
         with open(path_settings_save + '.yaml', 'w', encoding='utf8') as written_file:
             yaml.safe_dump(params, written_file, default_flow_style=False)
         print('Settings saved!')
+    else:
+        print('No settings save in test mode.')
 
     return results, pathfile_results, save_object
 

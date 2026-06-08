@@ -526,6 +526,13 @@ def simulation_sinfony_classic(settings_path, test_mode=False, snrs=None):
         "snr": snrs,
         "val_loss": loss,
         "val_acc": accuracy,
+        # Additional code and image information
+        "channel_uses": mean_number_channel_uses,
+        "rate_huffman_code": rate_huffman_code,
+        "rate_channel_code": rate_channel_code,
+        "number_entries": number_entries,
+        "number_bits": number_bits,
+        "code_word_length": code_word_length,
     }
 
     filename = algorithm + '_' + filename_sinfony + filename_extension
@@ -539,6 +546,8 @@ def simulation_sinfony_classic(settings_path, test_mode=False, snrs=None):
         with open(path_settings_save + '.yaml', 'w', encoding='utf8') as written_file:
             yaml.safe_dump(params, written_file, default_flow_style=False)
         print('Settings saved!')
+    else:
+        print('No settings save in test mode.')
 
     return results, pathfile_results, save_object
 

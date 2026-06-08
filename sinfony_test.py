@@ -86,6 +86,7 @@ if __name__ == '__main__':
                 pathfile_results, save_object, results['val_acc'], results['snr'], tolerance=2e-2)
             if counter == 1:
                 print("Simulation results file not found, jump to next file...")
+                accuracy_equal = False
 
         except Exception as e:
             print(f"Error: {e}")
