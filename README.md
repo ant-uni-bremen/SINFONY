@@ -15,18 +15,24 @@ SINFONY and the Generalized Context Model (GCM) implementation are part of the E
 
 4. E. Beck, H.-Y. Lin, P. Rückert, Y. Bao, B. von Helversen, S. Fehrler, K. Tracht, and A. Dekorsy, “Integrating Semantic Communication and Human Decision-Making into an End-to-End Sensing-Decision Framework,” IEEE Open Journal of the Communications Society, vol. 7, pp. 748-768, Jan 2026. https://doi.org/10.1109/OJCOMS.2026.3652845
 
-Further, the source code of the proposed semantics-aware, i.e., seismic exploration data-aware, receiver in [5] can be found here:
+## Related Repositories
+
+[`semantic-floating-point`](https://github.com/ant-uni-bremen/semantic-floating-point): The source code of the proposed semantics-aware, i.e., seismic exploration data-aware, receiver in [5] has been moved can be found in this repository.
 
 5. Edgar Beck, Ban-Sok Shin, Shengdi Wang, Thomas Wiedemann, Dmitriy Shutin, and Armin Dekorsy, “Swarm Exploration and Communications: A First Step towards Mutually-Aware Integration by Probabilistic Learning,” MDPI Electronics, vol. 12, no. 8, p. 1908, Apr. 2023. https://doi.org/10.3390/electronics12081908
 
 # Requirements & Usage
 
-This code was tested with TensorFlow 2.6 and should also run with version 2.10-2.15. For the script `sinfony_classic.py`, further sionna (>=0.9.0) is required.
+- The code base has been updated to `Keras 3` including all model saves and is now **backend-agnostic**, meaning that it can run with both `tensorflow` and `pytorch`. 
 
-Run the script as `python3 sinfony.py "semantic_config.yaml"`, `python3 sinfony_classic.py "classic/config_classic.yaml"`, `python3 sinfony_classic_features_autoencoder.py "classic/config_classic_features_autoencoder.yaml"`, `python3 gcm.py`, or `python3 semantic_floating_point.py` to reproduce the results of the articles. To do so, set the parameters in the configuration files to the values in the articles. Exemplary configurations are given in the folder `settings` and its subfolders named according to the used datasets.
+- You can test successful conversion and reproduction running the scripts `sinfony_test.py` and `gcm_test_models_conversion.py` that are able to reproduce all the results except for a few that require special settings.
+
+- For the script `sinfony_classic.py`, further sionna (>=1.0.0) is required.
+
+Run the script as `python3 sinfony.py "semantic_config"`, `python3 sinfony_classic.py "classic/config_classic"`, `python3 sinfony_classic_features_autoencoder.py "classic/config_classic_features_autoencoder"`, or `python3 gcm.py` to reproduce the results of the articles. To do so, set the parameters in the configuration files to the values in the articles. Exemplary configurations are given in the folder `settings` and its subfolders named according to the used datasets. For GCM simulations, set the parameters directly in the script file.
 
 ## Dependencies
-The dependencies are provided in the conda environment files `conda_env_tf26.yml`, `conda_env_tf215.yml`, and `conda_env_keras3.yml` that were used throughout the progression in the SINFONY code over the years.
+The dependencies are provided in the conda environment file `conda_env_keras3.yml`. Dependencies from older SINFONY versions that were used throughout the years can be found in the git history and on Zenodo.
 
 # Acknowledgements
 
@@ -43,7 +49,5 @@ This program is licensed under the GPLv3 license. If you in any way use this cod
 3. Following the recent success of Machine Learning tools in wireless communications, the idea of semantic communication by Weaver from 1949 has gained attention. It breaks with Shannon's classic design paradigm by aiming to transmit the meaning, i.e., semantics, of a message instead of its exact version, allowing for information rate savings. In this work, we apply the Stochastic Policy Gradient (SPG) to design a semantic communication system by reinforcement learning, separating transmitter and receiver, and not requiring a known or differentiable channel model -- a crucial step towards deployment in practice. Further, we derive the use of SPG for both classic and semantic communication from the maximization of the mutual information between received and target variables. Numerical results show that our approach achieves comparable performance to a model-aware approach based on the reparametrization trick, albeit with a decreased convergence rate.
 
 4. As early as 1949, Weaver defined communication in a very broad sense to include all procedures by which one mind or technical system can influence another, thus establishing the idea of semantic communication. With the recent success of machine learning in expert assistance systems where sensed information is wirelessly provided to a human to assist task execution, the need to design effective and efficient communications has become increasingly apparent. In particular, semantic communication aims to convey the meaning behind the sensed information relevant for Human Decision-Making (HDM). Regarding the interplay between semantic communication and HDM, many questions remain, such as how to model the entire end-to-end sensing-decision-making process, how to design semantic communication for the HDM and which information should be provided for HDM. To address these questions, we propose to integrate semantic communication and HDM into one probabilistic end-to-end sensing-decision framework that bridges communications and psychology. In our interdisciplinary framework, we model the human through a HDM process, allowing us to explore how feature extraction from semantic communication can best support HDM both in theory and in simulations. In this sense, our study reveals the fundamental design trade-off between maximizing the relevant semantic information and matching the cognitive capabilities of the HDM model. Our initial analysis shows how semantic communication can balance the level of detail with human cognitive capabilities while demanding less bandwidth, power, and latency.
-
-5. Swarm exploration by multi-agent systems relies on stable inter-agent communication. However, so far both exploration and communication have been mainly considered separately despite their strong inter-dependency in such systems. In this paper, we present the first steps towards a framework that unifies both of these realms by a “tight” integration. We propose to make exploration “communication-aware” and communication “exploration-aware” by using tools of probabilistic learning and semantic communication, thus enabling the coordination of knowledge and action in multi-agent systems. We anticipate that by a “tight” integration of the communication chain, the exploration strategy will balance the inference objective of the swarm with exploration-tailored, i.e., semantic, inter-agent communication. Thus, by such a semantic communication design, communication efficiency in terms of latency, required data rate, energy, and complexity may be improved. With this in mind, the research proposed in this work addresses challenges in the development of future distributed sensing and data processing platforms—sensor networks or mobile robotic swarms consisting of multiple agents—that can collect, communicate, and process spatially distributed sensor data.
 
 
