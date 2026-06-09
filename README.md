@@ -32,7 +32,7 @@ SINFONY and the Generalized Context Model (GCM) implementation are part of the E
 Run the script as `python3 sinfony.py "semantic_config"`, `python3 sinfony_classic.py "classic/config_classic"`, `python3 sinfony_classic_features_autoencoder.py "classic/config_classic_features_autoencoder"`, or `python3 gcm.py` to reproduce the results of the articles. To do so, set the parameters in the configuration files to the values in the articles. Exemplary configurations are given in the folder `settings` and its subfolders named according to the used datasets. For GCM simulations, set the parameters directly in the script file.
 
 ## Dependencies
-The dependencies are provided in the conda environment file `conda_env_keras3.yml`. Dependencies from older SINFONY versions that were used throughout the years can be found in the git history and on Zenodo.
+The dependencies are provided in the conda environment file `conda_env_keras3.yaml` for the TensorFlow backend and `conda_env_keras3_pytorch.yaml` for the PyTorch backend. Dependencies from older SINFONY versions that were used throughout the years can be found in the git history and on Zenodo.
 
 # Acknowledgements
 

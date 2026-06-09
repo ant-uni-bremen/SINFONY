@@ -40,10 +40,7 @@ if __name__ == '__main__':
     datapath = 'models'
     filename_prefix = ''
     suf = '_results'
-    if copy_models:
-        dn = ''
-    else:
-        dn = filename_prefix
+    dn = filename_prefix
 
     # Plot tables
 

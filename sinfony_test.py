@@ -45,7 +45,7 @@ if __name__ == '__main__':
     if backend_tf:
         gpu_select(number=-2, memory_growth=True)
 
-    move_old_model = True
+    move_old_model = False
     snr_range = [0, 0]          # Default: [-30,20]
     snr_step_size = 1           # 1
     load = True                 # True
@@ -55,7 +55,7 @@ if __name__ == '__main__':
     # Get the script's directory
     path_script = os.path.dirname(os.path.abspath(__file__))
     # Default: 'mnist'
-    SETTINGS_FILE = 'classic_ae'
+    SETTINGS_FILE = 'mnist'
     # Change from 'settings' to 'models' to reload simulations settings
     SETTINGS_FOLDER = 'models'
     settings_path = os.path.join(path_script, SETTINGS_FOLDER, SETTINGS_FILE)
