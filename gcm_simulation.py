@@ -7,8 +7,9 @@ Created on Wed May 28 12:40 2025
 GCM implemented in tensorflow
 
 Belongs to simulation framework for numerical results of the articles:
-1. E. Beck, H.-Y. Lin, P. Rückert, Y. Bao, B. von Helversen, S. Fehrler, K. Tracht, and A. Dekorsy, “Integrating Semantic Communication and Human Decision-Making into an End-to-End Sensing-Decision Framework”, arXiv preprint: 2412.05103, Dec. 2024. doi: 10.48550/arXiv.2412.05103.
+1. E. Beck, H.-Y. Lin, P. Rückert, Y. Bao, B. von Helversen, S. Fehrler, K. Tracht, and A. Dekorsy, “Integrating Semantic Communication and Human Decision-Making into an End-to-End Sensing-Decision Framework,” IEEE Open Journal of the Communications Society, vol. 7, pp. 748-768, Jan 2026. https://doi.org/10.1109/OJCOMS.2026.3652845
 """
+
 
 import sys                                  # NOQA
 # Include current folder, where start simulation script and packages are
@@ -18,27 +19,31 @@ sys.path.append('..')                       # NOQA
 
 import os
 import gc
-os.environ['KERAS_BACKEND'] = 'tensorflow'
+import time
+import numpy as np
+from matplotlib import pyplot as plt
+
+try:
+    print(os.environ['KERAS_BACKEND'])
+except Exception as e:
+    os.environ['KERAS_BACKEND'] = 'tensorflow'
+
 if os.environ['KERAS_BACKEND'] == 'tensorflow':
     from utilities.gpu_select_tf import gpu_select
     backend_tf = True
 else:
     backend_tf = False
-import keras
-from keras.optimizers import SGD, Adam
-import numpy as np
-from matplotlib import pyplot as plt
-import time
+import keras  # NOQA
+from keras.optimizers import SGD, Adam  # NOQA
 
-import datasets
-from utilities.my_layers_keras3 import epoch2iterationboundaries, new_optimizer
-import sinfony_wrapper as sw
-import model_evaluation
-import utilities.my_math_operations as mop
-from utilities.my_functions import savemodule, print_time, get_ram
-import sinfony_io
-import gcm as gcm_model
-
+import gcm as gcm_model  # NOQA
+import sinfony_io  # NOQA
+from utilities.my_functions import savemodule, print_time, get_ram  # NOQA
+import utilities.my_math_operations as mop  # NOQA
+import model_evaluation  # NOQA
+import sinfony_wrapper as sw  # NOQA
+from utilities.my_layers_keras3 import epoch2iterationboundaries, new_optimizer  # NOQA
+import datasets  # NOQA
 
 if __name__ == '__main__':
 

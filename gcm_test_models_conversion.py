@@ -7,7 +7,7 @@ Created on Wed May 28 12:40 2025
 GCM implemented in tensorflow
 
 Belongs to simulation framework for numerical results of the articles:
-1. E. Beck, H.-Y. Lin, P. Rückert, Y. Bao, B. von Helversen, S. Fehrler, K. Tracht, and A. Dekorsy, “Integrating Semantic Communication and Human Decision-Making into an End-to-End Sensing-Decision Framework”, arXiv preprint: 2412.05103, Dec. 2024. doi: 10.48550/arXiv.2412.05103.
+1. E. Beck, H.-Y. Lin, P. Rückert, Y. Bao, B. von Helversen, S. Fehrler, K. Tracht, and A. Dekorsy, “Integrating Semantic Communication and Human Decision-Making into an End-to-End Sensing-Decision Framework,” IEEE Open Journal of the Communications Society, vol. 7, pp. 748-768, Jan 2026. https://doi.org/10.1109/OJCOMS.2026.3652845
 """
 
 import sys                                  # NOQA
@@ -18,22 +18,24 @@ sys.path.append('..')                       # NOQA
 
 import os
 import shutil
+import time
 import tensorflow as tf
 # import tensorflow.keras as keras
 import keras
 from keras.optimizers import SGD, Adam
 import numpy as np
 
+# Own packages
 import datasets
 from utilities.my_layers_keras3 import new_optimizer
 from utilities.gpu_select_tf import gpu_select
 import sinfony_wrapper as sw
 import model_evaluation
 import utilities.my_math_operations as mop
-from utilities.my_functions import savemodule
+from utilities.my_functions import savemodule, print_time
 import sinfony_io
 import gcm as gcm_model
-from sinfony_test import compare_model_accuracies
+from sinfony_test import find_duplicate_weight_files
 
 
 def extract_parameters_from_filename(filename, template_files):
@@ -214,63 +216,46 @@ def convert_model_weights(sinfony_gcm, tfsm_model, reverse_remaining_weights=Tru
     return sorted_weights
 
 
-def set_deterministic(seed=42):
-    """
-    Forces deterministic behavior across different machines.
-
-    Args:
-        seed: Random seed to use
-    """
-    import random
-    import platform
-    # Seeds
-    os.environ['PYTHONHASHSEED'] = str(seed)
-    random.seed(seed)
-    np.random.seed(seed)
-    tf.random.set_seed(seed)
-
-    # Deterministische TF Operationen
-    os.environ['TF_DETERMINISTIC_OPS'] = '1'
-    os.environ['TF_CUDNN_DETERMINISTIC'] = '1'
-
-    # oneDNN deaktivieren
-    os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
-
-    # Threads fixieren
-    tf.config.threading.set_inter_op_parallelism_threads(1)
-    tf.config.threading.set_intra_op_parallelism_threads(1)
-
-    print(f"Python:     {sys.version}")
-    print(f"TensorFlow: {tf.__version__}")
-    print(f"Keras:      {keras.__version__}")
-    print(f"NumPy:      {np.__version__}")
-    print(f"CPU:        {platform.processor()}")
-
-
 if __name__ == '__main__':
 
-    # set_deterministic(seed=42)
-
-    gpu_select(number=-2, memory_growth=True, cpus=64)
+    if os.environ['KERAS_BACKEND'] == 'tensorflow':
+        from utilities.gpu_select_tf import gpu_select
+        gpu_select(number=-2, memory_growth=True, cpus=64)
     use_weights = True
 
     # Choose project/dataset
     # Possible data sets: mnist, cifar10, fraeser, hise, speechcommands, urbansound8k
-    wrapper = 'speechcommands'
+    wrapper = 'urbansound8k'
     simulation = 'snr'          # snr, memory, working_memory
+    find_duplicates = False
+    is_folder = False
+    from_tfsm_model = False
+    move_old_model = False
+    load = True
+    test_tolerance = 2e-2
 
     # Load sinfony wrapper
     path_script = os.path.dirname(os.path.abspath(__file__))
     subpath_results = os.path.join(path_script, 'models', wrapper)
-    entries = os.listdir(subpath_results)
-    folders = [entry for entry in entries if os.path.isdir(
-        os.path.join(subpath_results, entry))]
+
+    if find_duplicates:
+        duplicates = find_duplicate_weight_files(subpath_results)
+        settings_files = list(set(
+            f1.replace('_weights.h5', '').replace('.weights.h5', '')
+            for f1, f2 in duplicates
+        ))
+        folders = settings_files
+    else:
+        entries = os.listdir(subpath_results)
+        if is_folder:
+            folders = [entry.replace('_weights.h5', '').replace('.weights.h5', '') for entry in entries if os.path.isdir(
+                os.path.join(subpath_results, entry)) and entry.startswith('GCM') and entry.endswith('weights.h5')]
+        else:
+            folders = [entry.replace('_weights.h5', '').replace('.weights.h5', '') for entry in entries if os.path.isfile(
+                os.path.join(subpath_results, entry)) and entry.startswith('GCM') and entry.endswith('weights.h5')]
+
     template_files, _ = sw.template_models(wrapper)
 
-    from_tfsm_model = False
-    move_old_model = True
-
-    load = True
     filename_gcm = 'GCM_Ne1_Na20'
     gcm_input = 1               # 0: sinfony output, 1: last layer input, 2: image input
     # Number of last layer input features used by GCM [only active for gcm_input==1]
@@ -337,7 +322,15 @@ if __name__ == '__main__':
     number_classes, image_shapes = datasets.get_data_properties(
         test_labels, test_input_norm)
 
+    test_iteration = 0
+    successful_tests = 0
+    successful_runs = 0
+    failed_tests = 0
+    number_files = len(folders)
+
+    start_time = time.time()
     for folder in folders:
+        start_time2 = time.time()
         if from_tfsm_model is True:
             print('Trying conversion of: ' + folder)
         else:
@@ -406,7 +399,7 @@ if __name__ == '__main__':
                 filename = filename + '+joint_training'
             pathfile = os.path.join(path_script, subpath_results, filename)
 
-            if differentiable_memory is False:
+            if differentiable_memory is False and is_folder:
                 try:
                     print('Checking whether GCM with differentiable memory was used...')
                     tfsm_model2 = tf.saved_model.load(pathfile)
@@ -487,6 +480,7 @@ if __name__ == '__main__':
                             # Load existing GCM model:
                             print('Loading model...')
                             try:
+                                gcm.build(input_shape=exemplars.shape[1:])
                                 gcm = sinfony_io.try_load(gcm, pathfile)
                                 print('Model loaded.')
                             except Exception as e:
@@ -516,7 +510,7 @@ if __name__ == '__main__':
                         image_memory = []
                         for train_input_norm_item in train_input_norm:
                             image_memory.append(
-                                tf.constant(train_input_norm_item))
+                                keras.ops.convert_to_tensor(train_input_norm_item))
                         features_memory = sinfony.model(image_memory)
                         gcm_output = gcm_diff(features, features_memory)
                         # Final model
@@ -561,9 +555,10 @@ if __name__ == '__main__':
                         for var in tfsm_model.weights:
                             if 'stddev' in var.name:
                                 print(f"Found: {var.name} = {var.numpy()}")
-                                new_stddev = tf.constant(
-                                    [1 / 100000, 1 / 100000], dtype=tf.float32)
-                                var.assign(tf.cast(new_stddev, var.dtype))
+                                new_stddev = keras.ops.convert_to_tensor(
+                                    [1 / 100000, 1 / 100000], dtype='float32')
+                                var.assign(keras.ops.cast(
+                                    new_stddev, var.dtype))
                         test_result = tfsm_model(
                             test_input_norm[0][:test_size, ...])
                     else:
@@ -573,9 +568,10 @@ if __name__ == '__main__':
                         for var in tfsm_model2.variables:
                             if 'stddev' in var.name:
                                 print(f"Found: {var.name} = {var.numpy()}")
-                                new_stddev = tf.constant(
-                                    [1 / 100000, 1 / 100000], dtype=tf.float32)
-                                var.assign(tf.cast(new_stddev, var.dtype))
+                                new_stddev = keras.ops.convert_to_tensor(
+                                    [1 / 100000, 1 / 100000], dtype='float32')
+                                var.assign(keras.ops.cast(
+                                    new_stddev, var.dtype))
                         if gcm_input == 1:
                             if number_features == -1:
                                 test_result = infer(
@@ -625,7 +621,7 @@ if __name__ == '__main__':
                     sinfony_io.try_save(sinfony_gcm, pathfile)
                 else:
                     print(
-                        'No joint training: Already converted models are tested based on the weights files.')
+                        'Already converted models are tested based on the weights files (no joint training selected).')
                     model_deviation_equal = False
                     if load and joint_training is False and from_tfsm_model:
                         sinfony_io.try_save(gcm, pathfile)
@@ -700,31 +696,59 @@ if __name__ == '__main__':
                 # saveobj.save(pathfile_results_opt, results)
             print('Evaluation set up.')
 
+            successful_runs = successful_runs + 1
+
             try:
                 results2 = saveobj.load(pathfile_results)
+                accuracy_load = results2['val_acc'][np.isin(
+                    results2['snr'], snrs)]
+
+                accuracy_equal = sinfony_io.compare_model_accuracies(
+                    accuracy, accuracy_load, tolerance=test_tolerance)
+                if not accuracy_equal:
+                    failed_tests = failed_tests + 1
             except Exception as e:
                 print(
                     f"Simulation results file not found, jump to next file: {e}")
+                # accuracy_equal = True
+                # model_deviation_equal = True
                 raise
 
-            accuracy_load = results2['val_acc'][np.isin(results2['snr'], snrs)]
-
-            accuracy_equal = compare_model_accuracies(
-                accuracy, accuracy_load, tolerance=2e-2)
-
+        except Exception as e:
+            print(f"Error: {e}")
+            accuracy_equal = False
+            model_deviation_equal = False
+        finally:
+            if accuracy_equal:
+                successful_tests = successful_tests + 1
             # Backup the folder
             if (accuracy_equal or model_deviation_equal) and move_old_model:
+                # Define all files that should be backed up
+                backup_files = [
+                    pathfile + '',
+                    pathfile + '.yaml',
+                    pathfile + '_results.npz',
+                    pathfile + '_weights.h5',
+                    pathfile + '.weights.h5',
+                    pathfile + '.npz',
+                ]
                 try:
                     backup_path = os.path.join(
                         os.path.dirname(pathfile), 'backup')
                     os.makedirs(backup_path, exist_ok=True)
-                    shutil.move(pathfile, backup_path)
-                    print(f"Successfully moved {pathfile} to {backup_path}")
+                    # Move all backup files
+                    for backup_file in backup_files:
+                        if os.path.exists(backup_file):
+                            shutil.move(backup_file, backup_path)
+                            print(
+                                f"Successfully moved {backup_file} to {backup_path}")
+                        else:
+                            print(
+                                f"File {backup_file} does not exist, skipping...")
                 except Exception as move_error:
                     print(f"Failed to move {pathfile} to backup: {move_error}")
-        except Exception as e:
-            print(f"Error: {e}")
-            # raise
-            # pass  # Keep default if parsing fails
-        finally:
+            # Print current progress
+            test_iteration = test_iteration + 1
+            print(
+                f"GCM test iteration: {test_iteration}/{number_files}, Successful runs: {successful_runs}/{test_iteration}, Successful tests: {successful_tests}/{successful_runs}, Failed tests: {failed_tests}/{successful_runs}, Total Time: {print_time(time.time() - start_time2)}/{print_time(time.time() - start_time)}\n")
             keras.backend.clear_session()

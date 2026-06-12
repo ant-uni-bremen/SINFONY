@@ -17,7 +17,7 @@ SINFONY and the Generalized Context Model (GCM) implementation are part of the E
 
 ## Related Repositories
 
-[`semantic-floating-point`](https://github.com/ant-uni-bremen/semantic-floating-point): The source code of the proposed semantics-aware, i.e., seismic exploration data-aware, receiver in [5] has been moved can be found in this repository.
+[`semantic-floating-point`](https://github.com/ant-uni-bremen/semantic-floating-point): The source code of the proposed semantics-aware, i.e., seismic exploration data-aware, receiver in [5] has been moved and can be found in this repository.
 
 5. Edgar Beck, Ban-Sok Shin, Shengdi Wang, Thomas Wiedemann, Dmitriy Shutin, and Armin Dekorsy, “Swarm Exploration and Communications: A First Step towards Mutually-Aware Integration by Probabilistic Learning,” MDPI Electronics, vol. 12, no. 8, p. 1908, Apr. 2023. https://doi.org/10.3390/electronics12081908
 

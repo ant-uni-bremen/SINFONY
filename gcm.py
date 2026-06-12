@@ -7,7 +7,7 @@ Created on Wed May 28 12:40 2025
 GCM implemented in tensorflow
 
 Belongs to simulation framework for numerical results of the articles:
-1. E. Beck, H.-Y. Lin, P. Rückert, Y. Bao, B. von Helversen, S. Fehrler, K. Tracht, and A. Dekorsy, “Integrating Semantic Communication and Human Decision-Making into an End-to-End Sensing-Decision Framework”, arXiv preprint: 2412.05103, Dec. 2024. doi: 10.48550/arXiv.2412.05103.
+1. E. Beck, H.-Y. Lin, P. Rückert, Y. Bao, B. von Helversen, S. Fehrler, K. Tracht, and A. Dekorsy, “Integrating Semantic Communication and Human Decision-Making into an End-to-End Sensing-Decision Framework,” IEEE Open Journal of the Communications Society, vol. 7, pp. 748-768, Jan 2026. https://doi.org/10.1109/OJCOMS.2026.3652845
 """
 
 import sys                                  # NOQA
@@ -108,7 +108,8 @@ class SimilarityLayer(keras.layers.Layer):
         similarities_norm = keras.ops.softmax(log_similarities)
 
         # Weighted sum of similarities per class
-        probs = keras.ops.matmul(similarities_norm, keras.ops.cast(labels, 'float32'))
+        probs = keras.ops.matmul(
+            similarities_norm, keras.ops.cast(labels, 'float32'))
 
         # Weighted sum of similarities per class
         # numerators = keras.ops.matmul(similarities, keras.ops.cast(
@@ -343,7 +344,8 @@ class GeneralizedContextModelOld(keras.Model):
         similarities_norm = keras.ops.softmax(log_similarities)
 
         # Weighted sum of similarities per class
-        probs = keras.ops.matmul(similarities_norm, keras.ops.cast(self.labels, 'float32'))
+        probs = keras.ops.matmul(
+            similarities_norm, keras.ops.cast(self.labels, 'float32'))
 
         # Weighted sum of similarities per class
         # numerators = keras.ops.matmul(similarities, keras.ops.cast(

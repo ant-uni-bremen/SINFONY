@@ -34,6 +34,7 @@ import keras
 
 # Own packages
 import utilities.my_dataset_handling as mdh
+from datasets_stft import stft_dataset_in_partitions
 
 
 def test_get_batches():
@@ -837,54 +838,6 @@ def load_dataset_speech_commands(duration=1):
         data_waveforms.append(waveforms)
         data_labels.append(np.array(labels))
     return data_waveforms, data_labels
-
-
-def stft_dataset_in_partitions(data_waveforms, frame_length, frame_step, number_partitions=20, normalization_constant=1, dtype='float32'):
-    '''STFT for spectrogram
-    '''
-    data_spectrograms = []
-    if number_partitions == 1:
-        for waveforms in data_waveforms:
-            spectrograms = keras.ops.abs(keras.ops.stft(
-                waveforms.astype(dtype) / normalization_constant,
-                sequence_length=frame_length,
-                sequence_stride=frame_step,
-                fft_length=frame_length,
-                center=False
-            )) ** 2
-            data_spectrograms.append(spectrograms)
-    else:
-        for waveforms in data_waveforms:
-            partition_size = waveforms.shape[0] // number_partitions
-            spectrograms = []
-            for ind in tqdm(range(0, number_partitions)):
-                start = ind * partition_size
-                end = start + partition_size
-                spectrogram = keras.ops.abs(
-                    keras.ops.stft(
-                        waveforms[start:end, ...].astype(
-                            dtype) / normalization_constant,
-                        sequence_length=frame_length,
-                        sequence_stride=frame_step,
-                        fft_length=frame_length,
-                        center=False
-                    )
-                ) ** 2
-                spectrograms.append(spectrogram)
-            spectrogram = keras.ops.abs(
-                keras.ops.stft(
-                    waveforms[end:, ...].astype(
-                        dtype) / normalization_constant,
-                    sequence_length=frame_length,
-                    sequence_stride=frame_step,
-                    fft_length=frame_length,
-                    center=False
-                )
-            ) ** 2
-            spectrograms.append(spectrogram)
-            spectrograms = np.concatenate(spectrograms, axis=0)
-            data_spectrograms.append(spectrograms)
-    return data_spectrograms
 
 
 def load_dataset_speech_commands2spectrogram():

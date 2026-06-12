@@ -25,25 +25,23 @@ from matplotlib import pyplot as plt
 import time
 import yaml
 
-os.environ['KERAS_BACKEND'] = 'tensorflow'
-if os.environ['KERAS_BACKEND'] == 'tensorflow':
-    from utilities.gpu_select_tf import gpu_select
-    backend_tf = True
-else:
-    backend_tf = False
-import keras
-import sionna as sn
+try:
+    print(os.environ['KERAS_BACKEND'])
+except Exception as e:
+    os.environ['KERAS_BACKEND'] = 'tensorflow'
+import keras  # NOQA
+import sionna as sn  # NOQA
 
 
 # Own packages
-import utilities.huffman_coding as hc
-import datasets
-import utilities.my_float as mfl
-from utilities.my_functions import print_time, savemodule
-import utilities.my_math_operations as mop
-from sinfony_io import try_load, find_unique_results_path
-from model_builder import create_model
-from model_evaluation import print_iteration, print_validation_round
+import utilities.huffman_coding as hc  # NOQA
+import datasets  # NOQA
+import utilities.my_float as mfl  # NOQA
+from utilities.my_functions import print_time, savemodule  # NOQA
+import utilities.my_math_operations as mop  # NOQA
+from sinfony_io import try_load, find_unique_results_path  # NOQA
+from model_builder import create_model  # NOQA
+from model_evaluation import print_iteration, print_validation_round  # NOQA
 
 
 def classic_digital_communication(source_signal, huffman, information_word_length, encoder, mapper, channel, demapper, decoder, interleaver, deinterleaver, snr, floatx=None, probability_bit=None):
@@ -207,10 +205,12 @@ def simulation_sinfony_classic(settings_path, test_mode=False, snrs=None):
     evaluation_settings = params['evaluation']
 
     # Initialization
-    if backend_tf and not test_mode:
+    if os.environ['KERAS_BACKEND'] == 'tensorflow' and not test_mode:
+        from utilities.gpu_select_tf import gpu_select
         gpu_select(number=load_settings.get('gpu', -2), memory_growth=True)
     keras.backend.clear_session()
-    keras.backend.set_floatx(load_settings['numerical_precision'])
+    keras.backend.set_floatx(load_settings.get(
+        'numerical_precision', 'float32'))
 
     # Simulation parameters
     classic = evaluation_settings['classic_mode']
@@ -337,7 +337,7 @@ def simulation_sinfony_classic(settings_path, test_mode=False, snrs=None):
         train_input = train_input_normalized
         test_input = test_input_normalized
 
-    if show_dataset is True:
+    if show_dataset is True and not test_mode:
         datasets.summarize_dataset(train_input, train_labels,
                                    test_input, test_labels)
 
@@ -542,7 +542,8 @@ def simulation_sinfony_classic(settings_path, test_mode=False, snrs=None):
     if not test_mode:
         # Save settings when evaluation is done
         SETTINGS_SAVED_FOLDER = 'models/classic'    # 'settings_saved'
-        path_settings_save = os.path.join(path_script, SETTINGS_SAVED_FOLDER, filename)
+        path_settings_save = os.path.join(
+            path_script, SETTINGS_SAVED_FOLDER, filename)
         with open(path_settings_save + '.yaml', 'w', encoding='utf8') as written_file:
             yaml.safe_dump(params, written_file, default_flow_style=False)
         print('Settings saved!')
@@ -570,7 +571,8 @@ if __name__ == '__main__':
     SETTINGS_FOLDER = 'settings'
     settings_path = os.path.join(path_script, SETTINGS_FOLDER, SETTINGS_FILE)
 
-    results, pathfile_results, save_object = simulation_sinfony_classic(settings_path)
+    results, pathfile_results, save_object = simulation_sinfony_classic(
+        settings_path)
 
     # Show performance curve
     plt.figure(1)

@@ -46,7 +46,7 @@ def try_load_weights(model, pathfile):
     Returns:
         The model with loaded weights.
     """
-    tried_paths = [pathfile + '.weights.h5', pathfile + '_weights.h5', pathfile +
+    tried_paths = [pathfile + '_weights.h5', pathfile + '.weights.h5', pathfile +
                    '.h5', pathfile + '.keras', os.path.join(pathfile, os.path.basename(os.path.dirname(pathfile)))]
 
     for weights_path in tried_paths:

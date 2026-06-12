@@ -23,28 +23,26 @@ from matplotlib import pyplot as plt
 import time
 import yaml
 
-os.environ['KERAS_BACKEND'] = 'tensorflow'
-if os.environ['KERAS_BACKEND'] == 'tensorflow':
-    from utilities.gpu_select_tf import gpu_select
-    backend_tf = True
-else:
-    backend_tf = False
-import keras
+try:
+    print(os.environ['KERAS_BACKEND'])
+except Exception as e:
+    os.environ['KERAS_BACKEND'] = 'tensorflow'
+import keras  # NOQA
 # Keras functionality
-from keras.models import Model
+from keras.models import Model  # NOQA
 # , Conv2D, MaxPooling2D, Flatten, Add, Lambda, Concatenate, Layer, GaussianNoise
-from keras.layers import Input, Dense
-from keras.optimizers import SGD, Adam  # , Nadam
+from keras.layers import Input, Dense  # NOQA
+from keras.optimizers import SGD, Adam  # , Nadam # NOQA
 
 
 # Own packages
-import datasets
-import utilities.my_layers_keras3 as mt
-from utilities.my_functions import print_time, savemodule
-import utilities.my_math_operations as mop
-from sinfony_io import try_load, try_save, find_unique_results_path
-from model_builder import create_model
-from model_evaluation import print_iteration, print_validation_round
+import datasets  # NOQA
+import utilities.my_layers_keras3 as mt  # NOQA
+from utilities.my_functions import print_time, savemodule  # NOQA
+import utilities.my_math_operations as mop  # NOQA
+from sinfony_io import try_load, try_save, find_unique_results_path  # NOQA
+from model_builder import create_model  # NOQA
+from model_evaluation import print_iteration, print_validation_round  # NOQA
 
 
 def classic_features_autoencoder(number_channel_uses, layer_width_transmitter, layer_width_receiver, sigma, input_shape=1, output_shape=1, number_txrx_layer=1, receiver_final_layer_linear=False, power_normalization_axis=0):
@@ -182,10 +180,12 @@ def simulation_sinfony_classic_features_autoencoder(settings_path, test_mode=Fal
     evaluation_settings = params['evaluation']
 
     # Initialization
-    if backend_tf and not test_mode:
+    if os.environ['KERAS_BACKEND'] == 'tensorflow' and not test_mode:
+        from utilities.gpu_select_tf import gpu_select
         gpu_select(number=load_settings.get('gpu', -2), memory_growth=True)
     keras.backend.clear_session()
-    keras.backend.set_floatx(load_settings['numerical_precision'])
+    keras.backend.set_floatx(load_settings.get(
+        'numerical_precision', 'float32'))
 
     # Simulation parameters
     filename_extension = load_settings['filename_suffix']
@@ -293,7 +293,7 @@ def simulation_sinfony_classic_features_autoencoder(settings_path, test_mode=Fal
     # NOTE: Not implemented for input list of images
     train_input_normalized = datasets.preprocess_pixels_image(train_input[0])
     test_input_normalized = datasets.preprocess_pixels_image(test_input[0])
-    if show_dataset is True:
+    if show_dataset is True and not test_mode:
         datasets.summarize_dataset(
             train_input, train_labels, test_input, test_labels)
 
@@ -464,7 +464,8 @@ def simulation_sinfony_classic_features_autoencoder(settings_path, test_mode=Fal
     if not test_mode:
         # Save settings when evaluation is done
         SETTINGS_SAVED_FOLDER = 'models/classic_ae'    # 'settings_saved'
-        path_settings_save = os.path.join(path_script, SETTINGS_SAVED_FOLDER, filename)
+        path_settings_save = os.path.join(
+            path_script, SETTINGS_SAVED_FOLDER, filename)
         with open(path_settings_save + '.yaml', 'w', encoding='utf8') as written_file:
             yaml.safe_dump(params, written_file, default_flow_style=False)
         print('Settings saved!')
@@ -492,7 +493,8 @@ if __name__ == '__main__':
     SETTINGS_FOLDER = 'settings'
     settings_path = os.path.join(path_script, SETTINGS_FOLDER, SETTINGS_FILE)
 
-    results, pathfile_results, save_object = simulation_sinfony_classic_features_autoencoder(settings_path)
+    results, pathfile_results, save_object = simulation_sinfony_classic_features_autoencoder(
+        settings_path)
 
     # Show performance curve
     plt.figure(1)

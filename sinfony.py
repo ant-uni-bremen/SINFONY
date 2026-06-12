@@ -23,25 +23,22 @@ import numpy as np
 import yaml
 from matplotlib import pyplot as plt
 
-os.environ['KERAS_BACKEND'] = 'tensorflow'
-
-if os.environ['KERAS_BACKEND'] == 'tensorflow':
-    from utilities.gpu_select_tf import gpu_select
-    backend_tf = True
-else:
-    backend_tf = False
-import keras
+try:
+    print(os.environ['KERAS_BACKEND'])
+except Exception as e:
+    os.environ['KERAS_BACKEND'] = 'tensorflow'
+import keras  # NOQA
 
 # Own packages
-import datasets
-import model_evaluation
-import sinfony_architectures.resnet_rl_sinfony as resnet_rl_sinfony
-import utilities.my_math_operations as mop
-from utilities.my_functions import savemodule
-import utilities.my_layers_keras3 as mt
-import utilities.my_dataset_handling as mdh
-from sinfony_io import try_load, try_save, find_unique_results_path
-import model_builder
+import datasets  # NOQA
+import model_evaluation  # NOQA
+import sinfony_architectures.resnet_rl_sinfony as resnet_rl_sinfony  # NOQA
+import utilities.my_math_operations as mop  # NOQA
+from utilities.my_functions import savemodule  # NOQA
+import utilities.my_layers_keras3 as mt  # NOQA
+import utilities.my_dataset_handling as mdh  # NOQA
+from sinfony_io import try_load, try_save, find_unique_results_path  # NOQA
+import model_builder  # NOQA
 
 
 def simulation_sinfony(settings_path, test_mode=False, load=None, snrs=None):
@@ -57,9 +54,11 @@ def simulation_sinfony(settings_path, test_mode=False, load=None, snrs=None):
     transceiver_split = model_settings['communication']['transceiver_split']
 
     # Initialization
-    if backend_tf and not test_mode:
+    if os.environ['KERAS_BACKEND'] == 'tensorflow' and not test_mode:
+        from utilities.gpu_select_tf import gpu_select
         gpu_select(number=load_settings.get('gpu', -2), memory_growth=False)
-    keras.backend.set_floatx(load_settings['numerical_precision'])
+    keras.backend.set_floatx(load_settings.get(
+        'numerical_precision', 'float32'))
 
     # Simulation
     # Load model and reevaluate: False (default) # params.get('load', False)
@@ -83,7 +82,7 @@ def simulation_sinfony(settings_path, test_mode=False, load=None, snrs=None):
     train_input, train_labels, test_input, test_labels = datasets.load_dataset(
         dataset, validation_split=dataset_settings['validation_split'], image_split=dataset_settings['image_split'], preprocess=True)
     # Summarize loaded dataset
-    if dataset_settings['show_dataset'] is True:
+    if dataset_settings['show_dataset'] is True and not test_mode:
         datasets.summarize_dataset(
             train_input, train_labels, test_input, test_labels)
 
@@ -201,7 +200,8 @@ def simulation_sinfony(settings_path, test_mode=False, load=None, snrs=None):
 
     # Save settings when training is done
     if not test_mode:
-        SETTINGS_SAVED_FOLDER = os.path.join(path_script, subpath_results)  # 'settings_saved'
+        SETTINGS_SAVED_FOLDER = os.path.join(
+            path_script, subpath_results)  # 'settings_saved'
         saved_settings_path = os.path.join(path_script, SETTINGS_SAVED_FOLDER)
         with open(os.path.join(saved_settings_path, filename + '.yaml'), 'w', encoding='utf8') as written_file:
             yaml.safe_dump(params, written_file, default_flow_style=False)
