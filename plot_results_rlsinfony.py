@@ -53,7 +53,7 @@ if __name__ == '__main__':
                       'MNIST4 adam conv5 snr-4 6': ['mnist/' + dn + 'ResNet14_MNIST4_adam_Ne100_snr-4_6_conv5' + suf, 'r-s', 14, True],
                       # TODO: Investigate performance/convergence with only one agent?
                       # 'MNIST6 ntx56 Adam snr-4 6 one transmitter': ['mnist/' + dn + 'ResNet14_MNIST6_adam_Ne100_snr-4_6_onetransmitter_test' + suf, 'r--s', 14, True],
-                      'MNIST6 ntx56 RL Ne6000 Adam snr-4 6 one transmitter': ['mnist_rl/' + dn + 'ResNet14_MNIST6_RL_adam_Ne6000_snr-4_6_onetransmitter_test' + suf, 'b--x', 14, True],
+                      # 'MNIST6 ntx56 RL Ne6000 Adam snr-4 6 one transmitter': ['mnist_rl/' + dn + 'ResNet14_MNIST6_RL_adam_Ne6000_snr-4_6_onetransmitter_test' + suf, 'b--x', 14, True],
                       'MNIST4 ntx14 RL Ne6000 Adam snr-4 6 1': ['mnist_rl/' + dn + 'ResNet14_MNIST4_RL_adam_Ne6000_snr-4_6_conv1' + suf, 'b-x', 14, True],
                       }
     selected_plots.append(mnist_rl_paper)

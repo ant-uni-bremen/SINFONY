@@ -175,5 +175,5 @@ if __name__ == '__main__':
     else:
         figures = plot_sinfony.plot_results_semcom(selected_plots=selected_plots, x_axis=x_axis, y_axis=y_axis, datapath=datapath,
                                                    logplot=logplot, error_mode=error_mode, x_axis_normalization=x_axis_normalization)
-    for figure in figures:
-        figure.gca().set_xlim(x_min, x_max)
+        for figure in figures:
+            figure.gca().set_xlim(x_min, x_max)

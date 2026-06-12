@@ -225,7 +225,7 @@ if __name__ == '__main__':
 
     # Choose project/dataset
     # Possible data sets: mnist, cifar10, fraeser, hise, speechcommands, urbansound8k
-    wrapper = 'urbansound8k'
+    wrapper = 'mnist'
     simulation = 'snr'          # snr, memory, working_memory
     find_duplicates = False
     is_folder = False
