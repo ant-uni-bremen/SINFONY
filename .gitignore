@@ -7,7 +7,6 @@ plots/
 settings_saved/
 models_selected/
 models_old/
-*.h5
 Datasets/Fraeser_Aufnahmen_220824_Inkl_Verkippt/
 Datasets/Fraeser_Aufnahmen_Bis_220823/
 Datasets/Fraeser_KI_Cafe2/
