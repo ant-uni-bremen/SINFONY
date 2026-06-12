@@ -34,6 +34,30 @@ Run the script as `python3 sinfony.py "semantic_config"`, `python3 sinfony_class
 ## Dependencies
 The dependencies are provided in the conda environment file `conda_env_keras3.yaml` for the TensorFlow backend and `conda_env_keras3_pytorch.yaml` for the PyTorch backend. Dependencies from older SINFONY versions that were used throughout the years can be found in the git history and on Zenodo.
 
+### Git LFS
+
+This repository uses **Git Large File Storage (LFS)** to manage large binary files.
+
+After cloning the repository, the files tracked by LFS may appear as small placeholder files. To download the actual file contents, Git LFS must be installed and initialized.
+
+#### Setup
+
+Install Git LFS:
+https://git-lfs.com
+
+Then run:
+
+```bash
+git lfs install
+git lfs pull
+```
+
+This will fetch all large files tracked by LFS into your local repository.
+
+If Git LFS is not installed, only placeholder references to the files will be available, and the actual content will not be accessible.
+
+
+
 # Acknowledgements
 
 This work was partly funded by the Federal State of Bremen and the University of Bremen as part of the Humans on Mars Initiative, by the German Ministry of Education and Research (BMBF) under grant 16KISK016 (Open6GHub), and by the German Research Foundation (DFG) under grant 500260669 (SCIL).
