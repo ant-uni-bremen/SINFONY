@@ -1,4 +1,6 @@
 __*__
+*.h5
+*.npz
 *.code-workspace
 .vscode
 .gitignore
