@@ -231,7 +231,7 @@ if __name__ == '__main__':
     x_axis = 'snr'
     logplot = True          # Logarithmic plot?
     select_plot = False     # Select one plot or plot all preselected plots
-    copy_models = True      # Copy published models to public repository
+    copy_models = False      # Copy published models to public repository
     # Fixed
     datapath = 'models'
     filename_prefix = ''
@@ -277,7 +277,7 @@ if __name__ == '__main__':
         # 'CIFAR4 ntx16 nrx64 snr6 16': [dn + 'ResNet20_CIFAR4' + suf, 'g--D', 16, True],
         'CIFAR4 ntx16 nrx64 snr-4_6': [dn + 'ResNet20_CIFAR4_snr-4_6' + suf, 'g-D', 16, True],
         'CIFAR4 ntx16 nrx64 rx individual snr-4 6': [dn + 'ResNet20_CIFAR4_rx_snr-4_6' + suf, 'g--x', 16, True],
-        'CIFAR4 ntx16 nrx64 rx individual snr-4 6 2': [dn + 'ResNet20_CIFAR4_rx_snr-4_6_2' + suf, 'g--', 16, True],
+        # 'CIFAR4 ntx16 nrx64 rx individual snr-4 6 2': [dn + 'ResNet20_CIFAR4_rx_snr-4_6_2' + suf, 'g--', 16, True],
         # 'CIFAR5 ntx16': [dn + 'ResNet20_CIFAR5' + suf, 'g--', 0, True],
         # 'CIFAR6 ntx64 nrx64 snr6 16': [dn + 'ResNet20_CIFAR6' + suf, 'r--s', 64, True],
         'CIFAR6 ntx64 nrx64 snr-4_6': [dn + 'ResNet20_CIFAR6_snr-4_6' + suf, 'r-s', 64, True],

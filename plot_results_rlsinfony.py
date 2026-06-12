@@ -22,7 +22,7 @@ if __name__ == '__main__':
     y_axis = 'val_acc'   	# val_loss, val_acc, loss, accuracy, val_accuracy, acc, acc_val, rx_loss, rx_val_loss, tx_loss, tx_val_loss
     error_mode = True       # Show classification error instead of accuracy
     # (0) w/o SNR normalization, (56 or 64) SNR normalization by [number of channel uses/number of features 56 or 64]
-    x_axis_normalization = 0
+    x_axis_normalization = 1
     # (snr) snr value on x axis, (default) index on x axis
     x_axis = 'snr'
     logplot = True          # Logarithmic plot?
@@ -32,10 +32,7 @@ if __name__ == '__main__':
     datapath = 'models'
     filename_prefix = ''
     suf = '_results'
-    if copy_models:
-        dn = ''
-    else:
-        dn = filename_prefix
+    dn = filename_prefix
 
     # Plot tables
 
@@ -48,15 +45,16 @@ if __name__ == '__main__':
     # Unfortunately, training with CIFAR10 did not converge to a minimum with good generalization performance
 
     # [Published]
+
     mnist_rl_paper = {'title': ['RL-SINFONY design: MNIST - Paper', '', 56, False],
                       # 'Tag': ['data name', 'color in plot', channel uses, on/off],
-                      'MNIST2': ['mnist/' + dn + 'ResNet14_MNIST2_nosnr' + suf, 'b--', 0, True],
+                      'MNIST2': ['mnist/' + dn + 'ResNet14_MNIST2_nosnr' + suf, 'g--', 0, True],
                       'MNIST image classic rc25 n=15360 h100': ['classic/' + dn + 'classic_image_' + 'ResNet14_MNIST_rc25_n15360_h100' + suf, 'k-x', 28 * 28 * 1 * 8 / (0.25 * classic.HUFF_GAIN2), True],
-                      'MNIST4 adam conv5 snr-4 6': ['mnist/' + dn + 'ResNet14_MNIST4_adam_Ne100_snr-4_6_conv5' + suf, 'm-', 14, True],
+                      'MNIST4 adam conv5 snr-4 6': ['mnist/' + dn + 'ResNet14_MNIST4_adam_Ne100_snr-4_6_conv5' + suf, 'r-s', 14, True],
                       # TODO: Investigate performance/convergence with only one agent?
-                      # 'MNIST6 ntx56 Adam snr-4 6 one transmitter': ['mnist/' + dn + 'ResNet14_MNIST6_adam_Ne100_snr-4_6_onetransmitter_test' + suf, 'm--', 14, True],
-                      # 'MNIST6 ntx56 RL Ne6000 Adam snr-4 6 one transmitter': ['mnist_rl/' + dn + 'ResNet14_MNIST6_RL_adam_Ne6000_snr-4_6_onetransmitter_test' + suf, 'b--', 14, True],
-                      'MNIST4 ntx14 RL Ne6000 Adam snr-4 6 1': ['mnist_rl/' + dn + 'ResNet14_MNIST4_RL_adam_Ne6000_snr-4_6_conv1' + suf, 'b-', 14, True],
+                      # 'MNIST6 ntx56 Adam snr-4 6 one transmitter': ['mnist/' + dn + 'ResNet14_MNIST6_adam_Ne100_snr-4_6_onetransmitter_test' + suf, 'r--s', 14, True],
+                      'MNIST6 ntx56 RL Ne6000 Adam snr-4 6 one transmitter': ['mnist_rl/' + dn + 'ResNet14_MNIST6_RL_adam_Ne6000_snr-4_6_onetransmitter_test' + suf, 'b--x', 14, True],
+                      'MNIST4 ntx14 RL Ne6000 Adam snr-4 6 1': ['mnist_rl/' + dn + 'ResNet14_MNIST4_RL_adam_Ne6000_snr-4_6_conv1' + suf, 'b-x', 14, True],
                       }
     selected_plots.append(mnist_rl_paper)
 
@@ -64,13 +62,14 @@ if __name__ == '__main__':
     cifar_rl_paper = {'title': ['RL-SINFONY design: CIFAR - Paper', '', 64, False],
                       # 'Tag': ['data name', 'color in plot', channel uses, on/off],
                       # 'CIFAR sgdlr[1e-1,1e-2,1e-3][100,150]': ['cifar10/' + dn + 'ResNet20_CIFAR' + suf, 'r-', 0, True],
-                      'CIFAR2 sgdlr[1e-1,1e-2,1e-3][100,150] Ne200 snr-4 6 conv0': ['cifar10/' + dn + 'ResNet20_CIFAR2_nosnr' + suf, 'g--', 0, True],
-                      'CIFAR4 sgdlr[1e-1,1e-2,1e-3][100,150] Ne200 snr-4 6 conv0': ['cifar10/' + dn + 'ResNet20_CIFAR4_sgdlr_Ne200_snr-4_6_conv0' + suf, 'r-', 16, True],
+                      'CIFAR2 sgdlr[1e-1,1e-2,1e-3][100,150] Ne200 snr-4 6': ['cifar10/' + dn + 'ResNet20_CIFAR2_nosnr' + suf, 'g--', 0, True],
+                      'CIFAR4 sgdlr[1e-1,1e-2,1e-3][100,150] Ne200 snr-4 6 conv0': ['cifar10/' + dn + 'ResNet20_CIFAR4_sgdlr_Ne200_snr-4_6_conv0' + suf, 'r--s', 16, True],
                       # 'CIFAR4 adam lr1e-3 Nb500 Ne200 snr-4 6 conv0': ['cifar10/' + dn + 'ResNet20_CIFAR4_adam_Ne200_snr-4_6_conv0' + suf, 'g-', 16, True],
-                      'CIFAR4 adam lr1e-4 Nb500 Ne200 snr-4 6 conv0': ['cifar10/' + dn + 'ResNet20_CIFAR4_adam_lr1e-4_Ne200_snr-4_6_conv0' + suf, 'r--x', 16, True],
-                      'CIFAR4 adam lr1e-4 Nb500 Ne1000 snr-4 6 0': ['cifar10/' + dn + 'ResNet20_CIFAR4_adam_lr1e-4_Ne1000_snr-4_6_test' + suf, 'r-s', 16, True],
-                      'CIFAR4 RL adam lr1e-4 Ne100000 snr-4 6 0': ['cifar10_rl/' + dn + 'ResNet20_CIFAR4_RL_adam_lr1e-4_Ne100000_snr-4_6_conv0' + suf, 'b-o', 16, True],
-                      'CIFAR4 RL sgd Nb128 lr1e-4 Ne100000 snr-4 6 0': ['cifar10_rl/' + dn + 'ResNet20_CIFAR4_RL_sgdNb128_lr1e-4_Ne100000_snr-4_6_conv0' + suf, 'b-', 16, True],
+                      'CIFAR4 adam lr1e-4 Nb500 Ne200 snr-4 6 conv0': ['cifar10/' + dn + 'ResNet20_CIFAR4_adam_lr1e-4_Ne200_snr-4_6_conv0' + suf, 'r-s', 16, True],
+                      # 'CIFAR4 adam lr1e-4 Nb500 Ne1000 snr-4 6 0': ['cifar10/' + dn + 'ResNet20_CIFAR4_adam_lr1e-4_Ne1000_snr-4_6_test' + suf, 'r-s', 16, True],
+                      'CIFAR4 RL adam lr1e-4 Ne100000 snr-4 6 0': ['cifar10_rl/' + dn + 'ResNet20_CIFAR4_RL_adam_lr1e-4_Ne100000_snr-4_6_conv0' + suf, 'b-x', 16, True],
+                      'CIFAR4 RL sgd Nb128 lr1e-4 Ne100000 snr-4 6 0': ['cifar10_rl/' + dn + 'ResNet20_CIFAR4_RL_sgdNb128_lr1e-4_Ne100000_snr-4_6_conv0' + suf, 'b--^', 16, True],
+                      # / 4
                       'CIFAR image classic rc25 n=15360 h100': ['classic/' + dn + 'classic_image_' + 'ResNet20_CIFAR_rc25_n15360_h100' + suf, 'k-x', 32 * 32 * 3 * 8 / (0.25 * classic.HUFF_GAIN_CIFAR_IMAGES), True],
                       # 'CIFAR image classic rc25 n=15360 h1000': ['classic/' + dn + 'classic_image_' + 'ResNet20_CIFAR_rc25_n15360_h1000' + suf, 'k--x', 32 * 32 * 3 * 8 / (0.25 * classic.HUFF_GAIN_CIFAR_IMAGES), True],
                       }

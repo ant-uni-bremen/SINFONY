@@ -79,17 +79,17 @@ if __name__ == '__main__':
                             # 'MNIST2 classic rc75 n=1000 h1000': ['classic/' + dn + 'classic_' + 'ResNet14_MNIST2_rc75_h1000' + suf, 'k--<', 56 * 16 / (0.75 * HUFF_GAIN), True],
                             # 'MNIST2 classic rc75 n=1000 h100': ['classic/' + dn + 'classic_' + 'ResNet14_MNIST2_rc75_h100' + suf, 'k-<', 56 * 16 / (0.75 * HUFF_GAIN), True],
                             # 'MNIST2 classic rc75 n=11264 h100': ['classic/' + dn + 'classic_' + 'ResNet14_MNIST2_rc75_n11264_h100' + suf, 'k->', 56 * 16 / (0.75 * HUFF_GAIN), True],
-                            # 'MNIST2 AE ntx4 Ne10 snr-4 6': ['classic/' + dn + 'AE_' + suf + 'ResNet14_MNIST2_ntx4_NL8_Ne10_snr-4_6', 'g-x', 56 * 4, True],
-                            'MNIST2 AE ntx16 Ne10 snr-4 6': ['classic/' + dn + 'AE_' + suf + 'ResNet14_MNIST2_ntx16_NL32_Ne10_snr-4_6', 'g--x', 56 * 16, True],
-                            # 'MNIST2 AE ntx56 NW112 NL2 + linear rvec snr-4 6': ['classic/' + dn + 'AErvec_' + suf + 'ResNet14_MNIST2_ntx56_NL112_Ne100_snr-4_6', 'm-s', 56, True],
-                            # 'MNIST2 AE ntx56 NW112 NL2 + linear rvec ind snr-4 6': ['classic/' + dn + 'AErvec_ind_' + suf + 'ResNet14_MNIST2_ntx56_NL112_Ne100_snr-4_6', 'm--d', 56, True],
-                            # 'MNIST2 AE ntx56 NW56 NL2 + linear rvec snr-4 6': ['classic/' + dn + 'AErvec_' + suf + 'ResNet14_MNIST2_ntx56_NL56_Ne100_snr-4_6', 'm--s', 56, True],
-                            # 'MNIST2 AE ntx112 NW224 NL2 + linear rvec snr-4 6': ['classic/' + dn + 'AErvec_' + suf + 'ResNet14_MNIST2_ntx112_NL224_Ne100_snr-4_6', 'm:s', 56, True],
-                            # 'MNIST2 AE ntx14 NW28 NL2 + linear rvec snr-4 6': ['classic/' + dn + 'AErvec_' + suf + 'ResNet14_MNIST2_ntx14_NL28_Ne100_snr-4_6', 'm-D', 14, True],
+                            # 'MNIST2 AE ntx4 Ne10 snr-4 6': ['classic_ae/' + dn + 'AE_' + 'ResNet14_MNIST2_ntx4_NL8_Ne10_snr-4_6' + suf, 'g-x', 56 * 4, True],
+                            'MNIST2 AE ntx16 Ne10 snr-4 6': ['classic_ae/' + dn + 'AE_' + 'ResNet14_MNIST2_ntx16_NL32_Ne10_snr-4_6' + suf, 'g--x', 56 * 16, True],
+                            # 'MNIST2 AE ntx56 NW112 NL2 + linear rvec snr-4 6': ['classic_ae/' + dn + 'AErvec_' + 'ResNet14_MNIST2_ntx56_NL112_Ne100_snr-4_6' + suf, 'm-s', 56, True],
+                            # 'MNIST2 AE ntx56 NW112 NL2 + linear rvec ind snr-4 6': ['classic_ae/' + dn + 'AErvec_ind_' + 'ResNet14_MNIST2_ntx56_NL112_Ne100_snr-4_6' + suf, 'm--d', 56, True],
+                            # 'MNIST2 AE ntx56 NW56 NL2 + linear rvec snr-4 6': ['classic_ae/' + dn + 'AErvec_' + 'ResNet14_MNIST2_ntx56_NL56_Ne100_snr-4_6' + suf, 'm--s', 56, True],
+                            # 'MNIST2 AE ntx112 NW224 NL2 + linear rvec snr-4 6': ['classic_ae/' + dn + 'AErvec_' + 'ResNet14_MNIST2_ntx112_NL224_Ne100_snr-4_6' + suf, 'm:s', 56, True],
+                            # 'MNIST2 AE ntx14 NW28 NL2 + linear rvec snr-4 6': ['classic_ae/' + dn + 'AErvec_' + 'ResNet14_MNIST2_ntx14_NL28_Ne100_snr-4_6' + suf, 'm-D', 14, True],
                             # SINFONY Tx/Rx modules as AE for fair comparison
-                            # 'MNIST2 AE ntx14 nrx56 Ne20 sgdlrs SINFONY rvec snr-4 6': ['classic/' + dn + 'AErvec_' + suf + 'ResNet14_MNIST2_ntx14_SINFONY_sgdlrs_Ne20_snr-4_6', 'm:D', 14, True],
-                            # 'MNIST2 AE ntx56 nrx56 Ne100 adam SINFONY rvec snr-4 6': ['classic/' + dn + 'AErvec_' + suf + 'ResNet14_MNIST2_ntx56_NL56_SINFONY_Ne100_snr-4_6', 'm--s', 56, True],
-                            'MNIST2 AE ntx56 nrx56 Ne20 sgdlrs SINFONY rvec snr-4 6': ['classic/' + dn + 'AErvec_' + suf + 'ResNet14_MNIST2_ntx56_NL56_SINFONY_sgdlrs_Ne20_snr-4_6', 'm:^', 56, True],
+                            # 'MNIST2 AE ntx14 nrx56 Ne20 sgdlrs SINFONY rvec snr-4 6': ['classic_ae/' + dn + 'AErvec_' + 'ResNet14_MNIST2_ntx14_SINFONY_sgdlrs_Ne20_snr-4_6' + suf, 'm:D', 14, True],
+                            # 'MNIST2 AE ntx56 nrx56 Ne100 adam SINFONY rvec snr-4 6': ['classic_ae/' + dn + 'AErvec_' + 'ResNet14_MNIST2_ntx56_NL56_SINFONY_Ne100_snr-4_6' + suf, 'm--s', 56, True],
+                            'MNIST2 AE ntx56 nrx56 Ne20 sgdlrs SINFONY rvec snr-4 6': ['classic_ae/' + dn + 'AErvec_' + 'ResNet14_MNIST2_ntx56_NL56_SINFONY_sgdlrs_Ne20_snr-4_6' + suf, 'm:^', 56, True],
                             'MNIST6 ntx56 nrx56 Ne20 snr-4 6': ['mnist/' + dn + 'ResNet14_MNIST6_Ne20_snr-4_6' + suf, 'r-s', 56, True],
                             # 'MNIST6 ntx56 nrx56 Ne20 layer2 linear rx ind snr-4 6': ['mnist/' + dn + 'ResNet14_MNIST6_Ne20_layer2_rxindilinear_snr-4_6' + suf, 'r--s', 56, True],
                             # 'MNIST6 ntx56 nrx56 Ne20 layer2 linear rx snr-4 6': ['mnist/' + dn + 'ResNet14_MNIST6_Ne20_layer2_rxlinear_snr-4_6' + suf, 'r:s', 56, True],
@@ -100,7 +100,7 @@ if __name__ == '__main__':
     selected_plots.append(semcom_mnist_classic)
 
     # Investigation for CIFAR dataset
-    # [Partly Published, prepared for PhD thesis]
+    # [Published in PhD thesis]
     semcom_cifar_classic = {'title': ['SINFONY vs Classic communications on CIFAR10', '', 64, False],
                             # 'Tag': ['data name', 'color in plot', channel uses, on/off],
                             'CIFAR1': ['cifar10/' + dn + 'ResNet20_CIFAR' + suf, 'k--', 0, True],
@@ -110,9 +110,9 @@ if __name__ == '__main__':
                             'CIFAR2 features classic rc25 n=15360 h100': ['classic/' + dn + 'classic_' + 'ResNet20_CIFAR2_rc25_n15360_h100' + suf, 'k--o', 64 * 16 / (0.25 * HUFF_GAIN_CIFAR_FEATURES), True],
                             'CIFAR1 image classic rc25 n=15360 h100': ['classic/' + dn + 'classic_image_' + 'ResNet20_CIFAR_rc25_n15360_h100' + suf, 'k-x', 32 * 32 / 4 * 3 * 8 / (0.25 * HUFF_GAIN_CIFAR_IMAGES), True],
                             # 'CIFAR1 image classic rc25 n=15360 h1000': ['classic/' + dn + 'classic_image_' + 'ResNet20_CIFAR_rc25_n15360_h1000' + suf, 'k--x', 32 * 32 / 4 * 3 * 8 / (0.25 * HUFF_GAIN_CIFAR_IMAGES), True],
-                            'CIFAR2 AE ntx4 Ne10 snr-4 6': ['classic/' + dn + 'AE_' + suf + 'ResNet20_CIFAR2_ntx4_NW8_NL2_linear_Ne10_snr-4_6_CIFAR', 'g--x', 64 * 4, True],
-                            'CIFAR2 AE ntx64 nrx64 Ne200 sgdlrs SINFONY rvec snr-4 6': ['classic/' + dn + 'AErvec_' + suf + 'ResNet20_CIFAR2_ntx64_NW64_NL1_Ne200_snr-4_6_CIFAR', 'm:^', 64, True],
-                            # 'CIFAR2 AE ntx64 nrx64 Ne200 sgdlrs SINFONY rvec individual snr-4 6': ['classic/' + dn + 'AErvec_ind_' + suf + 'ResNet20_CIFAR2_ntx64_NW64_NL1_Ne200_snr-4_6_CIFAR', 'm:>', 64, True],
+                            'CIFAR2 AE ntx4 Ne10 snr-4 6': ['classic_ae/' + dn + 'AE_' + 'ResNet20_CIFAR2_ntx4_NW8_NL2_linear_Ne10_snr-4_6_CIFAR' + suf, 'g--x', 64 * 4, True],
+                            'CIFAR2 AE ntx64 nrx64 Ne200 sgdlrs SINFONY rvec snr-4 6': ['classic_ae/' + dn + 'AErvec_' + 'ResNet20_CIFAR2_ntx64_NW64_NL1_Ne200_snr-4_6_CIFAR' + suf, 'm:^', 64, True],
+                            # 'CIFAR2 AE ntx64 nrx64 Ne200 sgdlrs SINFONY rvec individual snr-4 6': ['classic_ae/' + dn + 'AErvec_ind_' + 'ResNet20_CIFAR2_ntx64_NW64_NL1_Ne200_snr-4_6_CIFAR' + suf, 'm:>', 64, True],
                             }
     selected_plots.append(semcom_cifar_classic)
 

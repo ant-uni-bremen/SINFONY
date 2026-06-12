@@ -273,7 +273,7 @@ if __name__ == '__main__':
 
     mnist_conv = {
         # Options: ['title', subpath, x_axis_normalization, False],
-        'title': ['SINFONY: MNIST4 sgdlr conv', 'mnist', 0, False],
+        'title': ['SINFONY: MNIST4 ntx14 sgdlr conv', 'mnist', 0, False],
         # 'Tag': ['Data set size', 'batch size', 'AE mode', 'subpath', 'on/off'],
         'params': [60000, 64, 1, False],
         # 'Tag': ['Data name', 'Color in plot', 'Channel uses', 'on/off'],
@@ -291,7 +291,7 @@ if __name__ == '__main__':
     # selected_plots.append(mnist_conv)
 
     mnist_conv2 = {
-        'title': ['SINFONY: MNIST4 sgdlr snr-4 6 conv', 'mnist', 0, False],
+        'title': ['SINFONY: MNIST4 ntx14 sgdlr snr-4 6 conv', 'mnist', 0, False],
         # 'Tag': ['Data set size', 'batch size', 'AE mode', 'subpath', 'on/off'],
         'params': [60000, 64, 1, False],
         # 'Tag': ['Data name', 'Color in plot', 'Channel uses', 'on/off'],
@@ -306,10 +306,10 @@ if __name__ == '__main__':
         'MNIST4 sgdlr snr-4 6 conv8': [dn + 'ResNet14_MNIST4_sgdlr_snr-4_6_conv8' + suf, 'g-', 14, True],
         'MNIST4 sgdlr snr-4 6 conv9': [dn + 'ResNet14_MNIST4_sgdlr_snr-4_6_conv9' + suf, 'g-', 14, True],
     }
-    selected_plots.append(mnist_conv2)
+    # selected_plots.append(mnist_conv2)
 
     mnist_adam_conv = {
-        'title': ['SINFONY: MNIST4 adam conv', 'mnist', 0, False],
+        'title': ['SINFONY: MNIST4 ntx14 adam conv', 'mnist', 0, False],
         # 'Tag': ['Data set size', 'batch size', 'AE mode', 'subpath', 'on/off'],
         'params': [60000, 500, 0, False],
         # 'Tag': ['Data name', 'Color in plot', 'Channel uses', 'on/off'],
@@ -327,7 +327,7 @@ if __name__ == '__main__':
     # selected_plots.append(mnist_adam_conv)
 
     mnist_adam_conv2 = {
-        'title': ['SINFONY: MNIST4 adam snr-4 6 conv', 'mnist', 0, False],
+        'title': ['SINFONY: MNIST4 ntx14 adam Ne100 snr-4 6 conv', 'mnist', 0, False],
         # 'Tag': ['Data set size', 'batch size', 'AE mode', 'subpath', 'on/off'],
         'params': [60000, 500, 0, False],
         # 'Tag': ['Data name', 'Color in plot', 'Channel uses', 'on/off'],
@@ -345,121 +345,121 @@ if __name__ == '__main__':
     selected_plots.append(mnist_adam_conv2)
 
     mnist_rl = {
-        'title': ['RL-SINFONY: MNIST4 ntx14 RL Ne3000 SGD lr1e-3', 'mnist_rl', 0, False],
+        'title': ['RL-SINFONY: MNIST4 ntx14 RL Ne1500 SGD lr1e-3', 'mnist_rl', 0, False],
         # 'Tag': ['Data set size', 'batch size', 'AE mode', 'subpath', 'on/off'],
         'params': [60000, 64, 0, False],
         # 'Tag': ['rx_finetuning_increment_factor', 'rl_rx_steps', 'rl_tx_steps', 'on/off'],
         'rlparams': [1.1, 10, 10, False],
         # 'Tag': ['Data name', 'Color in plot', 'Channel uses', 'on/off'],
-        'MNIST4 ntx14 RL Ne3000 SGD lr1e-3 2': [dn + 'ResNet14_MNIST4_RL_sgd_Ne3000_lr1e-3_2' + suf, 'k-', 14, True],
-        'MNIST4 ntx14 RL Ne3000 SGD lr1e-3': [dn + 'ResNet14_MNIST4_RL_sgd_Ne3000_lr1e-3' + suf, 'k--', 14, True],
-        'MNIST4 ntx14 RL Ne3000 SGD lr1e-3 3': [dn + 'ResNet14_MNIST4_RL_sgd_Ne3000_lr1e-3_3' + suf, 'k--', 14, True],
-        'MNIST4 ntx14 RL Ne3000 SGD lr1e-3 4': [dn + 'ResNet14_MNIST4_RL_sgd_Ne3000_4' + suf, 'k--', 14, True],
-        'MNIST4 ntx14 RL Ne3000 SGD lr1e-3 5': [dn + 'ResNet14_MNIST4_RL_sgd_Ne3000_5' + suf, 'k--', 14, True],
-        'MNIST4 ntx14 RL Ne3000 SGD lr1e-3 6': [dn + 'ResNet14_MNIST4_RL_sgd_Ne3000_6' + suf, 'k--', 14, True],
-        'MNIST4 ntx14 RL Ne3000 SGD lr1e-3 7': [dn + 'ResNet14_MNIST4_RL_sgd_Ne3000_7' + suf, 'k--', 14, True],
-        'MNIST4 ntx14 RL Ne3000 SGD lr1e-3 8': [dn + 'ResNet14_MNIST4_RL_sgd_Ne3000_8' + suf, 'k--', 14, True],
-        'MNIST4 ntx14 RL Ne3000 SGD lr1e-3 9': [dn + 'ResNet14_MNIST4_RL_sgd_Ne3000_9' + suf, 'k--', 14, True],
-        'MNIST4 ntx14 RL Ne3000 SGD lr1e-3 10': [dn + 'ResNet14_MNIST4_RL_sgd_Ne3000_10' + suf, 'k--', 14, True],
-        'MNIST4 ntx14 RL Ne3000 SGD lr1e-3 11': [dn + 'ResNet14_MNIST4_RL_sgd_Ne3000_11' + suf, 'k--', 14, True],
-        'MNIST4 ntx14 RL Ne3000 SGD lr1e-3 ml3': [dn + 'ResNet14_MNIST4_RL_sgd_Ne3000_ml3' + suf, 'k--x', 14, True],
-        # 'MNIST4 ntx14 RL Ne3000 SGD lr1e-3 ml3 2': [dn + 'ResNet14_MNIST4_RL_sgd_Ne3000_ml3_2' + suf, 'k-x', 14, True],
+        'MNIST4 ntx14 RL Ne1500 SGD lr1e-3 2': [dn + 'ResNet14_MNIST4_RL_sgd_Ne3000_lr1e-3_2' + suf, 'k-', 14, True],
+        'MNIST4 ntx14 RL Ne1500 SGD lr1e-3': [dn + 'ResNet14_MNIST4_RL_sgd_Ne3000_lr1e-3' + suf, 'k--', 14, True],
+        'MNIST4 ntx14 RL Ne1500 SGD lr1e-3 3': [dn + 'ResNet14_MNIST4_RL_sgd_Ne3000_lr1e-3_3' + suf, 'k--', 14, True],
+        'MNIST4 ntx14 RL Ne1500 SGD lr1e-3 4': [dn + 'ResNet14_MNIST4_RL_sgd_Ne3000_4' + suf, 'k--', 14, True],
+        'MNIST4 ntx14 RL Ne1500 SGD lr1e-3 5': [dn + 'ResNet14_MNIST4_RL_sgd_Ne3000_5' + suf, 'k--', 14, True],
+        'MNIST4 ntx14 RL Ne1500 SGD lr1e-3 6': [dn + 'ResNet14_MNIST4_RL_sgd_Ne3000_6' + suf, 'k--', 14, True],
+        'MNIST4 ntx14 RL Ne1500 SGD lr1e-3 7': [dn + 'ResNet14_MNIST4_RL_sgd_Ne3000_7' + suf, 'k--', 14, True],
+        'MNIST4 ntx14 RL Ne1500 SGD lr1e-3 8': [dn + 'ResNet14_MNIST4_RL_sgd_Ne3000_8' + suf, 'k--', 14, True],
+        'MNIST4 ntx14 RL Ne1500 SGD lr1e-3 9': [dn + 'ResNet14_MNIST4_RL_sgd_Ne3000_9' + suf, 'k--', 14, True],
+        'MNIST4 ntx14 RL Ne1500 SGD lr1e-3 10': [dn + 'ResNet14_MNIST4_RL_sgd_Ne3000_10' + suf, 'k--', 14, True],
+        'MNIST4 ntx14 RL Ne1500 SGD lr1e-3 11': [dn + 'ResNet14_MNIST4_RL_sgd_Ne3000_11' + suf, 'k--', 14, True],
+        'MNIST4 ntx14 RL Ne1500 SGD lr1e-3 ml3': [dn + 'ResNet14_MNIST4_RL_sgd_Ne3000_ml3' + suf, 'k--x', 14, True],
+        # 'MNIST4 ntx14 RL Ne1500 SGD lr1e-3 ml3 2': [dn + 'ResNet14_MNIST4_RL_sgd_Ne3000_ml3_2' + suf, 'k-x', 14, True],
     }
     # selected_plots.append(mnist_rl)
 
     mnist_rl2 = {
-        'title': ['RL-SINFONY: MNIST4 ntx14 RL Ne3000 SGD lr1e-3 snr-4_6', 'mnist_rl', 0, False],
+        'title': ['RL-SINFONY: MNIST4 ntx14 RL Ne1500 SGD lr1e-3 snr-4_6', 'mnist_rl', 0, False],
         # 'Tag': ['Data set size', 'batch size', 'AE mode', 'subpath', 'on/off'],
         'params': [60000, 64, 0, False],
         # 'Tag': ['rx_finetuning_increment_factor', 'rl_rx_steps', 'rl_tx_steps', 'on/off'],
         'rlparams': [1.1, 10, 10, False],
         # 'Tag': ['Data name', 'Color in plot', 'Channel uses', 'on/off'],
-        'MNIST4 ntx14 RL Ne3000 SGD lr1e-3 snr-4_6': [dn + 'ResNet14_MNIST4_RL_sgd_Ne3000_lr1e-3_snr-4_6' + suf, 'k-o', 14, True],
-        'MNIST4 ntx14 RL Ne3000 SGD lr1e-3 snr-4_6 2': [dn + 'ResNet14_MNIST4_RL_sgd_Ne3000_snr-4_6_2' + suf, 'k--', 14, True],
-        'MNIST4 ntx14 RL Ne3000 SGD lr1e-3 snr-4_6 3': [dn + 'ResNet14_MNIST4_RL_sgd_Ne3000_snr-4_6_3' + suf, 'k--', 14, True],
-        'MNIST4 ntx14 RL Ne3000 SGD lr1e-3 snr-4_6 4': [dn + 'ResNet14_MNIST4_RL_sgd_Ne3000_snr-4_6_4' + suf, 'k--', 14, True],
-        'MNIST4 ntx14 RL Ne3000 SGD lr1e-3 snr-4_6 5': [dn + 'ResNet14_MNIST4_RL_sgd_Ne3000_snr-4_6_5' + suf, 'k--', 14, True],
-        'MNIST4 ntx14 RL Ne3000 SGD lr1e-3 snr-4_6 6': [dn + 'ResNet14_MNIST4_RL_sgd_Ne3000_snr-4_6_6' + suf, 'k--', 14, True],
-        'MNIST4 ntx14 RL Ne3000 SGD lr1e-3 snr-4_6 7': [dn + 'ResNet14_MNIST4_RL_sgd_Ne3000_snr-4_6_7' + suf, 'k--', 14, True],
-        'MNIST4 ntx14 RL Ne3000 SGD lr1e-3 snr-4_6 8': [dn + 'ResNet14_MNIST4_RL_sgd_Ne3000_snr-4_6_8' + suf, 'k--', 14, True],
-        'MNIST4 ntx14 RL Ne3000 SGD lr1e-3 snr-4_6 9': [dn + 'ResNet14_MNIST4_RL_sgd_Ne3000_snr-4_6_9' + suf, 'k--', 14, True],
-        'MNIST4 ntx14 RL Ne3000 SGD lr1e-3 snr-4_6 10': [dn + 'ResNet14_MNIST4_sgd_Ne3000_snr-4_6_conv10' + suf, 'k--', 14, True],
+        'MNIST4 ntx14 RL Ne1500 SGD lr1e-3 snr-4_6': [dn + 'ResNet14_MNIST4_RL_sgd_Ne3000_lr1e-3_snr-4_6' + suf, 'k-o', 14, True],
+        'MNIST4 ntx14 RL Ne1500 SGD lr1e-3 snr-4_6 2': [dn + 'ResNet14_MNIST4_RL_sgd_Ne3000_snr-4_6_2' + suf, 'k--', 14, True],
+        'MNIST4 ntx14 RL Ne1500 SGD lr1e-3 snr-4_6 3': [dn + 'ResNet14_MNIST4_RL_sgd_Ne3000_snr-4_6_3' + suf, 'k--', 14, True],
+        'MNIST4 ntx14 RL Ne1500 SGD lr1e-3 snr-4_6 4': [dn + 'ResNet14_MNIST4_RL_sgd_Ne3000_snr-4_6_4' + suf, 'k--', 14, True],
+        'MNIST4 ntx14 RL Ne1500 SGD lr1e-3 snr-4_6 5': [dn + 'ResNet14_MNIST4_RL_sgd_Ne3000_snr-4_6_5' + suf, 'k--', 14, True],
+        'MNIST4 ntx14 RL Ne1500 SGD lr1e-3 snr-4_6 6': [dn + 'ResNet14_MNIST4_RL_sgd_Ne3000_snr-4_6_6' + suf, 'k--', 14, True],
+        'MNIST4 ntx14 RL Ne1500 SGD lr1e-3 snr-4_6 7': [dn + 'ResNet14_MNIST4_RL_sgd_Ne3000_snr-4_6_7' + suf, 'k--', 14, True],
+        'MNIST4 ntx14 RL Ne1500 SGD lr1e-3 snr-4_6 8': [dn + 'ResNet14_MNIST4_RL_sgd_Ne3000_snr-4_6_8' + suf, 'k--', 14, True],
+        'MNIST4 ntx14 RL Ne1500 SGD lr1e-3 snr-4_6 9': [dn + 'ResNet14_MNIST4_RL_sgd_Ne3000_snr-4_6_9' + suf, 'k--', 14, True],
+        'MNIST4 ntx14 RL Ne1500 SGD lr1e-3 snr-4_6 10': [dn + 'ResNet14_MNIST4_sgd_Ne3000_snr-4_6_conv10' + suf, 'k--', 14, True],
         # Test
-        # 'MNIST4 ntx14 RL Ne3000 SGD snr-4_6 test (w/o AE + RL call tf.function)': [dn + 'ResNet14_MNIST4_RL_snr-4_6_test' + suf, 'b-', 14, True],
-        # 'MNIST4 ntx14 RL Ne3000 SGD snr-4_6 test2 (w/o AE tf.function)': [dn + 'ResNet14_MNIST4_RL_snr-4_6_test2' + suf, 'b--', 14, True],
+        # 'MNIST4 ntx14 RL Ne1500 SGD snr-4_6 test (w/o AE + RL call tf.function)': [dn + 'ResNet14_MNIST4_RL_snr-4_6_test' + suf, 'b-', 14, True],
+        # 'MNIST4 ntx14 RL Ne1500 SGD snr-4_6 test2 (w/o AE tf.function)': [dn + 'ResNet14_MNIST4_RL_snr-4_6_test2' + suf, 'b--', 14, True],
     }
-    selected_plots.append(mnist_rl2)
+    # selected_plots.append(mnist_rl2)
 
     mnist_rl_adam = {
-        'title': ['RL-SINFONY: MNIST4 ntx14 RL Ne2000 Adam', 'mnist_rl', 0, False],
+        'title': ['RL-SINFONY: MNIST4 ntx14 RL Ne1000 Adam', 'mnist_rl', 0, False],
         # 'Tag': ['Data set size', 'batch size', 'AE mode', 'subpath', 'on/off'],
         'params': [60000, 500, 0, False],
         # 'Tag': ['rx_finetuning_increment_factor', 'rl_rx_steps', 'rl_tx_steps', 'on/off'],
         'rlparams': [1.1, 10, 10, False],
         # 'Tag': ['Data name', 'Color in plot', 'Channel uses', 'on/off'],
-        'MNIST4 ntx14 RL Ne2000 Adam np 0': [dn + 'ResNet14_MNIST4_RL_adam_Ne2000_np' + suf, 'm-', 14, True],
-        'MNIST4 ntx14 RL Ne2000 Adam 1': [dn + 'ResNet14_MNIST4_RL_adam_Ne2000_conv1' + suf, 'm-', 14, True],
-        'MNIST4 ntx14 RL Ne2000 Adam 2': [dn + 'ResNet14_MNIST4_RL_adam_Ne2000_conv2' + suf, 'm-', 14, True],
-        'MNIST4 ntx14 RL Ne2000 Adam 3': [dn + 'ResNet14_MNIST4_RL_adam_Ne2000_conv3' + suf, 'm-', 14, True],
-        'MNIST4 ntx14 RL Ne2000 Adam 4': [dn + 'ResNet14_MNIST4_RL_adam_Ne2000_conv4' + suf, 'm-', 14, True],
-        'MNIST4 ntx14 RL Ne2000 Adam 5': [dn + 'ResNet14_MNIST4_RL_adam_Ne2000_conv5' + suf, 'm-', 14, True],
-        'MNIST4 ntx14 RL Ne2000 Adam 6': [dn + 'ResNet14_MNIST4_RL_adam_Ne2000_conv6' + suf, 'm-', 14, True],
-        'MNIST4 ntx14 RL Ne2000 Adam 7': [dn + 'ResNet14_MNIST4_RL_adam_Ne2000_conv7' + suf, 'm-', 14, True],
-        'MNIST4 ntx14 RL Ne2000 Adam 8': [dn + 'ResNet14_MNIST4_RL_adam_Ne2000_conv8' + suf, 'm-', 14, True],
-        'MNIST4 ntx14 RL Ne2000 Adam 9': [dn + 'ResNet14_MNIST4_RL_adam_Ne2000_conv9' + suf, 'm-', 14, True],
-        'MNIST4 ntx14 RL Ne2000 Adam 10': [dn + 'ResNet14_MNIST4_RL_adam_Ne2000_conv10' + suf, 'm-', 14, True],
+        'MNIST4 ntx14 RL Ne1000 Adam np 0': [dn + 'ResNet14_MNIST4_RL_adam_Ne2000_np' + suf, 'm-', 14, True],
+        'MNIST4 ntx14 RL Ne1000 Adam 1': [dn + 'ResNet14_MNIST4_RL_adam_Ne2000_conv1' + suf, 'm-', 14, True],
+        'MNIST4 ntx14 RL Ne1000 Adam 2': [dn + 'ResNet14_MNIST4_RL_adam_Ne2000_conv2' + suf, 'm-', 14, True],
+        'MNIST4 ntx14 RL Ne1000 Adam 3': [dn + 'ResNet14_MNIST4_RL_adam_Ne2000_conv3' + suf, 'm-', 14, True],
+        'MNIST4 ntx14 RL Ne1000 Adam 4': [dn + 'ResNet14_MNIST4_RL_adam_Ne2000_conv4' + suf, 'm-', 14, True],
+        'MNIST4 ntx14 RL Ne1000 Adam 5': [dn + 'ResNet14_MNIST4_RL_adam_Ne2000_conv5' + suf, 'm-', 14, True],
+        'MNIST4 ntx14 RL Ne1000 Adam 6': [dn + 'ResNet14_MNIST4_RL_adam_Ne2000_conv6' + suf, 'm-', 14, True],
+        'MNIST4 ntx14 RL Ne1000 Adam 7': [dn + 'ResNet14_MNIST4_RL_adam_Ne2000_conv7' + suf, 'm-', 14, True],
+        'MNIST4 ntx14 RL Ne1000 Adam 8': [dn + 'ResNet14_MNIST4_RL_adam_Ne2000_conv8' + suf, 'm-', 14, True],
+        'MNIST4 ntx14 RL Ne1000 Adam 9': [dn + 'ResNet14_MNIST4_RL_adam_Ne2000_conv9' + suf, 'm-', 14, True],
+        'MNIST4 ntx14 RL Ne1000 Adam 10': [dn + 'ResNet14_MNIST4_RL_adam_Ne2000_conv10' + suf, 'm-', 14, True],
     }
     # selected_plots.append(mnist_rl_adam)
 
     mnist_rl_adam2 = {
-        'title': ['RL-SINFONY: MNIST4 ntx14 RL Ne3000 Adam snr-4 6', 'mnist_rl', 0, False],
+        'title': ['RL-SINFONY: MNIST4 ntx14 RL Ne1500 Adam snr-4 6', 'mnist_rl', 0, False],
         # 'Tag': ['Data set size', 'batch size', 'AE mode', 'subpath', 'on/off'],
         'params': [60000, 500, 0, False],
         # 'Tag': ['rx_finetuning_increment_factor', 'rl_rx_steps', 'rl_tx_steps', 'on/off'],
         'rlparams': [1.1, 10, 10, False],
         # 'Tag': ['Data name', 'Color in plot', 'Channel uses', 'on/off'],
-        'MNIST4 ntx14 RL Ne3000 Adam snr-4 6 0': [dn + 'ResNet14_MNIST4_RL_adam_Ne3000_snr-4_6_conv0' + suf, 'm-', 14, True],
-        'MNIST4 ntx14 RL Ne3000 Adam snr-4 6 1': [dn + 'ResNet14_MNIST4_RL_adam_Ne3000_snr-4_6_conv1' + suf, 'm-', 14, True],
-        'MNIST4 ntx14 RL Ne3000 Adam snr-4 6 2': [dn + 'ResNet14_MNIST4_RL_adam_Ne3000_snr-4_6_conv2' + suf, 'm-', 14, True],
-        'MNIST4 ntx14 RL Ne3000 Adam snr-4 6 3': [dn + 'ResNet14_MNIST4_RL_adam_Ne3000_snr-4_6_conv3' + suf, 'm-', 14, True],
-        'MNIST4 ntx14 RL Ne3000 Adam snr-4 6 4': [dn + 'ResNet14_MNIST4_RL_adam_Ne3000_snr-4_6_conv4' + suf, 'm-', 14, True],
-        'MNIST4 ntx14 RL Ne3000 Adam snr-4 6 5': [dn + 'ResNet14_MNIST4_RL_adam_Ne3000_snr-4_6_conv5' + suf, 'm-', 14, True],
-        'MNIST4 ntx14 RL Ne3000 Adam snr-4 6 6': [dn + 'ResNet14_MNIST4_RL_adam_Ne3000_snr-4_6_conv6' + suf, 'm-', 14, True],
-        'MNIST4 ntx14 RL Ne3000 Adam snr-4 6 7': [dn + 'ResNet14_MNIST4_RL_adam_Ne3000_snr-4_6_conv7' + suf, 'm-', 14, True],
-        'MNIST4 ntx14 RL Ne3000 Adam snr-4 6 8': [dn + 'ResNet14_MNIST4_RL_adam_Ne3000_snr-4_6_conv8' + suf, 'm-', 14, True],
-        'MNIST4 ntx14 RL Ne3000 Adam snr-4 6 9': [dn + 'ResNet14_MNIST4_RL_adam_Ne3000_snr-4_6_conv9' + suf, 'm-', 14, True],
+        'MNIST4 ntx14 RL Ne1500 Adam snr-4 6 0': [dn + 'ResNet14_MNIST4_RL_adam_Ne3000_snr-4_6_conv0' + suf, 'm-', 14, True],
+        'MNIST4 ntx14 RL Ne1500 Adam snr-4 6 1': [dn + 'ResNet14_MNIST4_RL_adam_Ne3000_snr-4_6_conv1' + suf, 'm-', 14, True],
+        'MNIST4 ntx14 RL Ne1500 Adam snr-4 6 2': [dn + 'ResNet14_MNIST4_RL_adam_Ne3000_snr-4_6_conv2' + suf, 'm-', 14, True],
+        'MNIST4 ntx14 RL Ne1500 Adam snr-4 6 3': [dn + 'ResNet14_MNIST4_RL_adam_Ne3000_snr-4_6_conv3' + suf, 'm-', 14, True],
+        'MNIST4 ntx14 RL Ne1500 Adam snr-4 6 4': [dn + 'ResNet14_MNIST4_RL_adam_Ne3000_snr-4_6_conv4' + suf, 'm-', 14, True],
+        'MNIST4 ntx14 RL Ne1500 Adam snr-4 6 5': [dn + 'ResNet14_MNIST4_RL_adam_Ne3000_snr-4_6_conv5' + suf, 'm-', 14, True],
+        'MNIST4 ntx14 RL Ne1500 Adam snr-4 6 6': [dn + 'ResNet14_MNIST4_RL_adam_Ne3000_snr-4_6_conv6' + suf, 'm-', 14, True],
+        'MNIST4 ntx14 RL Ne1500 Adam snr-4 6 7': [dn + 'ResNet14_MNIST4_RL_adam_Ne3000_snr-4_6_conv7' + suf, 'm-', 14, True],
+        'MNIST4 ntx14 RL Ne1500 Adam snr-4 6 8': [dn + 'ResNet14_MNIST4_RL_adam_Ne3000_snr-4_6_conv8' + suf, 'm-', 14, True],
+        'MNIST4 ntx14 RL Ne1500 Adam snr-4 6 9': [dn + 'ResNet14_MNIST4_RL_adam_Ne3000_snr-4_6_conv9' + suf, 'm-', 14, True],
     }
     # selected_plots.append(mnist_rl_adam2)
 
     mnist_rl_adam2_Ne = {
-        'title': ['RL-SINFONY: MNIST4 ntx14 RL Ne6000 Adam snr-4 6', 'mnist_rl', 0, False],
+        'title': ['RL-SINFONY: MNIST4 ntx14 RL Ne3000 Nerx 600 Adam snr-4 6', 'mnist_rl', 0, False],
         # 'Tag': ['Data set size', 'batch size', 'AE mode', 'subpath', 'on/off'],
         'params': [60000, 500, 0, False],
         # 'Tag': ['rx_finetuning_increment_factor', 'rl_rx_steps', 'rl_tx_steps', 'on/off'],
         'rlparams': [1.1, 10, 10, False],
         # 'Tag': ['Data name', 'Color in plot', 'Channel uses', 'on/off'],
-        # 'MNIST4 ntx14 RL Ne4000 Adam snr-4 6': [dn + 'ResNet14_MNIST4_RL_adam_Ne4000_snr-4_6_conv0' + suf, 'b--x', 14, True],
-        # 'MNIST4 ntx14 RL Ne5000 Adam snr-4 6': [dn + 'ResNet14_MNIST4_RL_adam_Ne5000_snr-4_6_conv0' + suf, 'b--x', 14, True],
-        'MNIST4 ntx14 RL Ne6000 Adam snr-4 6 0': [dn + 'ResNet14_MNIST4_RL_adam_Ne6000_snr-4_6_conv0' + suf, 'b-', 14, True],
-        'MNIST4 ntx14 RL Ne6000 Adam snr-4 6 1': [dn + 'ResNet14_MNIST4_RL_adam_Ne6000_snr-4_6_conv1' + suf, 'b-', 14, True],
-        'MNIST4 ntx14 RL Ne6000 Adam snr-4 6 2': [dn + 'ResNet14_MNIST4_RL_adam_Ne6000_snr-4_6_conv2' + suf, 'b-', 14, True],
-        'MNIST4 ntx14 RL Ne6000 Adam snr-4 6 3': [dn + 'ResNet14_MNIST4_RL_adam_Ne6000_snr-4_6_conv3' + suf, 'b-', 14, True],
-        'MNIST4 ntx14 RL Ne6000 Adam snr-4 6 4': [dn + 'ResNet14_MNIST4_RL_adam_Ne6000_snr-4_6_conv4' + suf, 'b-', 14, True],
-        'MNIST4 ntx14 RL Ne6000 Adam snr-4 6 5': [dn + 'ResNet14_MNIST4_RL_adam_Ne6000_snr-4_6_conv5' + suf, 'b-', 14, True],
-        'MNIST4 ntx14 RL Ne6000 Adam snr-4 6 6': [dn + 'ResNet14_MNIST4_RL_adam_Ne6000_snr-4_6_conv6' + suf, 'b-', 14, True],
-        'MNIST4 ntx14 RL Ne6000 Adam snr-4 6 7': [dn + 'ResNet14_MNIST4_RL_adam_Ne6000_snr-4_6_conv7' + suf, 'b-', 14, True],
-        'MNIST4 ntx14 RL Ne6000 Adam snr-4 6 8': [dn + 'ResNet14_MNIST4_RL_adam_Ne6000_snr-4_6_conv8' + suf, 'b-', 14, True],
-        'MNIST4 ntx14 RL Ne6000 Adam snr-4 6 9': [dn + 'ResNet14_MNIST4_RL_adam_Ne6000_snr-4_6_conv9' + suf, 'b-', 14, True],
-        # 'MNIST4 ntx14 RL Ne8000 Adam snr-4 6': [dn + 'ResNet14_MNIST4_RL_adam_Ne8000_snr-4_6_conv0' + suf, 'b--x', 14, True],
-        # 'MNIST4 RL adam Ne3000 pstd=0.15 snr-4 6 0': [dn + 'ResNet14_MNIST4_RL_adam_Ne3000_pstd15_snr-4_6_conv0' + suf, 'm-', 16, True],
-        # 'MNIST4 RL adam Ne4000 pstds[0.15, 0.15 ** 2][2000] snr-4 6 0': [dn + 'ResNet14_MNIST4_RL_adam_Ne4000_pstds_snr-4_6_conv0' + suf, 'm-', 16, True],
-        # 'MNIST4 RL adam Ne6000 pstds[0.15, 0.15 ** 2][2000] snr-4 6 0': [dn + 'ResNet14_MNIST4_RL_adam_Ne6000_pstds_snr-4_6_conv0' + suf, 'm-', 16, True],
-        # 'MNIST4 RL adam Ne10000 pstds[0.15, 0.15 ** 2][2000] snr-4 6 0': [dn + 'ResNet14_MNIST4_RL_adam_Ne10000_pstds_snr-4_6_conv0' + suf, 'r-', 16, True],
+        # 'MNIST4 ntx14 RL Ne2000 Adam snr-4 6': [dn + 'ResNet14_MNIST4_RL_adam_Ne4000_snr-4_6_conv0' + suf, 'b--x', 14, True],
+        # 'MNIST4 ntx14 RL Ne2500 Adam snr-4 6': [dn + 'ResNet14_MNIST4_RL_adam_Ne5000_snr-4_6_conv0' + suf, 'b--x', 14, True],
+        'MNIST4 ntx14 RL Ne3000 Adam snr-4 6 0': [dn + 'ResNet14_MNIST4_RL_adam_Ne6000_snr-4_6_conv0' + suf, 'b-', 14, True],
+        'MNIST4 ntx14 RL Ne3000 Adam snr-4 6 1': [dn + 'ResNet14_MNIST4_RL_adam_Ne6000_snr-4_6_conv1' + suf, 'b-', 14, True],
+        'MNIST4 ntx14 RL Ne3000 Adam snr-4 6 2': [dn + 'ResNet14_MNIST4_RL_adam_Ne6000_snr-4_6_conv2' + suf, 'b-', 14, True],
+        'MNIST4 ntx14 RL Ne3000 Adam snr-4 6 3': [dn + 'ResNet14_MNIST4_RL_adam_Ne6000_snr-4_6_conv3' + suf, 'b-', 14, True],
+        'MNIST4 ntx14 RL Ne3000 Adam snr-4 6 4': [dn + 'ResNet14_MNIST4_RL_adam_Ne6000_snr-4_6_conv4' + suf, 'b-', 14, True],
+        'MNIST4 ntx14 RL Ne3000 Adam snr-4 6 5': [dn + 'ResNet14_MNIST4_RL_adam_Ne6000_snr-4_6_conv5' + suf, 'b-', 14, True],
+        'MNIST4 ntx14 RL Ne3000 Adam snr-4 6 6': [dn + 'ResNet14_MNIST4_RL_adam_Ne6000_snr-4_6_conv6' + suf, 'b-', 14, True],
+        'MNIST4 ntx14 RL Ne3000 Adam snr-4 6 7': [dn + 'ResNet14_MNIST4_RL_adam_Ne6000_snr-4_6_conv7' + suf, 'b-', 14, True],
+        'MNIST4 ntx14 RL Ne3000 Adam snr-4 6 8': [dn + 'ResNet14_MNIST4_RL_adam_Ne6000_snr-4_6_conv8' + suf, 'b-', 14, True],
+        'MNIST4 ntx14 RL Ne3000 Adam snr-4 6 9': [dn + 'ResNet14_MNIST4_RL_adam_Ne6000_snr-4_6_conv9' + suf, 'b-', 14, True],
+        # 'MNIST4 ntx14 RL Ne4000 Adam snr-4 6': [dn + 'ResNet14_MNIST4_RL_adam_Ne8000_snr-4_6_conv0' + suf, 'b--x', 14, True],
+        # 'MNIST4 RL adam Ne1500 pstd=0.15 snr-4 6 0': [dn + 'ResNet14_MNIST4_RL_adam_Ne3000_pstd15_snr-4_6_conv0' + suf, 'm-', 16, True],
+        # 'MNIST4 RL adam Ne2000 pstds[0.15, 0.15 ** 2][2000] snr-4 6 0': [dn + 'ResNet14_MNIST4_RL_adam_Ne4000_pstds_snr-4_6_conv0' + suf, 'm-', 16, True],
+        # 'MNIST4 RL adam Ne3000 pstds[0.15, 0.15 ** 2][2000] snr-4 6 0': [dn + 'ResNet14_MNIST4_RL_adam_Ne6000_pstds_snr-4_6_conv0' + suf, 'm-', 16, True],
+        # 'MNIST4 RL adam Ne5000 pstds[0.15, 0.15 ** 2][2000] snr-4 6 0': [dn + 'ResNet14_MNIST4_RL_adam_Ne10000_pstds_snr-4_6_conv0' + suf, 'r-', 16, True],
     }
     selected_plots.append(mnist_rl_adam2_Ne)
 
     cifar_conv = {
-        'title': ['SINFONY: MNIST4 ntx14 RL Ne6000 Adam snr-4 6', 'cifar10', 0, False],
+        'title': ['SINFONY: CIFAR4 ntx14 RL Ne200 sgdlr snr-4 6', 'cifar10', 0, False],
         # 'Tag': ['Data set size', 'batch size', 'AE mode', 'subpath', 'on/off'],
         'params': [50000, 64, 1, False],
         # 'Tag': ['Data name', 'Color in plot', 'Channel uses', 'on/off'],
@@ -474,7 +474,7 @@ if __name__ == '__main__':
         'CIFAR4 sgdlr snr-4 6 conv8': [dn + 'ResNet20_CIFAR4_sgdlr_Ne200_snr-4_6_conv8' + suf, 'm-', 16, True],
         'CIFAR4 sgdlr snr-4 6 conv9': [dn + 'ResNet20_CIFAR4_sgdlr_Ne200_snr-4_6_conv9' + suf, 'm-', 16, True],
     }
-    selected_plots.append(cifar_conv)
+    # selected_plots.append(cifar_conv)
 
     cifar_adam_conv = {
         'title': ['SINFONY: CIFAR4 adam Nb500 lr1e-4 Ne200 snr-4 6 conv', 'cifar10', 0, False],
@@ -484,10 +484,10 @@ if __name__ == '__main__':
         # 'CIFAR4 adam Nb500 lr1e-3 Ne200 snr-4 6 conv0': [dn + 'ResNet20_CIFAR4_adam_Ne200_snr-4_6_conv0' + suf, 'g-', 16, True],
         'CIFAR4 adam Nb500 lr1e-4 Ne200 snr-4 6 conv0': [dn + 'ResNet20_CIFAR4_adam_lr1e-4_Ne200_snr-4_6_conv0' + suf, 'g--x', 16, True],
     }
-    selected_plots.append(cifar_adam_conv)
+    # selected_plots.append(cifar_adam_conv)
 
     cifar_rl = {
-        'title': ['RL-SINFONY: CIFAR4 RL sgd Nb128 lr1e-4 Ne100000 snr-4 6', 'cifar10_rl', 0, False],
+        'title': ['RL-SINFONY: CIFAR4 RL sgd Nb128 lr1e-4 Ne50000 snr-4 6', 'cifar10_rl', 0, False],
         # 'Tag': ['Data set size', 'batch size', 'AE mode', 'subpath', 'on/off'],
         'params': [50000, 128, 0, False],
         # 'params': [50000, 512, 0, False],
@@ -500,27 +500,27 @@ if __name__ == '__main__':
         # 'CIFAR4 RL sgd Nb512 lr1e-4 Ne10000 snr-4 6 0': [dn + 'ResNet20_CIFAR4_RL_sgdNb512_lr1e-4_Ne10000_snr-4_6_conv0' + suf, 'm-->', 16, True],
         # 'CIFAR4 RL sgd Nb512 lr1e-5 Ne10000 snr-4 6 0': [dn + 'ResNet20_CIFAR4_RL_sgdNb512_lr1e-5_Ne10000_snr-4_6_conv0' + suf, 'm--<', 16, True],
         # 'CIFAR4 RL sgd Nb512 lr1e-6 Ne10000 snr-4 6 0': [dn + 'ResNet20_CIFAR4_RL_sgdNb512_lr1e-6_Ne10000_snr-4_6_conv0' + suf, 'm--x', 16, True],
-        # 'CIFAR4 RL sgd Nb512 lrs0 Ne100000 snr-4 6 0': [dn + 'ResNet20_CIFAR4_RL_sgdNb512_lrs0_Ne100000_snr-4_6_conv0' + suf, 'm-->', 16, True],
-        # 'CIFAR4 RL sgd Nb512 lr1e-4 Ne100000 snr-4 6 0': [dn + 'ResNet20_CIFAR4_RL_sgdNb512_lr1e-4_Ne100000_snr-4_6_conv0' + suf, 'm-->', 16, True],
+        # 'CIFAR4 RL sgd Nb512 lrs0 Ne50000 snr-4 6 0': [dn + 'ResNet20_CIFAR4_RL_sgdNb512_lrs0_Ne100000_snr-4_6_conv0' + suf, 'm-->', 16, True],
+        # 'CIFAR4 RL sgd Nb512 lr1e-4 Ne50000 snr-4 6 0': [dn + 'ResNet20_CIFAR4_RL_sgdNb512_lr1e-4_Ne100000_snr-4_6_conv0' + suf, 'm-->', 16, True],
         # 'CIFAR4 RL sgd Nb512 lr1e-4 Ne50000 snr-4 6 0': [dn + 'ResNet20_CIFAR4_RL_sgdNb512_lr1e-4_Ne50000_snr-4_6_conv0' + suf, 'm-->', 16, True],
         # 'CIFAR4 RL sgd Nb512 lr1e-4 Ne200000 snr-4 6 0': [dn + 'ResNet20_CIFAR4_RL_sgdNb512_lr1e-4_Ne200000_snr-4_6_conv0' + suf, 'm-->', 16, True],
         # Last simulations
-        # 'CIFAR4 RL sgd Nb64 lr1e-4 Ne100000 snr-4 6 0': [dn + 'ResNet20_CIFAR4_RL_sgdNb64_lr1e-4_Ne100000_snr-4_6_conv0' + suf, 'k--<', 16, True],
-        'CIFAR4 RL sgd Nb128 lr1e-4 Ne100000 snr-4 6 0': [dn + 'ResNet20_CIFAR4_RL_sgdNb128_lr1e-4_Ne100000_snr-4_6_conv0' + suf, 'k-->', 16, True],
+        # 'CIFAR4 RL sgd Nb64 lr1e-4 Ne50000 snr-4 6 0': [dn + 'ResNet20_CIFAR4_RL_sgdNb64_lr1e-4_Ne100000_snr-4_6_conv0' + suf, 'k--<', 16, True],
+        'CIFAR4 RL sgd Nb128 lr1e-4 Ne50000 snr-4 6 0': [dn + 'ResNet20_CIFAR4_RL_sgdNb128_lr1e-4_Ne100000_snr-4_6_conv0' + suf, 'k-->', 16, True],
     }
-    selected_plots.append(cifar_rl)
+    # selected_plots.append(cifar_rl)
 
     cifar_rl_adam = {
-        'title': ['RL-SINFONY: CIFAR4 RL adam lr1e-4 Ne100000 snr-4 6', 'cifar10_rl', 0, False],
+        'title': ['RL-SINFONY: CIFAR4 RL adam lr1e-4 Ne50000 snr-4 6', 'cifar10_rl', 0, False],
         # 'Tag': ['Data set size', 'batch size', 'AE mode', 'subpath', 'on/off'],
         'params': [50000, 500, 0, False],
         # 'Tag': ['rx_finetuning_increment_factor', 'rl_rx_steps', 'rl_tx_steps', 'on/off'],
         'rlparams': [1.1, 10, 10, False],
         # 'Tag': ['Data name', 'Color in plot', 'Channel uses', 'on/off'],
-        'CIFAR4 RL adam lr1e-4 Ne100000 snr-4 6 0': [dn + 'ResNet20_CIFAR4_RL_adam_lr1e-4_Ne100000_snr-4_6_conv0' + suf, 'g--<', 16, True],
-        'CIFAR4 RL adam lr1e-4 Ne100000 snr-4 6 1': [dn + 'ResNet20_CIFAR4_RL_adam_lr1e-4_Ne100000_snr-4_6_conv1' + suf, 'g--<', 16, True],
+        'CIFAR4 RL adam lr1e-4 Ne50000 snr-4 6 0': [dn + 'ResNet20_CIFAR4_RL_adam_lr1e-4_Ne100000_snr-4_6_conv0' + suf, 'g--<', 16, True],
+        'CIFAR4 RL adam lr1e-4 Ne50000 snr-4 6 1': [dn + 'ResNet20_CIFAR4_RL_adam_lr1e-4_Ne100000_snr-4_6_conv1' + suf, 'g--<', 16, True],
     }
-    selected_plots.append(cifar_rl_adam)
+    # selected_plots.append(cifar_rl_adam)
 
     # MNIST
     # RL-Paper (Adam): mnist_adam_conv2, mnist_rl_adam2_Ne
@@ -528,7 +528,7 @@ if __name__ == '__main__':
     # SNR [6,16]: Labels without SNR range
     # CIFAR (only single runs since computation time high)
     # SINFONY: cifar_conv -> 'CIFAR4 sgdlr snr-4 6 conv5', 'CIFAR4 adam Nb500 Ne200 snr-4 6 conv0'
-    # RL-SINFONY: cifar_rl -> 'CIFAR4 RL sgd Nb512 lr1e-4 Ne100000 snr-4 6 0'
+    # RL-SINFONY: cifar_rl -> 'CIFAR4 RL sgd Nb512 lr1e-4 Ne50000 snr-4 6 0'
 
     # Set here one dictionary to be analyzed
     if select_plot is True:
