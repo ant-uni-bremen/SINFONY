@@ -1,0 +1,49 @@
+dataset:
+  dataset: cifar10
+  image_split: true
+  show_dataset: true
+  validation_split: 0.85
+evaluation:
+  snr_range:
+  - -30
+  - 20
+  snr_step_size: 1
+  validation_rounds: 10
+load_settings:
+  filename_suffix: _ntx4_NW8_NL2_linear_Ne10_snr-4_6_CIFAR
+  gpu: -2
+  load: true
+  numerical_precision: float32
+  path_classic: models/classic_ae
+  path_models: models
+  save_format: npz
+  simulation_filename_prefix: ''
+  simulation_filename_suffix: _results
+model:
+  feature_input: AE
+  layer_width_rx_intermediate: 8
+  layer_width_tx_intermediate: 8
+  noise:
+    snr_max_train: 6
+    snr_min_train: -4
+  number_channel_uses: 4
+  number_txrx_layer: 2
+  power_normalization_axis: 0
+  receiver_final_layer_linear: true
+training:
+  batch_size: 64
+  learning_rate: 0.001
+  learning_rate_schedule:
+    active: true
+    epoch_bound:
+    - 100
+    - 150
+    values:
+    - 0.1
+    - 0.01
+    - 0.001
+  loss: mean_squared_error
+  momentum: 0.9
+  number_epochs: 10
+  optimizer: sgd
+  validation_dataset_size: full
