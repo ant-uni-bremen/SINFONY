@@ -1,0 +1,77 @@
+dataset:
+  dataset: cifar10
+  image_split: true
+  show_dataset: true
+  validation_split: 0.85
+evaluation:
+  evaluation_snr: 20
+  mode: 0
+  snr_range:
+  - -30
+  - 20
+  snr_step_size: 1
+  validation_rounds: 10
+load_settings:
+  filename: ResNet20_CIFAR4_snr-4_6
+  gpu: -2
+  load: false
+  numerical_precision: float32
+  path: models/cifar10
+  save_format: npz
+  simulation_filename_suffix: _results    # name suffix of simulation file
+  simulation_filename_prefix: ''          # name prefix of simulation file
+model:
+  communication:
+    image_split_factor: 2
+    number_channel_uses: 16
+    number_txrx_layer: 1
+    power_normalization_axis: 0
+    rx_layer_width: 64
+    rx_linear: false
+    rx_same: 1
+    transceiver_split: 1
+    weight_decay: null
+    weight_initialization: he_uniform
+  noise:
+    active: true
+    snr_max_train: 6
+    snr_min_train: -4
+  resnet:
+    architecture: cifar10
+    batch_normalization: true
+    bottleneck: false
+    multi_image_layer_number: 0
+    multi_image_layer_width: 0
+    number_filters: 16
+    number_residual_units: 3
+    number_resnet_blocks: 3
+    preactivation: true
+    weight_decay: 0.0001
+    weight_initialization: he_uniform
+reinforcement_learning:
+  active: 0
+  exploration_boundaries:
+  - []
+  exploration_variance:
+  - 0.15
+  iteration_print: 10
+  number_epochs_receiver_finetuning: 200
+  own_optimizer_rxfinetuning: false
+  rx_steps: 10
+  tx_steps: 10
+training:
+  batch_size: 64
+  learning_rate: 0.001
+  learning_rate_schedule:
+    active: true
+    epoch_bound:
+    - 100
+    - 150
+    values:
+    - 0.1
+    - 0.01
+    - 0.001
+  momentum: 0.9
+  number_epochs: 200
+  optimizer: sgd
+  validation_dataset_size: full

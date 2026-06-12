@@ -5,12 +5,10 @@ __*__
 Archive/
 plots/
 settings_saved/
-models/
 models_selected/
 models_old/
 *.npz
 *.h5
-*.yaml
 Datasets/Fraeser_Aufnahmen_220824_Inkl_Verkippt/
 Datasets/Fraeser_Aufnahmen_Bis_220823/
 Datasets/Fraeser_KI_Cafe2/
