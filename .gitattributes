@@ -1,2 +1,7 @@
 # Alle Textdateien automatisch normalisieren
 * text=auto eol=lf
+*_results.npz filter=lfs diff=lfs merge=lfs -text
+*_results_memory.npz filter=lfs diff=lfs merge=lfs -text
+*_results_opt.npz filter=lfs diff=lfs merge=lfs -text
+*_results_working_memory.npz filter=lfs diff=lfs merge=lfs -text
+*.h5 filter=lfs diff=lfs merge=lfs -text

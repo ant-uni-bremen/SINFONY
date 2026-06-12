@@ -59,7 +59,7 @@ def copy_published_models2repository(selected_plots, datapath='models', destinat
                         path, simulation_file_subpath, filename)
 
                     destination_folder = os.path.join(
-                        destination, path, simulation_file_subpath)
+                        destination, subpath, simulation_file_subpath)
                     # Check if the destination folder exists, if not, create it
                     if not os.path.exists(destination_folder):
                         os.makedirs(destination_folder)
