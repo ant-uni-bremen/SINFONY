@@ -1,0 +1,29 @@
+communication:
+  blocks: 100
+  code_word_length: 15360
+  float_compression_to: float16
+  modulation: qam
+  num_bits_per_symbol: 4
+  rate_channel_code: 0.25
+dataset:
+  dataset: mnist
+  image_split: true
+  show_dataset: true
+  validation_split: 0.85
+evaluation:
+  bits_per_image_value: 8
+  classic_mode: 1
+  snr_range:
+  - -1
+  - 5
+  snr_step_size: 0.5
+  validation_rounds: 10
+load_settings:
+  gpu: 1
+  numerical_precision: float32
+  path_classic: models/classic
+  path_models: models
+  save_format: npz
+  simulation_filename_suffix: _results    # name suffix of simulation file
+  simulation_filename_prefix: ''          # name prefix of simulation file
+  filename_suffix: _rc25_n15360_qam4_h100
