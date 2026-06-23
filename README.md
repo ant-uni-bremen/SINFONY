@@ -35,7 +35,7 @@ Run the script as `python3 sinfony.py "semantic_config"`, `python3 sinfony_class
 ## Dependencies
 The dependencies are provided in the conda environment file `conda_env_keras3.yaml` for the TensorFlow backend and `conda_env_keras3_pytorch.yaml` for the PyTorch backend. Dependencies from older SINFONY versions that were used throughout the years can be found in the git history and on Zenodo.
 
-### Git LFS
+### SINFONY model weight and simulation result files
 
 This repository uses **Git Large File Storage (LFS)** to manage large SINFONY model weight and simulation result files.
 
@@ -57,9 +57,11 @@ This will fetch all large files tracked by LFS into your local repository.
 
 If Git LFS is not installed, only placeholder references to the files will be available, and the actual content will not be accessible.
 
-### Dataset: Model weights and simulation results
+### Alternative: SINFONY Dataset
 
-Alternatively, you can find SINFONY weights and simulation results also as a Zenodo dataset: https://doi.org/10.5281/zenodo.20813869
+Alternatively, you can find the SINFONY model weights and simulation results (v3.0.0) also in a Zenodo dataset: https://doi.org/10.5281/zenodo.20813869
+
+After downloading the zip-File, extract the contents of `models_selected/` to the folder `models/`.
 
 # Acknowledgements
 
