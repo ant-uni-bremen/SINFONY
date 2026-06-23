@@ -1,6 +1,7 @@
 # SINFONY: Semantic INFOrmation traNsmission and recoverY
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.8006567.svg)](https://doi.org/10.5281/zenodo.8006567)
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.8006567.svg)](https://doi.org/10.5281/zenodo.8006567) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20813869.svg)](https://doi.org/10.5281/zenodo.20813869)
 
 Source code from the PhD thesis [1] and the scientific research articles [2, 3] about the semantic communication approach SINFONY:
 
@@ -36,7 +37,7 @@ The dependencies are provided in the conda environment file `conda_env_keras3.ya
 
 ### Git LFS
 
-This repository uses **Git Large File Storage (LFS)** to manage large binary files.
+This repository uses **Git Large File Storage (LFS)** to manage large SINFONY model weight and simulation result files.
 
 After cloning the repository, the files tracked by LFS may appear as small placeholder files. To download the actual file contents, Git LFS must be installed and initialized.
 
@@ -56,7 +57,9 @@ This will fetch all large files tracked by LFS into your local repository.
 
 If Git LFS is not installed, only placeholder references to the files will be available, and the actual content will not be accessible.
 
+### Dataset: Model weights and simulation results
 
+Alternatively, you can find SINFONY weights and simulation results also as a Zenodo dataset: https://doi.org/10.5281/zenodo.20813869
 
 # Acknowledgements
 
